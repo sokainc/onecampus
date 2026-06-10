@@ -949,31 +949,85 @@ function rsvpEvent(name) {
 }
 
 // MAP
+let campusMap = null;
+let friendsLayer = null;
+let clubsLayer = null;
+
+const friendPins = [
+  { lat: 40.4265, lng: -86.9176, name: 'Jordan', i: 'J', c: '#EF4444', detail: 'ME Junior · at WALC' },
+  { lat: 40.4253, lng: -86.9096, name: 'Maya', i: 'M', c: '#7C3AED', detail: 'CS Sophomore · at PMU' },
+  { lat: 40.4215, lng: -86.9238, name: 'Tyler', i: 'T', c: '#0EA5E9', detail: 'EE Junior · at CoRec' },
+  { lat: 40.4278, lng: -86.9165, name: 'Priya', i: 'P', c: '#EC4899', detail: 'Pre-Med · at ARMS' },
+  { lat: 40.4242, lng: -86.9210, name: 'Sam', i: 'S', c: '#10B981', detail: 'Business · at Rawls' },
+  { lat: 40.4259, lng: -86.9140, name: 'Zoe', i: 'Z', c: '#F59E0B', detail: 'Psychology · at Stewart Ctr' },
+];
+
+const clubPins = [
+  { lat: 40.42665, lng: -86.9172, emoji: '💻', name: 'Purdue Hackers', where: 'WALC 1055', members: 847 },
+  { lat: 40.4279, lng: -86.9161, emoji: '⚙️', name: 'NSBE Purdue', where: 'ARMS 1010', members: 312 },
+  { lat: 40.4254, lng: -86.9100, emoji: '👩‍💻', name: 'SWE Purdue', where: 'PMU Rm 226', members: 421 },
+  { lat: 40.4243, lng: -86.9206, emoji: '📈', name: 'Boilermaker Invest Club', where: 'Rawls 1071', members: 156 },
+  { lat: 40.4283, lng: -86.9134, emoji: '🤖', name: 'Purdue Robotics Team', where: 'ME Building 164', members: 234 },
+  { lat: 40.4244, lng: -86.9190, emoji: '🩺', name: 'Pre-Med Society', where: 'LILLY B01', members: 567 },
+  { lat: 40.4217, lng: -86.9234, emoji: '🏋️', name: 'Boiler Barbell', where: 'CoRec Weight Room', members: 264 },
+  { lat: 40.4190, lng: -86.9221, emoji: '⚽', name: 'Purdue Club Soccer', where: 'TREC Fields', members: 380 },
+  { lat: 40.4257, lng: -86.9186, emoji: '🎭', name: 'Purdue Theatre Co.', where: 'PAO Hall', members: 142 },
+];
+
+const buildingLabels = [
+  { lat: 40.4265, lng: -86.9176, label: 'WALC' },
+  { lat: 40.4253, lng: -86.9096, label: 'PMU' },
+  { lat: 40.4215, lng: -86.9238, label: 'CoRec' },
+  { lat: 40.4278, lng: -86.9165, label: 'ARMS' },
+  { lat: 40.4242, lng: -86.9210, label: 'Rawls' },
+  { lat: 40.4251, lng: -86.9162, label: 'Stewart Ctr' },
+];
+
 function initMap() {
   if (mapInitialized) return;
   mapInitialized = true;
-  const map = L.map('map-container', { center: [40.4253, -86.9132], zoom: 15, zoomControl: false, attributionControl: false });
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+  campusMap = L.map('map-container', { center: [40.4253, -86.9132], zoom: 15, zoomControl: false, attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(campusMap);
 
-  const spots = [
-    { lat: 40.4265, lng: -86.9176, label: 'WALC', friend: { i: 'J', c: '#EF4444', n: 'Jordan — ME Junior' } },
-    { lat: 40.4253, lng: -86.9096, label: 'PMU', friend: { i: 'M', c: '#7C3AED', n: 'Maya — CS Sophomore' } },
-    { lat: 40.4215, lng: -86.9238, label: 'CoRec', friend: { i: 'T', c: '#0EA5E9', n: 'Tyler — EE Junior' } },
-    { lat: 40.4278, lng: -86.9165, label: 'ARMS', friend: { i: 'P', c: '#EC4899', n: 'Priya — Pre-Med' } },
-    { lat: 40.4242, lng: -86.9210, label: 'Rawls', friend: { i: 'S', c: '#10B981', n: 'Sam — Business' } },
-    { lat: 40.4251, lng: -86.9162, label: 'Stewart Ctr', friend: null },
-  ];
-
-  spots.forEach(s => {
-    L.marker([s.lat, s.lng], {
-      icon: L.divIcon({ html: `<div style="background:white;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700;color:#374151;box-shadow:0 2px 8px rgba(0,0,0,0.15);white-space:nowrap">${s.label}</div>`, className: '', iconAnchor: [20, 10] })
-    }).addTo(map);
-    if (s.friend) {
-      L.marker([s.lat + 0.0006, s.lng + 0.0006], {
-        icon: L.divIcon({ html: `<div style="width:30px;height:30px;background:${s.friend.c};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.2)">${s.friend.i}</div>`, className: '', iconSize: [30,30], iconAnchor: [15,15] })
-      }).bindPopup(`<strong>${s.friend.n}</strong>`).addTo(map);
-    }
+  // building name labels — always visible
+  buildingLabels.forEach(b => {
+    L.marker([b.lat, b.lng], {
+      icon: L.divIcon({ html: `<div style="background:white;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700;color:#374151;box-shadow:0 2px 8px rgba(0,0,0,0.15);white-space:nowrap">${b.label}</div>`, className: '', iconAnchor: [20, 10] })
+    }).addTo(campusMap);
   });
+
+  // friends layer — avatar pins, tap to DM
+  friendsLayer = L.layerGroup(friendPins.map(f => {
+    const m = L.marker([f.lat + 0.0006, f.lng + 0.0006], {
+      icon: L.divIcon({ html: `<div style="width:30px;height:30px;background:${f.c};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.2)">${f.i}</div>`, className: '', iconSize: [30,30], iconAnchor: [15,15] })
+    });
+    m.bindPopup(`<div style="font-family:Inter,sans-serif;min-width:130px"><strong>${f.name}</strong><br><span style="font-size:11px;color:#6B7280">${f.detail}</span><br><button onclick="openChat('${f.name}')" style="margin-top:6px;background:linear-gradient(135deg,#7C3AED,#A855F7);color:white;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">💬 Message</button></div>`);
+    return m;
+  }));
+
+  // clubs layer — emoji pins, tap to join
+  clubsLayer = L.layerGroup(clubPins.map(c => {
+    const m = L.marker([c.lat - 0.0005, c.lng - 0.0005], {
+      icon: L.divIcon({ html: `<div style="width:32px;height:32px;background:white;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;border:2.5px solid #7C3AED;box-shadow:0 3px 10px rgba(124,58,237,0.3)">${c.emoji}</div>`, className: '', iconSize: [32,32], iconAnchor: [16,16] })
+    });
+    m.bindPopup(`<div style="font-family:Inter,sans-serif;min-width:150px"><strong>${c.emoji} ${c.name}</strong><br><span style="font-size:11px;color:#6B7280">📍 ${c.where} · 👥 ${c.members} members</span><br><button onclick="joinClubFromMap('${c.name.replace(/'/g,"\\'")}')" style="margin-top:6px;background:linear-gradient(135deg,#7C3AED,#A855F7);color:white;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✓ Join Club</button></div>`);
+    return m;
+  }));
+
+  // default view: everyone
+  friendsLayer.addTo(campusMap);
+  clubsLayer.addTo(campusMap);
+}
+
+function joinClubFromMap(name) {
+  if (joinedClubs.has(name)) {
+    showToast(`Already a member of ${name}`);
+  } else {
+    joinedClubs.add(name);
+    const earned = addPoints(75);
+    showToast(`✓ Joined ${name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+  }
+  campusMap.closePopup();
 }
 
 function renderNearbyFriends() {
@@ -987,7 +1041,21 @@ function renderNearbyFriends() {
 function setMapTab(btn) {
   document.querySelectorAll('.map-tab').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
-  showToast(`Map: ${btn.textContent} view`);
+  const view = btn.textContent;
+  if (!campusMap) return;
+  friendsLayer.remove();
+  clubsLayer.remove();
+  if (view === 'Everyone') {
+    friendsLayer.addTo(campusMap);
+    clubsLayer.addTo(campusMap);
+    showToast(`Showing ${friendPins.length} friends + ${clubPins.length} clubs`);
+  } else if (view === 'Friends') {
+    friendsLayer.addTo(campusMap);
+    showToast(`${friendPins.length} friends on campus right now`);
+  } else {
+    clubsLayer.addTo(campusMap);
+    showToast(`${clubPins.length} clubs meeting nearby`);
+  }
 }
 
 // POINTS
