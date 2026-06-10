@@ -323,6 +323,60 @@
     .create-post-input { flex: 1; background: #F5F3FF; border: none; border-radius: 20px; padding: 9px 14px; font-size: 13px; color: #9CA3AF; font-family: inherit; cursor: pointer; }
     .create-post-btn { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; border: none; border-radius: 12px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
 
+    /* PREMIUM */
+    .modal-overlay {
+      position: absolute; inset: 0; background: rgba(26,26,46,0.55);
+      z-index: 500; display: flex; align-items: flex-end; justify-content: center;
+      opacity: 0; pointer-events: none; transition: opacity 0.25s;
+    }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-sheet {
+      background: white; border-radius: 28px 28px 0 0; width: 100%;
+      max-height: 88%; overflow-y: auto; padding: 22px 22px 30px;
+      transform: translateY(40px); transition: transform 0.25s; scrollbar-width: none;
+    }
+    .modal-sheet::-webkit-scrollbar { display: none; }
+    .modal-overlay.open .modal-sheet { transform: translateY(0); }
+    .sheet-handle { width: 40px; height: 4px; background: #E5E7EB; border-radius: 4px; margin: 0 auto 16px; }
+    .prem-hero { text-align: center; margin-bottom: 18px; }
+    .prem-crown { font-size: 44px; margin-bottom: 6px; }
+    .prem-title { font-size: 24px; font-weight: 900; background: linear-gradient(135deg,#F59E0B,#FF6B35); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+    .prem-price { font-size: 14px; color: #6B7280; margin-top: 4px; }
+    .prem-price strong { color: #1a1a2e; font-size: 17px; }
+    .prem-feature { display: flex; align-items: flex-start; gap: 12px; padding: 11px 0; border-bottom: 1px solid #F3F4F6; }
+    .prem-feature:last-of-type { border-bottom: none; }
+    .prem-f-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 19px; flex-shrink: 0; }
+    .prem-f-name { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+    .prem-f-desc { font-size: 12px; color: #6B7280; line-height: 1.4; }
+    .prem-cta {
+      width: 100%; padding: 15px; border: none; border-radius: 16px; margin-top: 16px;
+      background: linear-gradient(135deg,#F59E0B,#FF6B35); color: white;
+      font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit;
+      box-shadow: 0 6px 20px rgba(245,158,11,0.4);
+    }
+    .prem-skip { width: 100%; padding: 11px; border: none; background: none; color: #9CA3AF; font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; margin-top: 4px; }
+    .prem-fine { font-size: 10px; color: #C4C4CC; text-align: center; margin-top: 8px; }
+    .pts-badge.premium { background: linear-gradient(135deg,#F59E0B,#FF6B35); box-shadow: 0 2px 10px rgba(245,158,11,0.4); }
+    .pro-chip { background: linear-gradient(135deg,#F59E0B,#FF6B35); color: white; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 8px; letter-spacing: 0.5px; }
+    .campus-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
+    .campus-tab { flex: 1; padding: 8px; border-radius: 14px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .campus-tab.active { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; }
+    .campus-tab:not(.active) { background: white; color: #6B7280; }
+    .campus-tab .lock { font-size: 11px; }
+    .planner-block { border-radius: 16px; padding: 14px; margin-bottom: 10px; }
+    .planner-day { background: linear-gradient(135deg,#FEF3C7,#FDE68A); }
+    .planner-night { background: linear-gradient(135deg,#1a1a2e,#312E81); }
+    .planner-block-title { font-size: 13px; font-weight: 800; margin-bottom: 10px; }
+    .planner-day .planner-block-title { color: #92400E; }
+    .planner-night .planner-block-title { color: #C7D2FE; }
+    .planner-item { display: flex; gap: 10px; align-items: flex-start; padding: 6px 0; }
+    .planner-time { font-size: 11px; font-weight: 800; min-width: 58px; }
+    .planner-day .planner-time { color: #B45309; }
+    .planner-night .planner-time { color: #A5B4FC; }
+    .planner-what { font-size: 12.5px; font-weight: 600; line-height: 1.4; }
+    .planner-day .planner-what { color: #78350F; }
+    .planner-night .planner-what { color: #E0E7FF; }
+
     @media (max-width: 440px) {
       body { padding: 0; align-items: flex-start; background: #F5F3FF; }
       .phone { width: 100%; height: 100vh; border-radius: 0; box-shadow: none; }
@@ -359,6 +413,10 @@
           <div class="screen-sub">Find your people &amp; passions</div>
         </div>
         <button style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#A855F7);border:none;font-size:18px;cursor:pointer;color:white;" onclick="showToast('Quick Match on! ⚡')">⚡</button>
+      </div>
+      <div class="campus-toggle">
+        <button class="campus-tab active" id="tab-purdue" onclick="setCampus('purdue')">🚂 Purdue</button>
+        <button class="campus-tab" id="tab-iu" onclick="setCampus('iu')"><span class="lock" id="iu-lock">🔒</span> IU Bloomington</button>
       </div>
       <div class="discover-card-stack" id="card-stack"></div>
       <div class="disc-actions">
@@ -431,13 +489,13 @@
         <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:72%"></div></div>
         <div class="progress-note">944 pts to go</div>
       </div>
-      <div class="upgrade-banner">
+      <div class="upgrade-banner" id="upgrade-banner">
         <div class="upgrade-icon">⭐</div>
         <div class="upgrade-text">
-          <strong>Unlock AI Planner ✨</strong>
-          <span>Personalized suggestions &amp; 2x points</span>
+          <strong>One Campus Premium ✨</strong>
+          <span>2x points · AI organizer · cross-campus</span>
         </div>
-        <button class="upgrade-btn" onclick="showToast('AI Planner — Coming Soon! 🚀')">Upgrade</button>
+        <button class="upgrade-btn" onclick="openPremiumModal()">Upgrade</button>
       </div>
       <div class="pts-tabs">
         <button class="pts-tab active" onclick="setPtsTab(this,'badges')">🏅 Badges</button>
@@ -464,6 +522,11 @@
       <div id="connect-content"></div>
     </div>
 
+  </div>
+
+  <!-- PREMIUM MODAL -->
+  <div class="modal-overlay" id="prem-overlay" onclick="if(event.target===this)closePremiumModal()">
+    <div class="modal-sheet" id="prem-sheet"></div>
   </div>
 
   <div class="bottom-nav">
@@ -587,8 +650,19 @@ const suggested = [
   { name: 'Sofia R.', initial: 'S', color: '#EC4899', detail: 'Business · Invest Club' },
 ];
 
+const iuClubs = [
+  { name: 'IU Computing Club', tag: 'TECH', desc: 'Hoosier hackers — workshops, projects & tech talks at Luddy Hall.', members: 612, location: 'Luddy Hall 1106', grad: 'grad-1' },
+  { name: 'Kelley Consulting Club', tag: 'BUSINESS', desc: 'Real consulting projects for real clients at Kelley School.', members: 289, location: 'Hodge Hall 2055', grad: 'grad-4' },
+  { name: 'IU Outdoor Adventures', tag: 'SPORTS', desc: 'Hiking, climbing & kayaking trips around Bloomington.', members: 458, location: 'SRSC Lobby', grad: 'grad-3' },
+  { name: 'Hoosier Robotics', tag: 'TECH', desc: 'Build battle bots and autonomous rovers with IU engineers.', members: 175, location: 'Luddy 3166', grad: 'grad-5' },
+  { name: 'IU Dance Marathon', tag: 'ARTS', desc: 'The largest student org at IU — 36 hours for Riley Kids.', members: 1043, location: 'IMU Alumni Hall', grad: 'grad-2' },
+  { name: 'Little 500 Cycling', tag: 'SPORTS', desc: 'Train for the legendary Little 500 bike race.', members: 198, location: 'Bill Armstrong Stadium', grad: 'grad-6' },
+];
+
 let currentCardIndex = 0;
 let points = 2456;
+let isPremium = false;
+let activeCampus = 'purdue';
 let mapInitialized = false;
 const joinedClubs = new Set();
 const rsvpdEvents = new Set();
@@ -605,11 +679,29 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // DISCOVER
+function activeClubs() {
+  return activeCampus === 'iu' ? iuClubs : clubs;
+}
+
+function setCampus(campus) {
+  if (campus === 'iu' && !isPremium) {
+    openPremiumModal();
+    return;
+  }
+  activeCampus = campus;
+  currentCardIndex = 0;
+  document.getElementById('tab-purdue').classList.toggle('active', campus === 'purdue');
+  document.getElementById('tab-iu').classList.toggle('active', campus === 'iu');
+  renderDiscoverCards();
+  showToast(campus === 'iu' ? '🌎 Browsing IU Bloomington — Premium perk!' : '🚂 Back to Purdue');
+}
+
 function renderDiscoverCards() {
+  const list = activeClubs();
   const stack = document.getElementById('card-stack');
   stack.innerHTML = '';
-  const pool = clubs.slice(currentCardIndex % clubs.length);
-  const show = [...pool, ...clubs].slice(0, 3);
+  const pool = list.slice(currentCardIndex % list.length);
+  const show = [...pool, ...list].slice(0, 3);
   show.forEach((club, i) => {
     const card = document.createElement('div');
     card.className = `disc-card ${club.grad} ${i === 0 ? 'front' : i === 1 ? 'behind1' : 'behind2'}`;
@@ -635,7 +727,8 @@ function renderDiscoverCards() {
 function swipeCard(action) {
   const front = document.querySelector('.disc-card.front');
   if (!front) return;
-  const club = clubs[currentCardIndex % clubs.length];
+  const list = activeClubs();
+  const club = list[currentCardIndex % list.length];
   front.style.transform = (action === 'join' || action === 'super') ? 'translateX(130%) rotate(15deg)' : 'translateX(-130%) rotate(-15deg)';
   front.style.opacity = '0';
   if (action === 'join' || action === 'super') {
@@ -643,9 +736,8 @@ function swipeCard(action) {
       showToast(`Already a member of ${club.name}`);
     } else {
       joinedClubs.add(club.name);
-      const pts = action === 'super' ? 150 : 75;
-      addPoints(pts);
-      showToast(`${action === 'super' ? '⭐ Super joined' : '✓ Joined'} ${club.name}! +${pts} pts`);
+      const earned = addPoints(action === 'super' ? 150 : 75);
+      showToast(`${action === 'super' ? '⭐ Super joined' : '✓ Joined'} ${club.name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
     }
   } else {
     showToast(`Skipped — next up!`);
@@ -710,8 +802,8 @@ function rsvpEvent(name) {
     showToast(`You're already going to ${name}`);
   } else {
     rsvpdEvents.add(name);
-    addPoints(25);
-    showToast(`RSVP'd to ${name}! +25 pts`);
+    const earned = addPoints(25);
+    showToast(`RSVP'd to ${name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
     renderEvents(null);
   }
 }
@@ -884,8 +976,8 @@ function addFriend(name) {
     showToast(`Already sent a request to ${name}`);
   } else {
     addedFriends.add(name);
-    addPoints(10);
-    showToast(`Friend request sent to ${name}! +10 pts`);
+    const earned = addPoints(10);
+    showToast(`Friend request sent to ${name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
     renderConnectContent('discover');
   }
 }
@@ -905,11 +997,100 @@ function switchScreen(name, btn) {
   if (name === 'map') setTimeout(initMap, 100);
 }
 
+// PREMIUM
+function openPremiumModal() {
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="prem-hero">
+      <div class="prem-crown">👑</div>
+      <div class="prem-title">One Campus Premium</div>
+      <div class="prem-price"><strong>$7.99</strong> / month · cancel anytime</div>
+    </div>
+    <div class="prem-feature">
+      <div class="prem-f-icon" style="background:linear-gradient(135deg,#FF6B35,#FFB347)">⚡</div>
+      <div>
+        <div class="prem-f-name">Double Points</div>
+        <div class="prem-f-desc">Earn 2x points on every club join, RSVP, and friend you make. Climb the leaderboard twice as fast.</div>
+      </div>
+    </div>
+    <div class="prem-feature">
+      <div class="prem-f-icon" style="background:linear-gradient(135deg,#7C3AED,#A855F7)">🤖</div>
+      <div>
+        <div class="prem-f-name">AI Day / Night Organizer</div>
+        <div class="prem-f-desc">AI builds your perfect campus day — classes, events, study blocks by day, and social plans by night.</div>
+      </div>
+    </div>
+    <div class="prem-feature">
+      <div class="prem-f-icon" style="background:linear-gradient(135deg,#0EA5E9,#38BDF8)">🌎</div>
+      <div>
+        <div class="prem-f-name">Cross-Campus Access</div>
+        <div class="prem-f-desc">See clubs, events & people beyond Purdue — connect with students at IU Bloomington and more.</div>
+      </div>
+    </div>
+    <button class="prem-cta" onclick="subscribePremium()">Start Premium — $7.99/mo</button>
+    <button class="prem-skip" onclick="closePremiumModal()">Maybe later</button>
+    <div class="prem-fine">Demo only — no real payment is processed. Renews monthly until canceled.</div>`;
+  document.getElementById('prem-overlay').classList.add('open');
+}
+
+function closePremiumModal() {
+  document.getElementById('prem-overlay').classList.remove('open');
+}
+
+function subscribePremium() {
+  isPremium = true;
+  closePremiumModal();
+  // PRO styling on the points badge
+  document.querySelector('.pts-badge').classList.add('premium');
+  document.querySelector('.pts-badge').innerHTML = `👑 <span id="pts-display">${points.toLocaleString()}</span> pts`;
+  // unlock IU tab
+  document.getElementById('iu-lock').textContent = '🌎';
+  // banner becomes the AI planner launcher
+  document.getElementById('upgrade-banner').innerHTML = `
+    <div class="upgrade-icon">🤖</div>
+    <div class="upgrade-text">
+      <strong>AI Organizer <span class="pro-chip">PRO</span></strong>
+      <span>Your day & night, planned by AI</span>
+    </div>
+    <button class="upgrade-btn" onclick="openAIPlanner()">Open</button>`;
+  showToast('👑 Welcome to Premium! 2x points active');
+}
+
+function openAIPlanner() {
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="prem-hero">
+      <div class="prem-crown">🤖</div>
+      <div class="prem-title">Your AI-Planned Day</div>
+      <div class="prem-price">Built from your classes, clubs &amp; campus events</div>
+    </div>
+    <div class="planner-block planner-day">
+      <div class="planner-block-title">☀️ DAYTIME — Tuesday, June 10</div>
+      <div class="planner-item"><span class="planner-time">8:30 AM</span><span class="planner-what">Breakfast at PMU before your 9:30 lecture — beats the rush</span></div>
+      <div class="planner-item"><span class="planner-time">10:00 AM</span><span class="planner-what">Engineering Career Fair @ PMU Ballrooms — bring resumes, 3 friends going</span></div>
+      <div class="planner-item"><span class="planner-time">12:30 PM</span><span class="planner-what">Lunch with Maya — she's at WALC, 4 min from you</span></div>
+      <div class="planner-item"><span class="planner-time">2:00 PM</span><span class="planner-what">Study block: WALC 2nd floor is 40% empty right now</span></div>
+      <div class="planner-item"><span class="planner-time">4:30 PM</span><span class="planner-what">CoRec workout — Tyler is training for the 5K, join him</span></div>
+    </div>
+    <div class="planner-block planner-night">
+      <div class="planner-block-title">🌙 TONIGHT</div>
+      <div class="planner-item"><span class="planner-time">6:00 PM</span><span class="planner-what">NSBE General Meeting @ ARMS 1010 — earns you ~50 pts (2x = 100)</span></div>
+      <div class="planner-item"><span class="planner-time">7:30 PM</span><span class="planner-what">Hack Purdue session @ WALC — Maya's team needs a frontend dev</span></div>
+      <div class="planner-item"><span class="planner-time">9:30 PM</span><span class="planner-what">Astronomy Night rooftop hangout — 89 students interested</span></div>
+      <div class="planner-item"><span class="planner-time">11:00 PM</span><span class="planner-what">Wind down — quiz tomorrow at 10:30, AI suggests sleep by 12</span></div>
+    </div>
+    <button class="prem-cta" onclick="closePremiumModal();showToast('Day added to your calendar! 📅 +50 pts');addPoints(25)">Add All to My Calendar</button>
+    <button class="prem-skip" onclick="closePremiumModal()">Close</button>`;
+  document.getElementById('prem-overlay').classList.add('open');
+}
+
 // UTILS
 function addPoints(n) {
-  points += n;
+  const earned = isPremium ? n * 2 : n;
+  points += earned;
   document.getElementById('pts-display').textContent = points.toLocaleString();
   document.getElementById('hero-pts').textContent = points.toLocaleString();
+  return earned;
 }
 
 function showToast(msg) {
