@@ -568,6 +568,7 @@
         <button class="pts-tab active" onclick="setPtsTab(this,'badges')">🏅 Badges</button>
         <button class="pts-tab" onclick="setPtsTab(this,'weekly')">⚡ Weekly</button>
         <button class="pts-tab" onclick="setPtsTab(this,'ranks')">🏆 Ranks</button>
+        <button class="pts-tab" onclick="setPtsTab(this,'shop')">🎁 Shop</button>
       </div>
       <div id="pts-content"></div>
     </div>
@@ -1058,9 +1059,98 @@ function setMapTab(btn) {
   }
 }
 
+// REWARDS SHOP
+const rewards = [
+  { id: 'coffee', icon: '☕', name: 'Free Drink at Greyhouse', desc: 'Any drink at Greyhouse Coffee, right off campus', cost: 1000, sponsor: 'Sponsored by Greyhouse' },
+  { id: 'charity', icon: '❤️', name: 'Donate $1 to a Cause', desc: 'One Campus donates $1 to a student-voted cause', cost: 1000, sponsor: 'Community impact' },
+  { id: 'dominos', icon: '🍕', name: "$5 off Domino's", desc: 'Code applied at checkout — late night fuel', cost: 2000, sponsor: "Sponsored by Domino's" },
+  { id: 'chickfila', icon: '🐔', name: 'Free Chick-fil-A Entrée', desc: 'Any entrée at the PMU Chick-fil-A', cost: 3000, sponsor: 'Sponsored by Chick-fil-A' },
+];
+const redeemedRewards = [];
+
+function renderShop() {
+  const c = document.getElementById('pts-content');
+  c.innerHTML = `
+    <div style="font-size:12px;color:#6B7280;margin-bottom:12px;text-align:center">You have <strong style="color:#7C3AED">⚡ ${points.toLocaleString()} pts</strong> to spend</div>
+    ${rewards.map(r => {
+      const afford = points >= r.cost;
+      return `
+      <div style="background:white;border-radius:16px;padding:13px 14px;margin-bottom:10px;display:flex;align-items:center;gap:12px;${afford ? '' : 'opacity:0.55'}">
+        <div style="width:44px;height:44px;border-radius:14px;background:#F5F3FF;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0">${r.icon}</div>
+        <div style="flex:1">
+          <div style="font-size:13.5px;font-weight:700;color:#1a1a2e">${r.name}</div>
+          <div style="font-size:11px;color:#6B7280;line-height:1.35">${r.desc}</div>
+          <div style="font-size:10px;color:#9CA3AF;margin-top:2px">${r.sponsor}</div>
+        </div>
+        <button onclick="redeemReward('${r.id}')" style="background:${afford ? 'linear-gradient(135deg,#7C3AED,#A855F7)' : '#E5E7EB'};color:${afford ? 'white' : '#9CA3AF'};border:none;border-radius:12px;padding:8px 11px;font-size:11.5px;font-weight:800;cursor:pointer;white-space:nowrap;font-family:inherit">⚡ ${r.cost.toLocaleString()}</button>
+      </div>`;
+    }).join('')}
+    ${redeemedRewards.length ? `<div style="font-size:11px;font-weight:800;color:#6B7280;text-transform:uppercase;letter-spacing:0.5px;margin:14px 0 8px">My Redemptions</div>` + redeemedRewards.map(r => `
+      <div style="background:#F0FDF4;border-radius:14px;padding:11px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:18px">${r.icon}</span>
+        <div style="flex:1"><div style="font-size:12.5px;font-weight:700;color:#166534">${r.name}</div><div style="font-size:11px;color:#22c55e;font-weight:700;letter-spacing:1px">${r.code}</div></div>
+        <span style="font-size:11px;color:#22c55e;font-weight:700">✓ Redeemed</span>
+      </div>`).join('') : ''}`;
+}
+
+function redeemReward(id) {
+  const r = rewards.find(x => x.id === id);
+  if (points < r.cost) {
+    showToast(`Need ${(r.cost - points).toLocaleString()} more pts for that! ⚡`);
+    return;
+  }
+  if (r.id === 'charity') { openCharityVote(); return; }
+  confirmRedeem(r);
+}
+
+function confirmRedeem(r, cause) {
+  points -= r.cost;
+  document.getElementById('pts-display').textContent = points.toLocaleString();
+  document.getElementById('hero-pts').textContent = points.toLocaleString();
+  const code = 'OC-' + Math.random().toString(36).slice(2, 7).toUpperCase();
+  redeemedRewards.unshift({ icon: r.icon, name: cause ? `$1 donated to ${cause}` : r.name, code: cause ? 'THANK YOU 💜' : code });
+  closePremiumModal();
+  renderShop();
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="prem-hero">
+      <div class="prem-crown">${cause ? '❤️' : '🎉'}</div>
+      <div class="prem-title" style="background:linear-gradient(135deg,#7C3AED,#A855F7);-webkit-background-clip:text;background-clip:text;">${cause ? 'Donation Made!' : 'Reward Unlocked!'}</div>
+      <div class="prem-price">${cause ? `One Campus is donating <strong>$1</strong> to <strong>${cause}</strong> on behalf of students like you.` : `Show this code at the register:`}</div>
+    </div>
+    ${cause ? '' : `<div style="background:#F5F3FF;border:2px dashed #7C3AED;border-radius:16px;padding:18px;text-align:center;font-size:24px;font-weight:900;color:#7C3AED;letter-spacing:3px">${code}</div>`}
+    <div style="font-size:12px;color:#9CA3AF;text-align:center;margin-top:10px">−${r.cost.toLocaleString()} pts · New balance: ⚡ ${points.toLocaleString()}</div>
+    <button class="prem-cta" style="background:linear-gradient(135deg,#7C3AED,#A855F7);box-shadow:0 6px 20px rgba(124,58,237,0.4)" onclick="closePremiumModal()">Done</button>`;
+  document.getElementById('prem-overlay').classList.add('open');
+}
+
+function openCharityVote() {
+  const causes = [
+    { emoji: '🏥', name: 'Riley Children\'s Hospital' },
+    { emoji: '🍲', name: 'Lafayette Food Bank' },
+    { emoji: '🧠', name: 'Student Mental Health Fund' },
+    { emoji: '🐾', name: 'Local Animal Shelter' },
+  ];
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="prem-hero">
+      <div class="prem-crown">❤️</div>
+      <div class="prem-title" style="background:linear-gradient(135deg,#7C3AED,#A855F7);-webkit-background-clip:text;background-clip:text;">Pick Your Cause</div>
+      <div class="prem-price">1,000 pts → One Campus donates <strong>$1</strong> where you vote</div>
+    </div>
+    ${causes.map(c => `
+      <button onclick="confirmRedeem(rewards.find(r=>r.id==='charity'),'${c.name.replace(/'/g,"\\'")}')" style="width:100%;background:white;border:1.5px solid #E9D5FF;border-radius:14px;padding:13px 16px;margin-bottom:8px;display:flex;align-items:center;gap:12px;cursor:pointer;font-family:inherit;text-align:left">
+        <span style="font-size:22px">${c.emoji}</span>
+        <span style="font-size:14px;font-weight:700;color:#1a1a2e">${c.name}</span>
+      </button>`).join('')}
+    <button class="prem-skip" onclick="closePremiumModal()">Cancel</button>`;
+  document.getElementById('prem-overlay').classList.add('open');
+}
+
 // POINTS
 function renderPtsContent(tab) {
   const c = document.getElementById('pts-content');
+  if (tab === 'shop') { renderShop(); return; }
   if (tab === 'badges') {
     c.innerHTML = `<div class="badge-grid">${badges.map(b => `<div class="badge-card"><div class="badge-icon">${b.icon}</div><div class="badge-name">${b.name}</div><div class="badge-desc">${b.desc}</div><div class="badge-pts">${b.pts}</div></div>`).join('')}</div>`;
   } else if (tab === 'weekly') {
