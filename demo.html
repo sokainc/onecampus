@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>One Campus — Purdue University</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(150deg, #EDE9FE 0%, #FCE7F3 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+    .phone {
+      width: 390px;
+      height: 844px;
+      background: #F5F3FF;
+      border-radius: 44px;
+      overflow: hidden;
+      position: relative;
+      box-shadow: 0 40px 100px rgba(124,58,237,0.25), 0 0 0 1px rgba(255,255,255,0.5);
+      display: flex;
+      flex-direction: column;
+    }
+    .status-bar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 28px 0;
+      font-size: 15px;
+      font-weight: 600;
+      color: #1a1a2e;
+      flex-shrink: 0;
+    }
+    .notch {
+      width: 126px; height: 34px;
+      background: #1a1a2e;
+      border-radius: 20px;
+    }
+    .status-icons { display: flex; gap: 6px; align-items: center; }
+    .battery {
+      width: 24px; height: 12px;
+      border: 2px solid #1a1a2e;
+      border-radius: 3px;
+      position: relative;
+    }
+    .battery::after {
+      content: '';
+      position: absolute;
+      right: -5px; top: 50%;
+      transform: translateY(-50%);
+      width: 3px; height: 6px;
+      background: #1a1a2e;
+      border-radius: 0 2px 2px 0;
+    }
+    .battery-fill { width: 85%; height: 100%; background: #22c55e; border-radius: 1px; }
+    .app-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      flex-shrink: 0;
+    }
+    .app-logo { display: flex; align-items: center; gap: 10px; }
+    .logo-icon {
+      width: 40px; height: 40px;
+      background: linear-gradient(135deg, #7C3AED, #A855F7);
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 20px;
+    }
+    .logo-name { font-size: 18px; font-weight: 800; color: #7C3AED; }
+    .pts-badge {
+      background: linear-gradient(135deg, #FF6B35, #FFB347);
+      color: white; font-weight: 700; font-size: 14px;
+      padding: 6px 14px; border-radius: 20px;
+      display: flex; align-items: center; gap: 5px;
+    }
+    .screens { flex: 1; overflow: hidden; position: relative; }
+    .screen {
+      position: absolute; inset: 0;
+      overflow-y: auto; padding: 0 20px 16px;
+      display: none; scrollbar-width: none;
+    }
+    .screen::-webkit-scrollbar { display: none; }
+    .screen.active { display: block; }
+    .screen-title { font-size: 28px; font-weight: 800; color: #7C3AED; margin-bottom: 2px; }
+    .screen-sub { font-size: 14px; color: #6B7280; margin-bottom: 16px; }
+    .screen-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 16px; }
+
+    /* DISCOVER */
+    .discover-card-stack { position: relative; height: 340px; margin-bottom: 16px; }
+    .disc-card {
+      position: absolute; inset: 0;
+      border-radius: 24px; padding: 24px;
+      display: flex; flex-direction: column; justify-content: flex-end;
+      cursor: grab;
+      transition: transform 0.3s ease, opacity 0.3s ease;
+      user-select: none;
+    }
+    .disc-card.front { z-index: 3; }
+    .disc-card.behind1 { z-index: 2; transform: scale(0.95) translateY(10px); opacity: 0.7; }
+    .disc-card.behind2 { z-index: 1; transform: scale(0.90) translateY(20px); opacity: 0.4; }
+    .disc-card-tag {
+      background: rgba(255,255,255,0.25); color: white;
+      font-size: 12px; font-weight: 600;
+      padding: 4px 10px; border-radius: 20px;
+      width: fit-content; margin-bottom: 8px;
+    }
+    .disc-card-name { font-size: 26px; font-weight: 800; color: white; margin-bottom: 4px; }
+    .disc-card-desc { font-size: 14px; color: rgba(255,255,255,0.85); margin-bottom: 12px; }
+    .disc-card-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+    .disc-meta-pill {
+      background: rgba(255,255,255,0.2); color: white;
+      font-size: 12px; font-weight: 600;
+      padding: 5px 12px; border-radius: 20px;
+    }
+    .disc-actions { display: flex; justify-content: center; gap: 16px; margin-bottom: 16px; }
+    .disc-btn {
+      width: 56px; height: 56px; border-radius: 50%; border: none;
+      font-size: 22px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.15s;
+    }
+    .disc-btn:active { transform: scale(0.9); }
+    .disc-btn.skip { background: white; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
+    .disc-btn.join { background: linear-gradient(135deg,#7C3AED,#A855F7); box-shadow: 0 4px 20px rgba(124,58,237,0.4); color: white; }
+    .disc-btn.super { background: linear-gradient(135deg,#FF6B35,#FFB347); box-shadow: 0 4px 20px rgba(255,107,53,0.4); }
+    .disc-interests { font-size: 12px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
+    .interest-pills { display: flex; flex-wrap: wrap; gap: 8px; }
+    .interest-pill {
+      background: white; border: 1.5px solid #E9D5FF; color: #7C3AED;
+      font-size: 13px; font-weight: 600; padding: 5px 13px; border-radius: 20px; cursor: pointer;
+      transition: all 0.2s;
+    }
+    .interest-pill.active { background: #7C3AED; color: white; border-color: #7C3AED; }
+    .grad-1 { background: linear-gradient(135deg,#FF1744 0%,#FF4081 100%); }
+    .grad-2 { background: linear-gradient(135deg,#7C3AED 0%,#A855F7 100%); }
+    .grad-3 { background: linear-gradient(135deg,#0EA5E9 0%,#38BDF8 100%); }
+    .grad-4 { background: linear-gradient(135deg,#10B981 0%,#34D399 100%); }
+    .grad-5 { background: linear-gradient(135deg,#F59E0B 0%,#FCD34D 100%); }
+    .grad-6 { background: linear-gradient(135deg,#EF4444 0%,#F87171 100%); }
+
+    /* EVENTS */
+    .week-strip { background: white; border-radius: 20px; padding: 14px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+    .week-days { display: flex; justify-content: space-between; }
+    .day-cell { display: flex; flex-direction: column; align-items: center; gap: 5px; padding: 7px 5px; border-radius: 14px; cursor: pointer; min-width: 38px; }
+    .day-cell.today { background: linear-gradient(135deg,#7C3AED,#A855F7); }
+    .day-name { font-size: 10px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; }
+    .day-cell.today .day-name { color: rgba(255,255,255,0.8); }
+    .day-num { font-size: 17px; font-weight: 700; color: #1a1a2e; }
+    .day-cell.today .day-num { color: white; }
+    .day-dot { width: 5px; height: 5px; border-radius: 50%; background: #FF4081; }
+    .day-cell.today .day-dot { background: white; }
+    .day-dot.hidden { opacity: 0; }
+    .events-section-title { font-size: 12px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .event-card {
+      background: white; border-radius: 16px; padding: 12px 14px; margin-bottom: 10px;
+      display: flex; align-items: center; gap: 12px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.06); cursor: pointer;
+      transition: transform 0.15s;
+    }
+    .event-card:active { transform: scale(0.98); }
+    .event-color-bar { width: 4px; height: 48px; border-radius: 4px; flex-shrink: 0; }
+    .event-time-col { min-width: 48px; }
+    .event-time { font-size: 13px; font-weight: 700; color: #7C3AED; }
+    .event-ampm { font-size: 11px; color: #9CA3AF; }
+    .event-info { flex: 1; }
+    .event-name { font-size: 14px; font-weight: 700; color: #1a1a2e; margin-bottom: 2px; }
+    .event-location { font-size: 12px; color: #6B7280; }
+    .event-badge { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 10px; flex-shrink: 0; }
+    .badge-live { background: #FEE2E2; color: #EF4444; }
+    .badge-today { background: #EDE9FE; color: #7C3AED; }
+    .badge-soon { background: #F0FDF4; color: #22c55e; }
+    .add-event-btn {
+      width: 46px; height: 46px;
+      background: linear-gradient(135deg,#7C3AED,#A855F7);
+      border: none; border-radius: 14px; color: white; font-size: 24px; cursor: pointer;
+      display: flex; align-items: center; justify-content: center;
+      box-shadow: 0 4px 14px rgba(124,58,237,0.4);
+    }
+
+    /* MAP */
+    #map-container { height: 260px; border-radius: 20px; overflow: hidden; margin-bottom: 14px; box-shadow: 0 4px 20px rgba(0,0,0,0.12); }
+    .map-filter-tabs { display: flex; gap: 8px; margin-bottom: 10px; }
+    .map-tab { padding: 7px 16px; border-radius: 20px; border: none; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .map-tab.active { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; }
+    .map-tab:not(.active) { background: white; color: #6B7280; }
+    .map-active-label { font-size: 13px; margin-bottom: 12px; }
+    .map-active-label strong { color: #22c55e; }
+    .nearby-title { font-size: 12px; font-weight: 700; color: #374151; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 10px; }
+    .nearby-friends { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 4px; }
+    .nearby-friends::-webkit-scrollbar { display: none; }
+    .friend-chip { display: flex; flex-direction: column; align-items: center; gap: 4px; cursor: pointer; flex-shrink: 0; }
+    .friend-avatar {
+      width: 50px; height: 50px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 17px; font-weight: 700; color: white; position: relative;
+    }
+    .online-dot { position: absolute; bottom: 2px; right: 2px; width: 11px; height: 11px; background: #22c55e; border-radius: 50%; border: 2px solid white; }
+    .friend-name { font-size: 11px; font-weight: 600; color: #374151; }
+
+    /* POINTS */
+    .points-hero {
+      background: linear-gradient(135deg,#7C3AED,#A855F7);
+      border-radius: 24px; padding: 20px; margin-bottom: 14px;
+      position: relative; overflow: hidden;
+    }
+    .points-hero::before { content: ''; position: absolute; top: -30px; right: -30px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%; }
+    .points-hero-top { display: flex; align-items: center; gap: 14px; }
+    .hero-avatar { width: 58px; height: 58px; border-radius: 50%; background: rgba(255,255,255,0.2); display: flex; align-items: center; justify-content: center; font-size: 24px; font-weight: 800; color: white; border: 3px solid rgba(255,255,255,0.4); }
+    .hero-info { color: white; }
+    .hero-campus-name { font-size: 15px; font-weight: 700; }
+    .hero-pts-big { font-size: 34px; font-weight: 900; }
+    .hero-pts-label { font-size: 12px; opacity: 0.8; }
+    .progress-card { background: white; border-radius: 16px; padding: 14px; margin-bottom: 12px; }
+    .progress-labels { display: flex; justify-content: space-between; margin-bottom: 8px; }
+    .prog-label-from { font-size: 13px; font-weight: 700; color: #7C3AED; }
+    .prog-label-to { font-size: 13px; font-weight: 600; color: #9CA3AF; }
+    .progress-bar-bg { height: 10px; background: #F3F4F6; border-radius: 10px; overflow: hidden; margin-bottom: 6px; }
+    .progress-bar-fill { height: 100%; background: linear-gradient(90deg,#7C3AED,#EC4899); border-radius: 10px; }
+    .progress-note { font-size: 12px; color: #9CA3AF; text-align: right; }
+    .upgrade-banner { background: linear-gradient(135deg,#FEF3C7,#FDE68A); border-radius: 16px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+    .upgrade-icon { width: 38px; height: 38px; background: linear-gradient(135deg,#FF6B35,#FFB347); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .upgrade-text { flex: 1; }
+    .upgrade-text strong { font-size: 13px; display: block; color: #92400E; }
+    .upgrade-text span { font-size: 11px; color: #B45309; }
+    .upgrade-btn { background: linear-gradient(135deg,#FF6B35,#FFB347); color: white; border: none; border-radius: 12px; padding: 7px 12px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+    .pts-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .pts-tab { flex: 1; padding: 9px; border-radius: 14px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .pts-tab.active { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; }
+    .pts-tab:not(.active) { background: white; color: #6B7280; }
+    .badge-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .badge-card { background: white; border-radius: 16px; padding: 14px; text-align: center; }
+    .badge-icon { font-size: 28px; margin-bottom: 5px; }
+    .badge-name { font-size: 13px; font-weight: 700; color: #1a1a2e; margin-bottom: 2px; }
+    .badge-desc { font-size: 11px; color: #9CA3AF; }
+    .badge-pts { display: inline-block; background: #EDE9FE; color: #7C3AED; font-size: 11px; font-weight: 700; padding: 2px 8px; border-radius: 10px; margin-top: 5px; }
+
+    /* CONNECT */
+    .connect-tabs { display: flex; gap: 8px; margin-bottom: 14px; }
+    .connect-tab { flex: 1; padding: 9px; border-radius: 14px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; }
+    .connect-tab.active { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; }
+    .connect-tab:not(.active) { background: white; color: #6B7280; }
+    .friends-row { display: flex; gap: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 8px; margin-bottom: 14px; }
+    .friends-row::-webkit-scrollbar { display: none; }
+    .feed-item { background: white; border-radius: 16px; padding: 12px; display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .feed-avatar { width: 42px; height: 42px; border-radius: 50%; font-size: 15px; font-weight: 700; color: white; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .feed-content { flex: 1; }
+    .feed-text { font-size: 13px; color: #1a1a2e; margin-bottom: 3px; line-height: 1.4; }
+    .feed-time { font-size: 11px; color: #9CA3AF; }
+    .feed-pts { font-size: 11px; font-weight: 700; color: #FF6B35; }
+    .feed-heart { font-size: 18px; cursor: pointer; color: #E5E7EB; transition: color 0.2s, transform 0.2s; }
+    .feed-heart.liked { color: #EF4444; transform: scale(1.2); }
+    .suggested-card { background: white; border-radius: 14px; padding: 11px 13px; display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .suggested-info { flex: 1; }
+    .suggested-name { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+    .suggested-detail { font-size: 12px; color: #6B7280; }
+    .add-friend-btn { background: #EDE9FE; color: #7C3AED; border: none; border-radius: 10px; padding: 7px 13px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; transition: all 0.2s; }
+    .add-friend-btn.added { background: #7C3AED; color: white; }
+
+    /* BOTTOM NAV */
+    .bottom-nav { background: white; border-top: 1px solid #F3F4F6; display: flex; padding: 8px 8px 18px; flex-shrink: 0; }
+    .nav-btn { flex: 1; border: none; background: none; display: flex; flex-direction: column; align-items: center; gap: 2px; cursor: pointer; padding: 6px 4px; border-radius: 14px; transition: all 0.2s; }
+    .nav-btn.active { background: linear-gradient(135deg,#7C3AED,#A855F7); }
+    .nav-icon { font-size: 20px; line-height: 1; }
+    .nav-label { font-size: 10px; font-weight: 600; color: #9CA3AF; }
+    .nav-btn.active .nav-label { color: white; }
+
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 110px; left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: #1a1a2e; color: white;
+      padding: 10px 18px; border-radius: 20px;
+      font-size: 13px; font-weight: 600;
+      opacity: 0; transition: all 0.3s;
+      pointer-events: none; z-index: 999;
+      white-space: nowrap; max-width: 340px;
+      text-align: center;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    /* SOCIAL FEED */
+    .post-card { background: white; border-radius: 18px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+    .post-header { display: flex; align-items: center; gap: 10px; padding: 12px 14px 8px; }
+    .post-avatar { width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: 700; color: white; flex-shrink: 0; }
+    .post-meta { flex: 1; }
+    .post-name { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+    .post-time { font-size: 11px; color: #9CA3AF; }
+    .post-club-tag { font-size: 11px; font-weight: 600; background: #EDE9FE; color: #7C3AED; padding: 2px 8px; border-radius: 8px; }
+    .post-body { padding: 0 14px 10px; font-size: 13px; color: #374151; line-height: 1.5; }
+    .post-image { width: 100%; height: 140px; object-fit: cover; display: flex; align-items: center; justify-content: center; font-size: 36px; margin-bottom: 8px; border-radius: 12px; }
+    .post-actions { display: flex; gap: 0; border-top: 1px solid #F3F4F6; }
+    .post-action-btn { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 9px 4px; font-size: 12px; font-weight: 600; color: #6B7280; background: none; border: none; cursor: pointer; transition: color 0.2s; border-radius: 0; }
+    .post-action-btn:hover { color: #7C3AED; }
+    .post-action-btn.liked { color: #EF4444; }
+    .post-action-btn.liked svg path { fill: #EF4444; }
+
+    /* AD CARDS */
+    .ad-card { background: white; border-radius: 18px; margin-bottom: 10px; overflow: hidden; box-shadow: 0 2px 10px rgba(0,0,0,0.05); border: 1.5px solid #F3F4F6; }
+    .ad-label-bar { display: flex; align-items: center; justify-content: space-between; padding: 7px 12px; background: #FAFAFA; border-bottom: 1px solid #F3F4F6; }
+    .ad-sponsored { font-size: 10px; font-weight: 600; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; }
+    .ad-x { font-size: 14px; color: #D1D5DB; cursor: pointer; background: none; border: none; }
+    .ad-body { padding: 12px 14px; }
+    .ad-brand-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+    .ad-logo { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 20px; flex-shrink: 0; }
+    .ad-brand-name { font-size: 14px; font-weight: 800; color: #1a1a2e; }
+    .ad-brand-cat { font-size: 11px; color: #9CA3AF; }
+    .ad-image { width: 100%; height: 110px; border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; justify-content: center; font-size: 32px; }
+    .ad-headline { font-size: 15px; font-weight: 800; color: #1a1a2e; margin-bottom: 4px; }
+    .ad-copy { font-size: 12px; color: #6B7280; margin-bottom: 10px; line-height: 1.4; }
+    .ad-cta { width: 100%; padding: 10px; border: none; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+    /* CREATE POST BOX */
+    .create-post { background: white; border-radius: 16px; padding: 12px 14px; margin-bottom: 10px; display: flex; align-items: center; gap: 10px; }
+    .create-post-input { flex: 1; background: #F5F3FF; border: none; border-radius: 20px; padding: 9px 14px; font-size: 13px; color: #9CA3AF; font-family: inherit; cursor: pointer; }
+    .create-post-btn { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; border: none; border-radius: 12px; padding: 8px 14px; font-size: 12px; font-weight: 700; cursor: pointer; white-space: nowrap; }
+
+    @media (max-width: 440px) {
+      body { padding: 0; align-items: flex-start; background: #F5F3FF; }
+      .phone { width: 100%; height: 100vh; border-radius: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="phone">
+  <div class="status-bar">
+    <span>9:41</span>
+    <div class="notch"></div>
+    <div class="status-icons">
+      <span style="font-size:12px;letter-spacing:-1px">●●●</span>
+      <div class="battery"><div class="battery-fill"></div></div>
+    </div>
+  </div>
+
+  <div class="app-header">
+    <div class="app-logo">
+      <div class="logo-icon">🎓</div>
+      <span class="logo-name">One Campus</span>
+    </div>
+    <div class="pts-badge">⚡ <span id="pts-display">2,456</span> pts</div>
+  </div>
+
+  <div class="screens">
+
+    <!-- DISCOVER -->
+    <div class="screen active" id="screen-discover">
+      <div class="screen-header">
+        <div>
+          <div class="screen-title">Discover</div>
+          <div class="screen-sub">Find your people &amp; passions</div>
+        </div>
+        <button style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#A855F7);border:none;font-size:18px;cursor:pointer;color:white;" onclick="showToast('Quick Match on! ⚡')">⚡</button>
+      </div>
+      <div class="discover-card-stack" id="card-stack"></div>
+      <div class="disc-actions">
+        <button class="disc-btn skip" onclick="swipeCard('skip')" title="Skip">✕</button>
+        <button class="disc-btn super" onclick="swipeCard('super')" title="Super Join">⭐</button>
+        <button class="disc-btn join" onclick="swipeCard('join')" title="Join">✓</button>
+      </div>
+      <div class="disc-interests">Filter by Interest</div>
+      <div class="interest-pills">
+        <div class="interest-pill active" onclick="toggleInterest(this)">All</div>
+        <div class="interest-pill" onclick="toggleInterest(this)">Tech</div>
+        <div class="interest-pill" onclick="toggleInterest(this)">Engineering</div>
+        <div class="interest-pill" onclick="toggleInterest(this)">Business</div>
+        <div class="interest-pill" onclick="toggleInterest(this)">Science</div>
+        <div class="interest-pill" onclick="toggleInterest(this)">Arts</div>
+        <div class="interest-pill" onclick="toggleInterest(this)">Sports</div>
+      </div>
+    </div>
+
+    <!-- EVENTS -->
+    <div class="screen" id="screen-events">
+      <div class="screen-header">
+        <div>
+          <div class="screen-title">Events</div>
+          <div class="screen-sub">What's happening on campus</div>
+        </div>
+        <button class="add-event-btn" onclick="showToast('Add event — Coming soon! 📅')">+</button>
+      </div>
+      <div class="week-strip"><div class="week-days" id="week-days"></div></div>
+      <div class="events-section-title" id="events-count-title">6 UPCOMING EVENTS</div>
+      <div id="events-list"></div>
+    </div>
+
+    <!-- MAP -->
+    <div class="screen" id="screen-map">
+      <div class="screen-header">
+        <div>
+          <div class="screen-title">Campus Map</div>
+          <div class="map-active-label"><strong>6 active</strong> right now</div>
+        </div>
+        <button style="background:linear-gradient(135deg,#7C3AED,#A855F7);color:white;border:none;border-radius:14px;padding:8px 16px;font-size:13px;font-weight:700;cursor:pointer;" onclick="showToast('Zones view — Coming soon!')">Zones</button>
+      </div>
+      <div class="map-filter-tabs">
+        <button class="map-tab active" onclick="setMapTab(this)">Everyone</button>
+        <button class="map-tab" onclick="setMapTab(this)">Friends</button>
+        <button class="map-tab" onclick="setMapTab(this)">Clubs</button>
+      </div>
+      <div id="map-container"></div>
+      <div class="nearby-title">NEARBY FRIENDS</div>
+      <div class="nearby-friends" id="nearby-friends"></div>
+    </div>
+
+    <!-- POINTS -->
+    <div class="screen" id="screen-points">
+      <div class="points-hero">
+        <div class="points-hero-top">
+          <div class="hero-avatar">LB</div>
+          <div class="hero-info">
+            <div class="hero-campus-name">Your Campus</div>
+            <div class="hero-pts-big" id="hero-pts">2,456</div>
+            <div class="hero-pts-label">Campus Explorer · Purdue</div>
+          </div>
+        </div>
+      </div>
+      <div class="progress-card">
+        <div class="progress-labels">
+          <span class="prog-label-from">Campus Explorer</span>
+          <span class="prog-label-to">Campus Champion</span>
+        </div>
+        <div class="progress-bar-bg"><div class="progress-bar-fill" style="width:72%"></div></div>
+        <div class="progress-note">944 pts to go</div>
+      </div>
+      <div class="upgrade-banner">
+        <div class="upgrade-icon">⭐</div>
+        <div class="upgrade-text">
+          <strong>Unlock AI Planner ✨</strong>
+          <span>Personalized suggestions &amp; 2x points</span>
+        </div>
+        <button class="upgrade-btn" onclick="showToast('AI Planner — Coming Soon! 🚀')">Upgrade</button>
+      </div>
+      <div class="pts-tabs">
+        <button class="pts-tab active" onclick="setPtsTab(this,'badges')">🏅 Badges</button>
+        <button class="pts-tab" onclick="setPtsTab(this,'weekly')">⚡ Weekly</button>
+        <button class="pts-tab" onclick="setPtsTab(this,'ranks')">🏆 Ranks</button>
+      </div>
+      <div id="pts-content"></div>
+    </div>
+
+    <!-- CONNECT -->
+    <div class="screen" id="screen-connect">
+      <div class="screen-header">
+        <div>
+          <div class="screen-title">Connections</div>
+          <div class="screen-sub">5 friends · 6 suggested</div>
+        </div>
+        <button style="width:40px;height:40px;border:1.5px solid #E9D5FF;background:white;border-radius:50%;font-size:16px;cursor:pointer;" onclick="showToast('Search friends...')">🔍</button>
+      </div>
+      <div class="connect-tabs">
+        <button class="connect-tab active" onclick="setConnectTab(this,'feed')">🔥 Feed</button>
+        <button class="connect-tab" onclick="setConnectTab(this,'friends')">👥 Friends</button>
+        <button class="connect-tab" onclick="setConnectTab(this,'discover')">✨ Discover</button>
+      </div>
+      <div id="connect-content"></div>
+    </div>
+
+  </div>
+
+  <div class="bottom-nav">
+    <button class="nav-btn active" onclick="switchScreen('discover',this)">
+      <span class="nav-icon">🧭</span><span class="nav-label">Discover</span>
+    </button>
+    <button class="nav-btn" onclick="switchScreen('events',this)">
+      <span class="nav-icon">📅</span><span class="nav-label">Events</span>
+    </button>
+    <button class="nav-btn" onclick="switchScreen('map',this)">
+      <span class="nav-icon">🗺️</span><span class="nav-label">Map</span>
+    </button>
+    <button class="nav-btn" onclick="switchScreen('points',this)">
+      <span class="nav-icon">🏆</span><span class="nav-label">Points</span>
+    </button>
+    <button class="nav-btn" onclick="switchScreen('connect',this)">
+      <span class="nav-icon">👥</span><span class="nav-label">Connect</span>
+    </button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+const clubs = [
+  { name: 'Purdue Hackers', tag: 'TECH', desc: 'Build, ship, repeat. Weekly hackathons & workshops at WALC.', members: 847, location: 'WALC 1055', grad: 'grad-1' },
+  { name: 'NSBE Purdue', tag: 'ENGINEERING', desc: 'National Society of Black Engineers — empower & excel.', members: 312, location: 'ARMS 1010', grad: 'grad-2' },
+  { name: 'SWE Purdue', tag: 'ENGINEERING', desc: 'Society of Women Engineers — breaking barriers daily.', members: 421, location: 'PMU Rm 226', grad: 'grad-3' },
+  { name: 'Boilermaker Invest Club', tag: 'BUSINESS', desc: 'Manage a real $50k student-run investment portfolio.', members: 156, location: 'Rawls 1071', grad: 'grad-4' },
+  { name: 'Purdue Robotics Team', tag: 'TECH', desc: 'Design & build competition robots. VEX & FRC.', members: 234, location: 'ME Building 164', grad: 'grad-5' },
+  { name: 'Pre-Med Society', tag: 'SCIENCE', desc: 'MCAT prep, shadowing hours, and med school networking.', members: 567, location: 'LILLY B01', grad: 'grad-6' },
+];
+
+const events = [
+  { name: 'Hack Purdue Kickoff', time: '7:00', ampm: 'PM', location: 'WALC 1055', badge: 'live', color: '#FF1744', day: 0 },
+  { name: 'Engineering Career Fair', time: '10:00', ampm: 'AM', location: 'PMU Ballrooms', badge: 'today', color: '#7C3AED', day: 0 },
+  { name: 'NSBE General Meeting', time: '6:00', ampm: 'PM', location: 'ARMS 1010', badge: 'soon', color: '#0EA5E9', day: 2 },
+  { name: 'Astronomy Night', time: '9:00', ampm: 'PM', location: 'Lilly Hall Rooftop', badge: 'soon', color: '#10B981', day: 3 },
+  { name: 'SWE Workshop: Resume', time: '4:00', ampm: 'PM', location: 'Rawls 1071', badge: 'soon', color: '#F59E0B', day: 4 },
+  { name: 'Boilermaker 5K Fun Run', time: '8:00', ampm: 'AM', location: 'CoRec Track', badge: 'soon', color: '#EF4444', day: 5 },
+];
+
+const friends = [
+  { name: 'Maya', initial: 'M', color: '#7C3AED', major: 'CS Sophomore', online: true },
+  { name: 'Jordan', initial: 'J', color: '#EF4444', major: 'ME Junior', online: true },
+  { name: 'Sam', initial: 'S', color: '#10B981', major: 'Business Senior', online: false },
+  { name: 'Priya', initial: 'P', color: '#EC4899', major: 'Pre-Med Freshman', online: true },
+  { name: 'Tyler', initial: 'T', color: '#0EA5E9', major: 'EE Junior', online: true },
+  { name: 'Zoe', initial: 'Z', color: '#F59E0B', major: 'Psychology Soph.', online: false },
+  { name: 'Alex', initial: 'A', color: '#06B6D4', major: 'Data Science', online: true },
+];
+
+const feed = [
+  { person: 'Sam K.', initial: 'S', color: '#10B981', text: 'earned the 🔥 <strong style="color:#7C3AED">On Fire badge</strong>', time: '10m ago', pts: '+50' },
+  { person: 'Maya L.', initial: 'M', color: '#7C3AED', text: 'joined <strong style="color:#7C3AED">Purdue Hackers</strong> — 3rd club this week!', time: '25m ago', pts: '+100' },
+  { person: 'Jordan R.', initial: 'J', color: '#EF4444', text: 'checked in at <strong style="color:#7C3AED">WALC</strong> · Hack Purdue event', time: '1h ago', pts: '+75' },
+  { person: 'Priya M.', initial: 'P', color: '#EC4899', text: "RSVP'd to <strong style=\"color:#7C3AED\">Engineering Career Fair</strong>", time: '2h ago', pts: '+25' },
+  { person: 'Tyler B.', initial: 'T', color: '#0EA5E9', text: 'reached <strong style="color:#7C3AED">Campus Explorer</strong> level 🎉', time: '3h ago', pts: '+200' },
+];
+
+const badges = [
+  { icon: '🔥', name: 'On Fire', desc: '7-day streak', pts: '+500 pts' },
+  { icon: '🚀', name: 'Early Adopter', desc: 'Joined Week 1', pts: '+250 pts' },
+  { icon: '🤝', name: 'Connector', desc: '10 friends made', pts: '+300 pts' },
+  { icon: '📅', name: 'Event Goer', desc: '5 events attended', pts: '+400 pts' },
+  { icon: '🏛️', name: 'Club Hopper', desc: 'Joined 3 clubs', pts: '+350 pts' },
+  { icon: '⭐', name: 'Top Contributor', desc: 'Weekly #1 rank', pts: '+600 pts' },
+];
+
+const posts = [
+  { id: 'p1', person: 'Maya L.', initial: 'M', color: '#7C3AED', time: '5m ago', club: 'Purdue Hackers', text: 'Just finished building my first full-stack app at tonight\'s Hack Purdue session 🚀 If anyone wants to collab on something this weekend, drop a comment!', emoji: '💻', bg: '#EDE9FE', likes: 24, comments: 7 },
+  { id: 'p2', person: 'Jordan R.', initial: 'J', color: '#EF4444', time: '18m ago', club: 'NSBE Purdue', text: 'Engineering Career Fair tomorrow at PMU Ballrooms — came prepped with 30 copies of my resume. See you all there! 💼', emoji: '🏛️', bg: '#FEE2E2', likes: 41, comments: 12 },
+  { id: 'p3', person: 'Priya M.', initial: 'P', color: '#EC4899', time: '45m ago', club: 'Pre-Med Society', text: 'Study group forming for BIOL 201 midterm next Friday. Meeting at WALC 2nd floor, 6pm. Comment to join 📚', emoji: '🔬', bg: '#FCE7F3', likes: 18, comments: 22 },
+  { id: 'p4', person: 'Tyler B.', initial: 'T', color: '#0EA5E9', time: '1h ago', club: null, text: 'CoRec just got new rowing machines 🏋️ Hit a new PR today. Anyone else training for the Boilermaker 5K on Saturday?', emoji: '💪', bg: '#E0F2FE', likes: 33, comments: 5 },
+  { id: 'p5', person: 'Sam K.', initial: 'S', color: '#10B981', time: '2h ago', club: 'Boilermaker Invest Club', text: 'BIG just closed our Q2 portfolio review — up 12% this semester. Recruitment for new members opens Monday. DM me for details 📈', emoji: '📊', bg: '#D1FAE5', likes: 57, comments: 19 },
+  { id: 'p6', person: 'Zoe T.', initial: 'Z', color: '#F59E0B', time: '3h ago', club: null, text: 'Astronomy Night on the Lilly Hall roof Thursday at 9pm — Jupiter is visible with the naked eye right now 🪐 Free to all students!', emoji: '🔭', bg: '#FEF3C7', likes: 89, comments: 31 },
+];
+
+const ads = [
+  {
+    id: 'ad1', brand: "Domino's", cat: 'Food Delivery', logo: '🍕',
+    logoBg: 'linear-gradient(135deg,#E63946,#FF6B6B)',
+    imageBg: 'linear-gradient(135deg,#E63946,#FF6B6B)',
+    headline: '30-min delivery to your dorm 🍕',
+    copy: 'Late night studying? Get a large pizza delivered to your room for just $7.99. Use code BOILER at checkout.',
+    cta: 'Order Now', ctaBg: 'linear-gradient(135deg,#E63946,#FF6B6B)', ctaColor: 'white',
+  },
+  {
+    id: 'ad2', brand: 'Chegg', cat: 'Textbooks & Tutoring', logo: '📚',
+    logoBg: 'linear-gradient(135deg,#F4792B,#FBBF24)',
+    imageBg: 'linear-gradient(135deg,#FEF3C7,#FDE68A)',
+    headline: 'Rent textbooks from $9.99 📖',
+    copy: 'Stop overpaying at the bookstore. Rent or buy used textbooks and get 24/7 expert homework help.',
+    cta: 'Save on Books', ctaBg: 'linear-gradient(135deg,#F4792B,#FBBF24)', ctaColor: 'white',
+  },
+  {
+    id: 'ad3', brand: 'Spotify', cat: 'Student Discount', logo: '🎵',
+    logoBg: 'linear-gradient(135deg,#1DB954,#17A349)',
+    imageBg: 'linear-gradient(135deg,#D1FAE5,#A7F3D0)',
+    headline: 'Spotify Premium — 3 months free 🎧',
+    copy: 'Verified students get 3 months free then just $5.99/mo. Study better with music, podcasts & no ads.',
+    cta: 'Get 3 Months Free', ctaBg: 'linear-gradient(135deg,#1DB954,#17A349)', ctaColor: 'white',
+  },
+  {
+    id: 'ad4', brand: 'Amazon Prime', cat: 'Student Membership', logo: '📦',
+    logoBg: 'linear-gradient(135deg,#FF9900,#FFB347)',
+    imageBg: 'linear-gradient(135deg,#FEF3C7,#FDE68A)',
+    headline: 'Free 6-month Prime Student trial 📦',
+    copy: 'Free 2-day shipping, Prime Video, and exclusive student deals. Ship textbooks back home for free.',
+    cta: 'Start Free Trial', ctaBg: 'linear-gradient(135deg,#FF9900,#FFB347)', ctaColor: 'white',
+  },
+];
+
+const suggested = [
+  { name: 'Alex T.', initial: 'A', color: '#06B6D4', detail: 'Data Science · 3 mutual friends' },
+  { name: 'Olivia P.', initial: 'O', color: '#8B5CF6', detail: 'CS Junior · Purdue Hackers' },
+  { name: 'Marcus W.', initial: 'M', color: '#F59E0B', detail: 'ME Sophomore · NSBE member' },
+  { name: 'Emily C.', initial: 'E', color: '#EF4444', detail: 'Biology · Pre-Med Society' },
+  { name: 'Dev P.', initial: 'D', color: '#10B981', detail: 'ECE · Robotics Team' },
+  { name: 'Sofia R.', initial: 'S', color: '#EC4899', detail: 'Business · Invest Club' },
+];
+
+let currentCardIndex = 0;
+let points = 2456;
+let mapInitialized = false;
+const joinedClubs = new Set();
+const rsvpdEvents = new Set();
+const addedFriends = new Set();
+const likedPosts = new Set();
+
+document.addEventListener('DOMContentLoaded', () => {
+  renderDiscoverCards();
+  renderWeekCalendar();
+  renderEvents(null);
+  renderNearbyFriends();
+  renderPtsContent('badges');
+  renderConnectContent('feed');
+});
+
+// DISCOVER
+function renderDiscoverCards() {
+  const stack = document.getElementById('card-stack');
+  stack.innerHTML = '';
+  const pool = clubs.slice(currentCardIndex % clubs.length);
+  const show = [...pool, ...clubs].slice(0, 3);
+  show.forEach((club, i) => {
+    const card = document.createElement('div');
+    card.className = `disc-card ${club.grad} ${i === 0 ? 'front' : i === 1 ? 'behind1' : 'behind2'}`;
+    const alreadyJoined = joinedClubs.has(club.name);
+    card.innerHTML = `
+      <div class="disc-card-tag">${club.tag}</div>
+      <div class="disc-card-name">${club.name}</div>
+      <div class="disc-card-desc">${club.desc}</div>
+      <div class="disc-card-meta">
+        <span class="disc-meta-pill">👥 ${club.members.toLocaleString()} members</span>
+        <span class="disc-meta-pill">📍 ${club.location}</span>
+        ${alreadyJoined ? '<span class="disc-meta-pill" style="background:rgba(255,255,255,0.4)">✓ Joined</span>' : ''}
+      </div>`;
+    let startX = 0;
+    card.addEventListener('mousedown', e => { startX = e.clientX; });
+    card.addEventListener('mouseup', e => { if (Math.abs(e.clientX - startX) > 50) swipeCard(e.clientX > startX ? 'join' : 'skip'); });
+    card.addEventListener('touchstart', e => { startX = e.touches[0].clientX; }, { passive: true });
+    card.addEventListener('touchend', e => { const d = e.changedTouches[0].clientX - startX; if (Math.abs(d) > 50) swipeCard(d > 0 ? 'join' : 'skip'); });
+    stack.appendChild(card);
+  });
+}
+
+function swipeCard(action) {
+  const front = document.querySelector('.disc-card.front');
+  if (!front) return;
+  const club = clubs[currentCardIndex % clubs.length];
+  front.style.transform = (action === 'join' || action === 'super') ? 'translateX(130%) rotate(15deg)' : 'translateX(-130%) rotate(-15deg)';
+  front.style.opacity = '0';
+  if (action === 'join' || action === 'super') {
+    if (joinedClubs.has(club.name)) {
+      showToast(`Already a member of ${club.name}`);
+    } else {
+      joinedClubs.add(club.name);
+      const pts = action === 'super' ? 150 : 75;
+      addPoints(pts);
+      showToast(`${action === 'super' ? '⭐ Super joined' : '✓ Joined'} ${club.name}! +${pts} pts`);
+    }
+  } else {
+    showToast(`Skipped — next up!`);
+  }
+  currentCardIndex++;
+  setTimeout(renderDiscoverCards, 300);
+}
+
+function toggleInterest(el) {
+  document.querySelectorAll('.interest-pill').forEach(p => p.classList.remove('active'));
+  el.classList.add('active');
+  showToast(`Filtering by: ${el.textContent}`);
+}
+
+// EVENTS
+function renderWeekCalendar() {
+  const container = document.getElementById('week-days');
+  const today = new Date();
+  const dow = today.getDay();
+  const monday = new Date(today);
+  monday.setDate(today.getDate() - (dow === 0 ? 6 : dow - 1));
+  const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+  container.innerHTML = '';
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const isToday = d.toDateString() === today.toDateString();
+    const hasEvent = events.some(e => e.day === i);
+    const cell = document.createElement('div');
+    cell.className = `day-cell${isToday ? ' today' : ''}`;
+    cell.innerHTML = `<span class="day-name">${dayNames[d.getDay()]}</span><span class="day-num">${d.getDate()}</span><span class="day-dot${hasEvent ? '' : ' hidden'}"></span>`;
+    cell.onclick = () => {
+      document.querySelectorAll('.day-cell').forEach(c => c.classList.remove('today'));
+      cell.classList.add('today');
+      renderEvents(i);
+    };
+    container.appendChild(cell);
+  }
+}
+
+function renderEvents(dayFilter) {
+  const list = document.getElementById('events-list');
+  const title = document.getElementById('events-count-title');
+  const filtered = dayFilter === null ? events : events.filter(e => e.day === dayFilter);
+  title.textContent = `${filtered.length} UPCOMING EVENT${filtered.length !== 1 ? 'S' : ''}`;
+  list.innerHTML = filtered.length ? filtered.map(e => {
+    const already = rsvpdEvents.has(e.name);
+    return `<div class="event-card" onclick="rsvpEvent('${e.name.replace(/'/g,"\\'")}')">
+      <div class="event-color-bar" style="background:${e.color}"></div>
+      <div class="event-time-col"><div class="event-time">${e.time}</div><div class="event-ampm">${e.ampm}</div></div>
+      <div class="event-info">
+        <div class="event-name">${e.name}</div>
+        <div class="event-location">📍 ${e.location}</div>
+      </div>
+      <span class="event-badge ${already ? '' : 'badge-' + e.badge}" style="${already ? 'background:#F0FDF4;color:#22c55e' : ''}">${already ? '✓ Going' : e.badge === 'live' ? '🔴 Live' : e.badge === 'today' ? 'Today' : 'Soon'}</span>
+    </div>`;
+  }).join('') : `<div style="text-align:center;padding:30px;color:#9CA3AF;font-size:14px;">No events this day</div>`;
+}
+
+function rsvpEvent(name) {
+  if (rsvpdEvents.has(name)) {
+    showToast(`You're already going to ${name}`);
+  } else {
+    rsvpdEvents.add(name);
+    addPoints(25);
+    showToast(`RSVP'd to ${name}! +25 pts`);
+    renderEvents(null);
+  }
+}
+
+// MAP
+function initMap() {
+  if (mapInitialized) return;
+  mapInitialized = true;
+  const map = L.map('map-container', { center: [40.4253, -86.9132], zoom: 15, zoomControl: false, attributionControl: false });
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+
+  const spots = [
+    { lat: 40.4265, lng: -86.9176, label: 'WALC', friend: { i: 'J', c: '#EF4444', n: 'Jordan — ME Junior' } },
+    { lat: 40.4253, lng: -86.9096, label: 'PMU', friend: { i: 'M', c: '#7C3AED', n: 'Maya — CS Sophomore' } },
+    { lat: 40.4215, lng: -86.9238, label: 'CoRec', friend: { i: 'T', c: '#0EA5E9', n: 'Tyler — EE Junior' } },
+    { lat: 40.4278, lng: -86.9165, label: 'ARMS', friend: { i: 'P', c: '#EC4899', n: 'Priya — Pre-Med' } },
+    { lat: 40.4242, lng: -86.9210, label: 'Rawls', friend: { i: 'S', c: '#10B981', n: 'Sam — Business' } },
+    { lat: 40.4251, lng: -86.9162, label: 'Stewart Ctr', friend: null },
+  ];
+
+  spots.forEach(s => {
+    L.marker([s.lat, s.lng], {
+      icon: L.divIcon({ html: `<div style="background:white;padding:3px 8px;border-radius:8px;font-size:10px;font-weight:700;color:#374151;box-shadow:0 2px 8px rgba(0,0,0,0.15);white-space:nowrap">${s.label}</div>`, className: '', iconAnchor: [20, 10] })
+    }).addTo(map);
+    if (s.friend) {
+      L.marker([s.lat + 0.0006, s.lng + 0.0006], {
+        icon: L.divIcon({ html: `<div style="width:30px;height:30px;background:${s.friend.c};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;color:white;border:3px solid white;box-shadow:0 3px 10px rgba(0,0,0,0.2)">${s.friend.i}</div>`, className: '', iconSize: [30,30], iconAnchor: [15,15] })
+      }).bindPopup(`<strong>${s.friend.n}</strong>`).addTo(map);
+    }
+  });
+}
+
+function renderNearbyFriends() {
+  document.getElementById('nearby-friends').innerHTML = friends.map(f => `
+    <div class="friend-chip" onclick="showToast('Viewing ${f.name} — ${f.major}')">
+      <div class="friend-avatar" style="background:${f.color}">${f.initial}${f.online ? '<span class="online-dot"></span>' : ''}</div>
+      <span class="friend-name">${f.name}</span>
+    </div>`).join('');
+}
+
+function setMapTab(btn) {
+  document.querySelectorAll('.map-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  showToast(`Map: ${btn.textContent} view`);
+}
+
+// POINTS
+function renderPtsContent(tab) {
+  const c = document.getElementById('pts-content');
+  if (tab === 'badges') {
+    c.innerHTML = `<div class="badge-grid">${badges.map(b => `<div class="badge-card"><div class="badge-icon">${b.icon}</div><div class="badge-name">${b.name}</div><div class="badge-desc">${b.desc}</div><div class="badge-pts">${b.pts}</div></div>`).join('')}</div>`;
+  } else if (tab === 'weekly') {
+    const leaders = [
+      { name: 'Leighton B.', pts: 2456, you: true },
+      { name: 'Maya L.', pts: 2210 },
+      { name: 'Jordan R.', pts: 1980 },
+      { name: 'Priya M.', pts: 1750 },
+      { name: 'Tyler B.', pts: 1600 },
+    ];
+    c.innerHTML = leaders.map((u, i) => `
+      <div style="background:${u.you ? 'linear-gradient(135deg,#EDE9FE,#FCE7F3)' : 'white'};border-radius:14px;padding:11px 14px;margin-bottom:8px;display:flex;align-items:center;gap:12px;">
+        <span style="font-size:18px;min-width:26px">${['🥇','🥈','🥉','#4','#5'][i]}</span>
+        <div style="flex:1;font-size:14px;font-weight:700;color:#1a1a2e">${u.name}${u.you ? ' <span style="color:#7C3AED;font-size:12px">(You)</span>' : ''}</div>
+        <div style="font-size:13px;font-weight:700;color:#7C3AED">⚡ ${u.pts.toLocaleString()}</div>
+      </div>`).join('');
+  } else {
+    c.innerHTML = `<div style="text-align:center;padding:24px 0"><div style="font-size:48px;margin-bottom:12px">🏆</div><div style="font-size:18px;font-weight:800;color:#7C3AED">Campus Explorer</div><div style="font-size:14px;color:#6B7280;margin-top:4px">Rank #3 at Purdue</div><div style="background:linear-gradient(135deg,#EDE9FE,#FCE7F3);border-radius:20px;padding:20px;margin-top:20px"><div style="font-size:32px;font-weight:900;color:#7C3AED">${points.toLocaleString()}</div><div style="font-size:13px;color:#6B7280">total points earned</div></div></div>`;
+  }
+}
+
+function setPtsTab(btn, tab) {
+  document.querySelectorAll('.pts-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderPtsContent(tab);
+}
+
+// CONNECT
+function renderConnectContent(tab) {
+  const c = document.getElementById('connect-content');
+  if (tab === 'feed') {
+    const row = `<div class="friends-row">${friends.map(f => `<div class="friend-chip" onclick="showToast('Messaging ${f.name}...')"><div class="friend-avatar" style="background:${f.color};width:50px;height:50px">${f.initial}${f.online ? '<span class="online-dot"></span>' : ''}</div><span class="friend-name">${f.name}</span></div>`).join('')}</div>`;
+    const createBox = `<div class="create-post"><div class="post-avatar" style="background:linear-gradient(135deg,#7C3AED,#A855F7);width:36px;height:36px;font-size:13px">LB</div><input class="create-post-input" placeholder="Share something with campus..." onclick="showToast('Post composer — coming soon! ✍️')" readonly /><button class="create-post-btn" onclick="showToast('Post composer — coming soon! ✍️')">Post</button></div>`;
+
+    let adIndex = 0;
+    const feedItems = posts.map((p, i) => {
+      const liked = likedPosts.has(p.id);
+      const postHtml = `
+        <div class="post-card">
+          <div class="post-header">
+            <div class="post-avatar" style="background:${p.color}">${p.initial}</div>
+            <div class="post-meta">
+              <div class="post-name">${p.person} ${p.club ? `<span class="post-club-tag">${p.club}</span>` : ''}</div>
+              <div class="post-time">${p.time}</div>
+            </div>
+            <button style="background:none;border:none;font-size:18px;color:#D1D5DB;cursor:pointer">···</button>
+          </div>
+          <div class="post-body">
+            <div class="post-image" style="background:${p.bg}">${p.emoji}</div>
+            ${p.text}
+          </div>
+          <div class="post-actions">
+            <button class="post-action-btn ${liked ? 'liked' : ''}" onclick="toggleLike('${p.id}',this)">
+              ${liked ? '❤️' : '🤍'} <span id="likes-${p.id}">${liked ? p.likes + 1 : p.likes}</span>
+            </button>
+            <button class="post-action-btn" onclick="showToast('Comments — coming soon! 💬')">
+              💬 ${p.comments}
+            </button>
+            <button class="post-action-btn" onclick="showToast('Shared! 🔗')">
+              🔗 Share
+            </button>
+          </div>
+        </div>`;
+
+      // Insert an ad after every 2nd post
+      let adHtml = '';
+      if ((i + 1) % 2 === 0 && adIndex < ads.length) {
+        const ad = ads[adIndex++];
+        adHtml = `
+          <div class="ad-card" id="${ad.id}">
+            <div class="ad-label-bar">
+              <span class="ad-sponsored">Sponsored</span>
+              <button class="ad-x" onclick="document.getElementById('${ad.id}').remove();showToast('Ad hidden')">✕</button>
+            </div>
+            <div class="ad-body">
+              <div class="ad-brand-row">
+                <div class="ad-logo" style="background:${ad.logoBg}">${ad.logo}</div>
+                <div>
+                  <div class="ad-brand-name">${ad.brand}</div>
+                  <div class="ad-brand-cat">${ad.cat}</div>
+                </div>
+              </div>
+              <div class="ad-image" style="background:${ad.imageBg}">${ad.logo}</div>
+              <div class="ad-headline">${ad.headline}</div>
+              <div class="ad-copy">${ad.copy}</div>
+              <button class="ad-cta" style="background:${ad.ctaBg};color:${ad.ctaColor}" onclick="showToast('Opening ${ad.brand}... 🔗')">${ad.cta}</button>
+            </div>
+          </div>`;
+      }
+      return postHtml + adHtml;
+    }).join('');
+
+    c.innerHTML = row + createBox + feedItems;
+  } else if (tab === 'friends') {
+    c.innerHTML = friends.map(f => `<div class="suggested-card"><div class="friend-avatar" style="background:${f.color};width:42px;height:42px;font-size:15px">${f.initial}</div><div class="suggested-info"><div class="suggested-name">${f.name}</div><div class="suggested-detail">${f.major}</div></div><button style="background:#EDE9FE;color:#7C3AED;border:none;border-radius:10px;padding:6px 12px;font-size:12px;font-weight:700;cursor:pointer" onclick="showToast('Messaging ${f.name}...')">Message</button></div>`).join('');
+  } else {
+    c.innerHTML = `<div style="font-size:12px;font-weight:700;color:#374151;text-transform:uppercase;letter-spacing:.5px;margin-bottom:10px">SUGGESTED FOR YOU</div>` + suggested.map(s => {
+      const already = addedFriends.has(s.name);
+      return `<div class="suggested-card"><div class="friend-avatar" style="background:${s.color};width:42px;height:42px;font-size:15px">${s.initial}</div><div class="suggested-info"><div class="suggested-name">${s.name}</div><div class="suggested-detail">${s.detail}</div></div><button class="add-friend-btn ${already ? 'added' : ''}" onclick="addFriend('${s.name.replace(/'/g,"\\'")}')">${already ? 'Added ✓' : '+ Add'}</button></div>`;
+    }).join('');
+  }
+}
+
+function toggleLike(postId, btn) {
+  const post = posts.find(p => p.id === postId);
+  if (!post) return;
+  const countEl = document.getElementById(`likes-${postId}`);
+  if (likedPosts.has(postId)) {
+    likedPosts.delete(postId);
+    btn.classList.remove('liked');
+    btn.innerHTML = `🤍 <span id="likes-${postId}">${post.likes}</span>`;
+  } else {
+    likedPosts.add(postId);
+    btn.classList.add('liked');
+    btn.innerHTML = `❤️ <span id="likes-${postId}">${post.likes + 1}</span>`;
+  }
+}
+
+function addFriend(name) {
+  if (addedFriends.has(name)) {
+    showToast(`Already sent a request to ${name}`);
+  } else {
+    addedFriends.add(name);
+    addPoints(10);
+    showToast(`Friend request sent to ${name}! +10 pts`);
+    renderConnectContent('discover');
+  }
+}
+
+function setConnectTab(btn, tab) {
+  document.querySelectorAll('.connect-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderConnectContent(tab);
+}
+
+// NAV
+function switchScreen(name, btn) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById(`screen-${name}`).classList.add('active');
+  btn.classList.add('active');
+  if (name === 'map') setTimeout(initMap, 100);
+}
+
+// UTILS
+function addPoints(n) {
+  points += n;
+  document.getElementById('pts-display').textContent = points.toLocaleString();
+  document.getElementById('hero-pts').textContent = points.toLocaleString();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.classList.remove('show'), 2500);
+}
+</script>
+</body>
+</html>

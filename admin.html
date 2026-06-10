@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Admin Portal — One Campus</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #F5F3FF; display: flex; min-height: 100vh; }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 220px; background: linear-gradient(160deg,#4C1D95,#7C3AED);
+      display: flex; flex-direction: column; padding: 24px 0; flex-shrink: 0;
+      position: fixed; top: 0; left: 0; height: 100vh; z-index: 100;
+    }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 28px; border-bottom: 1px solid rgba(255,255,255,0.12); }
+    .sidebar-logo-icon { width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .sidebar-logo-text { font-size: 15px; font-weight: 800; color: white; }
+    .sidebar-logo-badge { font-size: 10px; background: rgba(255,255,255,0.2); color: white; padding: 2px 6px; border-radius: 6px; margin-left: 4px; }
+    .sidebar-nav { padding: 16px 12px; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .nav-item {
+      display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+      border-radius: 12px; color: rgba(255,255,255,0.7); font-size: 13px; font-weight: 600;
+      cursor: pointer; transition: all 0.2s; text-decoration: none;
+    }
+    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.15); color: white; }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+    .nav-badge { margin-left: auto; background: #EF4444; color: white; font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 10px; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.12); }
+    .admin-chip { display: flex; align-items: center; gap: 8px; }
+    .admin-avatar { width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: white; }
+    .admin-info { font-size: 12px; color: rgba(255,255,255,0.8); }
+    .admin-info strong { display: block; color: white; font-size: 13px; }
+
+    /* MAIN */
+    .main { margin-left: 220px; flex: 1; padding: 28px; min-height: 100vh; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* TOP BAR */
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .topbar-title { font-size: 24px; font-weight: 800; color: #1a1a2e; }
+    .topbar-sub { font-size: 13px; color: #6B7280; margin-top: 2px; }
+    .topbar-actions { display: flex; gap: 10px; }
+    .btn { padding: 9px 18px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; }
+    .btn-primary { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; }
+    .btn-outline { background: white; color: #7C3AED; border: 1.5px solid #E9D5FF; }
+
+    /* STAT CARDS */
+    .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+    .stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 12px; }
+    .stat-value { font-size: 26px; font-weight: 900; color: #1a1a2e; margin-bottom: 2px; }
+    .stat-label { font-size: 12px; color: #6B7280; font-weight: 500; }
+    .stat-change { font-size: 11px; font-weight: 700; margin-top: 4px; }
+    .stat-change.up { color: #22c55e; }
+    .stat-change.down { color: #EF4444; }
+
+    /* CARDS */
+    .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .card-title { font-size: 15px; font-weight: 800; color: #1a1a2e; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .card-title span { font-size: 12px; font-weight: 600; color: #7C3AED; cursor: pointer; }
+
+    /* TABLE */
+    table { width: 100%; border-collapse: collapse; }
+    th { text-align: left; font-size: 11px; font-weight: 700; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.5px; padding: 0 12px 10px; }
+    td { padding: 10px 12px; font-size: 13px; color: #374151; border-top: 1px solid #F3F4F6; }
+    tr:hover td { background: #FAFAFA; }
+    .user-cell { display: flex; align-items: center; gap: 8px; }
+    .user-avatar-sm { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; color: white; flex-shrink: 0; }
+    .user-name { font-weight: 600; color: #1a1a2e; font-size: 13px; }
+    .user-email { font-size: 11px; color: #9CA3AF; }
+    .status-pill { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 8px; }
+    .status-active { background: #D1FAE5; color: #065F46; }
+    .status-pending { background: #FEF3C7; color: #92400E; }
+    .status-flagged { background: #FEE2E2; color: #991B1B; }
+    .action-btns { display: flex; gap: 6px; }
+    .action-btn { padding: 4px 10px; border-radius: 8px; font-size: 11px; font-weight: 700; cursor: pointer; border: none; }
+    .action-btn.view { background: #EDE9FE; color: #7C3AED; }
+    .action-btn.warn { background: #FEF3C7; color: #92400E; }
+    .action-btn.ban { background: #FEE2E2; color: #EF4444; }
+    .action-btn.approve { background: #D1FAE5; color: #065F46; }
+    .action-btn.remove { background: #FEE2E2; color: #EF4444; }
+
+    /* SEARCH BAR */
+    .search-bar { display: flex; gap: 10px; margin-bottom: 16px; }
+    .search-input { flex: 1; padding: 10px 16px; border: 1.5px solid #E9D5FF; border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; }
+    .search-input:focus { border-color: #7C3AED; }
+    .filter-select { padding: 10px 14px; border: 1.5px solid #E9D5FF; border-radius: 12px; font-size: 13px; font-family: inherit; color: #374151; outline: none; cursor: pointer; }
+
+    /* FLAGGED POSTS */
+    .flagged-item { border: 1.5px solid #FEE2E2; border-radius: 14px; padding: 14px; margin-bottom: 12px; }
+    .flagged-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+    .flagged-user { font-size: 13px; font-weight: 700; color: #1a1a2e; }
+    .flagged-reason { font-size: 11px; background: #FEE2E2; color: #EF4444; padding: 2px 8px; border-radius: 8px; font-weight: 600; }
+    .flagged-text { font-size: 13px; color: #374151; margin-bottom: 10px; padding: 10px; background: #FAFAFA; border-radius: 10px; line-height: 1.4; }
+    .flagged-meta { font-size: 11px; color: #9CA3AF; margin-bottom: 10px; }
+
+    /* REVENUE TABLE */
+    .rev-row { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid #F3F4F6; }
+    .rev-logo { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .rev-info { flex: 1; }
+    .rev-name { font-size: 13px; font-weight: 700; color: #1a1a2e; }
+    .rev-type { font-size: 11px; color: #9CA3AF; }
+    .rev-bar-bg { flex: 2; height: 6px; background: #F3F4F6; border-radius: 6px; overflow: hidden; }
+    .rev-bar-fill { height: 100%; border-radius: 6px; background: linear-gradient(90deg,#7C3AED,#A855F7); }
+    .rev-amount { font-size: 13px; font-weight: 700; color: #1a1a2e; min-width: 60px; text-align: right; }
+
+    /* GRID LAYOUTS */
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 14px; margin-bottom: 24px; }
+
+    /* CHART */
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* CAMPUS CARDS */
+    .campus-card { background: white; border-radius: 16px; padding: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+    .campus-name { font-size: 15px; font-weight: 800; color: #1a1a2e; margin-bottom: 2px; }
+    .campus-state { font-size: 12px; color: #9CA3AF; margin-bottom: 12px; }
+    .campus-stat { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; }
+    .campus-stat-label { color: #6B7280; }
+    .campus-stat-value { font-weight: 700; color: #1a1a2e; }
+    .campus-status { font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 8px; background: #D1FAE5; color: #065F46; }
+
+    /* TOAST */
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: white; padding: 12px 20px; border-radius: 14px; font-size: 13px; font-weight: 600; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 9999; }
+    .toast.show { opacity: 1; }
+
+    /* MODAL SYSTEM */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box { background: white; border-radius: 24px; padding: 28px; width: 100%; max-width: 460px; max-height: 90vh; overflow-y: auto; transform: scale(0.95) translateY(10px); transition: transform 0.25s; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .modal-overlay.open .modal-box { transform: scale(1) translateY(0); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-size: 18px; font-weight: 800; color: #1a1a2e; }
+    .modal-close-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: #F3F4F6; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6B7280; }
+    .modal-close-btn:hover { background: #E5E7EB; }
+    .mform-group { margin-bottom: 14px; }
+    .mform-label { font-size: 12px; font-weight: 700; color: #374151; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .mform-input { width: 100%; padding: 10px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s; }
+    .mform-input:focus { border-color: #7C3AED; }
+    .mform-select { width: 100%; padding: 10px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; cursor: pointer; background: white; }
+    .mform-textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; min-height: 90px; }
+    .mform-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-btn-row { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-btn { flex: 1; padding: 11px; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .modal-btn-primary { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; }
+    .modal-btn-danger  { background: linear-gradient(135deg,#EF4444,#F87171); color: white; }
+    .modal-btn-warning { background: linear-gradient(135deg,#F59E0B,#FCD34D); color: white; }
+    .modal-btn-cancel  { background: #F3F4F6; color: #6B7280; }
+    .user-profile-header { display: flex; align-items: center; gap: 14px; padding: 16px; background: linear-gradient(135deg,#EDE9FE,#FCE7F3); border-radius: 16px; margin-bottom: 16px; }
+    .user-profile-avatar { width: 52px; height: 52px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 20px; font-weight: 800; color: white; }
+    .user-profile-name { font-size: 16px; font-weight: 800; color: #1a1a2e; }
+    .user-profile-email { font-size: 12px; color: #6B7280; }
+    .user-stat-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+    .user-stat-box { background: #F9FAFB; border-radius: 12px; padding: 10px; text-align: center; }
+    .user-stat-box strong { display: block; font-size: 18px; font-weight: 800; color: #1a1a2e; }
+    .user-stat-box span { font-size: 11px; color: #9CA3AF; }
+    .confirm-icon { font-size: 48px; text-align: center; margin-bottom: 12px; }
+    .confirm-text { font-size: 14px; color: #374151; text-align: center; line-height: 1.5; margin-bottom: 6px; }
+    .confirm-sub { font-size: 12px; color: #9CA3AF; text-align: center; margin-bottom: 4px; }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">🎓</div>
+    <div>
+      <span class="sidebar-logo-text">One Campus</span>
+      <span class="sidebar-logo-badge">Admin</span>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">📊</span>Dashboard</a>
+    <a class="nav-item" onclick="showPage('users',this)"><span class="icon">👥</span>Users<span class="nav-badge">3</span></a>
+    <a class="nav-item" onclick="showPage('content',this)"><span class="icon">🚩</span>Content Mod<span class="nav-badge">4</span></a>
+    <a class="nav-item" onclick="showPage('ads',this)"><span class="icon">📢</span>Ads & Revenue</a>
+    <a class="nav-item" onclick="showPage('campuses',this)"><span class="icon">🏛️</span>Campuses</a>
+    <a class="nav-item" onclick="showPage('settings',this)"><span class="icon">⚙️</span>Settings</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="admin-chip">
+      <div class="admin-avatar">LB</div>
+      <div class="admin-info"><strong>Leighton B.</strong>Super Admin</div>
+    </div>
+  </div>
+</div>
+
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="topbar">
+      <div><div class="topbar-title">Dashboard</div><div class="topbar-sub">Welcome back, Leighton. Here's what's happening.</div></div>
+      <div class="topbar-actions">
+        <button class="btn btn-outline" onclick="exportReport()">Export Report</button>
+        <button class="btn btn-primary" onclick="openInviteUser()">+ Invite User</button>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#EDE9FE">👥</div>
+        <div class="stat-value">1,247</div>
+        <div class="stat-label">Total Users</div>
+        <div class="stat-change up">↑ 12% this week</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#D1FAE5">🟢</div>
+        <div class="stat-value">89</div>
+        <div class="stat-label">Active Today</div>
+        <div class="stat-change up">↑ 8% vs yesterday</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#FEF3C7">💰</div>
+        <div class="stat-value">$3,420</div>
+        <div class="stat-label">Ad Revenue (MTD)</div>
+        <div class="stat-change up">↑ 23% vs last month</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-icon" style="background:#FEE2E2">🚩</div>
+        <div class="stat-value">4</div>
+        <div class="stat-label">Flagged Posts</div>
+        <div class="stat-change down">Needs review</div>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">User Growth <span onclick="toast('Full analytics coming soon!')">View All →</span></div>
+        <div class="chart-wrap"><canvas id="growthChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Revenue by Advertiser</div>
+        <div id="rev-list">
+          <div class="rev-row">
+            <div class="rev-logo" style="background:linear-gradient(135deg,#E63946,#FF6B6B)">🍕</div>
+            <div class="rev-info"><div class="rev-name">Domino's</div><div class="rev-type">Food & Delivery</div></div>
+            <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:80%"></div></div>
+            <div class="rev-amount">$1,120</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-logo" style="background:linear-gradient(135deg,#F4792B,#FBBF24)">📚</div>
+            <div class="rev-info"><div class="rev-name">Chegg</div><div class="rev-type">Ed-Tech</div></div>
+            <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:65%"></div></div>
+            <div class="rev-amount">$910</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-logo" style="background:linear-gradient(135deg,#1DB954,#17A349)">🎵</div>
+            <div class="rev-info"><div class="rev-name">Spotify</div><div class="rev-type">Entertainment</div></div>
+            <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:55%"></div></div>
+            <div class="rev-amount">$770</div>
+          </div>
+          <div class="rev-row">
+            <div class="rev-logo" style="background:linear-gradient(135deg,#FF9900,#FFB347)">📦</div>
+            <div class="rev-info"><div class="rev-name">Amazon Prime</div><div class="rev-type">E-Commerce</div></div>
+            <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:44%"></div></div>
+            <div class="rev-amount">$620</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Recent Signups <span onclick="showPage('users',document.querySelectorAll('.nav-item')[1])">View All →</span></div>
+      <table>
+        <thead><tr><th>User</th><th>Campus</th><th>Major</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#7C3AED">ML</div><div><div class="user-name">Maya Liu</div><div class="user-email">liu247@purdue.edu</div></div></div></td><td>Purdue</td><td>Computer Science</td><td>Today</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Maya Liu','liu247@purdue.edu','Purdue','Computer Science','Active','2,210','4','#7C3AED')">View</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EF4444">JR</div><div><div class="user-name">Jordan Reed</div><div class="user-email">jreed@purdue.edu</div></div></div></td><td>Purdue</td><td>Mechanical Eng.</td><td>Today</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Jordan Reed','jreed@purdue.edu','Purdue','Mechanical Eng.','Active','1,980','2','#EF4444')">View</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EC4899">PM</div><div><div class="user-name">Priya Mehta</div><div class="user-email">pmehta@purdue.edu</div></div></div></td><td>Purdue</td><td>Pre-Medicine</td><td>Yesterday</td><td><span class="status-pill status-pending">Pending</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Priya Mehta','pmehta@purdue.edu','Purdue','Pre-Medicine','Pending','1,750','1','#EC4899')">View</button><button class="action-btn approve" onclick="verifyUser(this,'Priya Mehta')">Verify</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EF4444">AK</div><div><div class="user-name">Alex Kim</div><div class="user-email">akim99@purdue.edu</div></div></div></td><td>Purdue</td><td>Data Science</td><td>Jun 7</td><td><span class="status-pill status-flagged">Flagged</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Alex Kim','akim99@purdue.edu','Purdue','Data Science','Flagged','890','1','#EF4444')">View</button><button class="action-btn warn" onclick="openWarnUser('Alex Kim')">Warn</button><button class="action-btn ban" onclick="openBanUser('Alex Kim')">Ban</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#0EA5E9">TB</div><div><div class="user-name">Tyler Brooks</div><div class="user-email">tbrooks@purdue.edu</div></div></div></td><td>Purdue</td><td>Electrical Eng.</td><td>Jun 6</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Tyler Brooks','tbrooks@purdue.edu','Purdue','Electrical Eng.','Active','1,600','2','#0EA5E9')">View</button></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- USERS -->
+  <div class="page" id="page-users">
+    <div class="topbar">
+      <div><div class="topbar-title">User Management</div><div class="topbar-sub">1,247 total users across all campuses</div></div>
+      <button class="btn btn-primary" onclick="openInviteUser()">+ Invite User</button>
+    </div>
+    <div class="card">
+      <div class="search-bar">
+        <input class="search-input" placeholder="🔍  Search users by name or email..." />
+        <select class="filter-select"><option>All Campuses</option><option>Purdue</option><option>IU</option><option>Butler</option></select>
+        <select class="filter-select"><option>All Status</option><option>Active</option><option>Pending</option><option>Flagged</option><option>Banned</option></select>
+      </div>
+      <table>
+        <thead><tr><th>User</th><th>Campus</th><th>Major</th><th>Points</th><th>Clubs</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#7C3AED">LB</div><div><div class="user-name">Leighton Bailey</div><div class="user-email">lbailey@purdue.edu</div></div></div></td><td>Purdue</td><td>Business</td><td>2,456</td><td>3</td><td>May 1</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Leighton Bailey','lbailey@purdue.edu','Purdue','Business','Active','2,456','3','#7C3AED')">View</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#7C3AED">ML</div><div><div class="user-name">Maya Liu</div><div class="user-email">liu247@purdue.edu</div></div></div></td><td>Purdue</td><td>CS</td><td>2,210</td><td>4</td><td>May 3</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Maya Liu','liu247@purdue.edu','Purdue','CS','Active','2,210','4','#7C3AED')">View</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EF4444">JR</div><div><div class="user-name">Jordan Reed</div><div class="user-email">jreed@purdue.edu</div></div></div></td><td>Purdue</td><td>ME</td><td>1,980</td><td>2</td><td>May 5</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Jordan Reed','jreed@purdue.edu','Purdue','Mechanical Eng.','Active','1,980','2','#EF4444')">View</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EC4899">PM</div><div><div class="user-name">Priya Mehta</div><div class="user-email">pmehta@purdue.edu</div></div></div></td><td>Purdue</td><td>Pre-Med</td><td>1,750</td><td>1</td><td>Jun 1</td><td><span class="status-pill status-pending">Pending</span></td><td><div class="action-btns"><button class="action-btn approve" onclick="verifyUser(this,'Priya Mehta')">Verify</button><button class="action-btn ban" onclick="openBanUser('Priya Mehta')">Ban</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EF4444">AK</div><div><div class="user-name">Alex Kim</div><div class="user-email">akim99@purdue.edu</div></div></div></td><td>Purdue</td><td>Data Science</td><td>890</td><td>1</td><td>Jun 7</td><td><span class="status-pill status-flagged">Flagged</span></td><td><div class="action-btns"><button class="action-btn warn" onclick="openWarnUser('Alex Kim')">Warn</button><button class="action-btn ban" onclick="openBanUser('Alex Kim')">Ban</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#0EA5E9">TB</div><div><div class="user-name">Tyler Brooks</div><div class="user-email">tbrooks@purdue.edu</div></div></div></td><td>Purdue</td><td>EE</td><td>1,600</td><td>2</td><td>Jun 6</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Tyler Brooks','tbrooks@purdue.edu','Purdue','Electrical Eng.','Active','1,600','2','#0EA5E9')">View</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#F59E0B">ZT</div><div><div class="user-name">Zoe Torres</div><div class="user-email">ztorres@purdue.edu</div></div></div></td><td>Purdue</td><td>Psychology</td><td>1,340</td><td>2</td><td>Jun 4</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Zoe Torres','ztorres@purdue.edu','Purdue','Psychology','Active','1,340','2','#F59E0B')">View</button></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CONTENT MODERATION -->
+  <div class="page" id="page-content">
+    <div class="topbar">
+      <div><div class="topbar-title">Content Moderation</div><div class="topbar-sub">4 posts need review</div></div>
+      <button class="btn btn-outline" onclick="clearAllFlagged()">Clear All</button>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="flagged-item">
+          <div class="flagged-header"><span class="flagged-user">Alex Kim · @akim99</span><span class="flagged-reason">Spam</span></div>
+          <div class="flagged-text">"Join my Discord server for free Robux and V-bucks!! Limited time only click link in bio 🔥🔥"</div>
+          <div class="flagged-meta">Reported by 3 users · Posted Jun 8, 2:14 PM · Purdue Campus Feed</div>
+          <div class="action-btns"><button class="action-btn approve" onclick="toast('Post approved')">Keep</button><button class="action-btn remove" onclick="this.closest('.flagged-item').remove();toast('Post removed')">Remove</button><button class="action-btn ban" onclick="toast('User banned')">Ban User</button></div>
+        </div>
+        <div class="flagged-item">
+          <div class="flagged-header"><span class="flagged-user">Unknown · @user4492</span><span class="flagged-reason">Harassment</span></div>
+          <div class="flagged-text">"Stop posting your project in every channel nobody cares about your stupid robotics team lmao"</div>
+          <div class="flagged-meta">Reported by 1 user · Posted Jun 7, 9:41 PM · NSBE Club Feed</div>
+          <div class="action-btns"><button class="action-btn approve" onclick="toast('Post kept')">Keep</button><button class="action-btn remove" onclick="this.closest('.flagged-item').remove();toast('Post removed')">Remove</button><button class="action-btn warn" onclick="toast('Warning sent')">Warn User</button></div>
+        </div>
+      </div>
+      <div>
+        <div class="flagged-item">
+          <div class="flagged-header"><span class="flagged-user">Anon · @anon8812</span><span class="flagged-reason">Misinformation</span></div>
+          <div class="flagged-text">"WALC is CLOSED tomorrow for the whole day due to a gas leak — cancel your study sessions!!"</div>
+          <div class="flagged-meta">Reported by 5 users · Posted Jun 8, 11:02 AM · Campus Events</div>
+          <div class="action-btns"><button class="action-btn approve" onclick="toast('Post kept')">Keep</button><button class="action-btn remove" onclick="this.closest('.flagged-item').remove();toast('Post removed')">Remove</button><button class="action-btn ban" onclick="toast('User banned')">Ban User</button></div>
+        </div>
+        <div class="flagged-item">
+          <div class="flagged-header"><span class="flagged-user">User · @test123</span><span class="flagged-reason">Inappropriate</span></div>
+          <div class="flagged-text">"[Image flagged — explicit content detected by AI filter. Manual review required before displaying.]"</div>
+          <div class="flagged-meta">Auto-flagged by AI · Posted Jun 8, 7:55 AM · Connect Feed</div>
+          <div class="action-btns"><button class="action-btn approve" onclick="toast('Post approved')">Approve</button><button class="action-btn remove" onclick="this.closest('.flagged-item').remove();toast('Image removed')">Remove</button><button class="action-btn ban" onclick="toast('User banned')">Ban User</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADS & REVENUE -->
+  <div class="page" id="page-ads">
+    <div class="topbar">
+      <div><div class="topbar-title">Ads & Revenue</div><div class="topbar-sub">4 active campaigns · $3,420 earned this month</div></div>
+      <button class="btn btn-primary" onclick="openNewAdSlot()">+ New Ad Slot</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-icon" style="background:#EDE9FE">👁️</div><div class="stat-value">84,200</div><div class="stat-label">Total Impressions</div><div class="stat-change up">↑ 18%</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5">🖱️</div><div class="stat-value">5,714</div><div class="stat-label">Total Clicks</div><div class="stat-change up">↑ 11%</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FEF3C7">📈</div><div class="stat-value">6.8%</div><div class="stat-label">Avg CTR</div><div class="stat-change up">↑ 0.4%</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5">💰</div><div class="stat-value">$3,420</div><div class="stat-label">Revenue (MTD)</div><div class="stat-change up">↑ 23%</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Active Campaigns</div>
+      <table>
+        <thead><tr><th>Advertiser</th><th>Campaign</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Spend</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:linear-gradient(135deg,#E63946,#FF6B6B)">🍕</div><div><div class="user-name">Domino's</div></div></div></td><td>Dorm Delivery Promo</td><td>28,400</td><td>2,130</td><td>7.5%</td><td>$1,120</td><td><span class="status-pill status-active">Live</span></td><td><div class="action-btns"><button class="action-btn view" onclick="toast('Viewing Domino\'s campaign details')">View</button><button class="action-btn warn" onclick="pauseCampaign(this)">Pause</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:linear-gradient(135deg,#F4792B,#FBBF24)">📚</div><div><div class="user-name">Chegg</div></div></div></td><td>Textbook Rental Back-to-School</td><td>24,100</td><td>1,690</td><td>7.0%</td><td>$910</td><td><span class="status-pill status-active">Live</span></td><td><div class="action-btns"><button class="action-btn view" onclick="toast('Viewing Chegg campaign details')">View</button><button class="action-btn warn" onclick="pauseCampaign(this)">Pause</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:linear-gradient(135deg,#1DB954,#17A349)">🎵</div><div><div class="user-name">Spotify</div></div></div></td><td>Student Premium 3-Month Free</td><td>18,700</td><td>1,200</td><td>6.4%</td><td>$770</td><td><span class="status-pill status-active">Live</span></td><td><div class="action-btns"><button class="action-btn view" onclick="toast('Viewing Spotify campaign details')">View</button><button class="action-btn warn" onclick="pauseCampaign(this)">Pause</button></div></td></tr>
+          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:linear-gradient(135deg,#FF9900,#FFB347)">📦</div><div><div class="user-name">Amazon Prime</div></div></div></td><td>Prime Student Free Trial</td><td>13,000</td><td>694</td><td>5.3%</td><td>$620</td><td><span class="status-pill status-pending">Review</span></td><td><div class="action-btns"><button class="action-btn approve" onclick="approveCampaign(this)">Approve</button><button class="action-btn ban" onclick="rejectCampaign(this)">Reject</button></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- CAMPUSES -->
+  <div class="page" id="page-campuses">
+    <div class="topbar">
+      <div><div class="topbar-title">Campus Management</div><div class="topbar-sub">3 campuses active · Expand to new schools</div></div>
+      <button class="btn btn-primary" onclick="openAddCampus()">+ Add Campus</button>
+    </div>
+    <div class="three-col">
+      <div class="campus-card"><div class="campus-name">Purdue University</div><div class="campus-state">West Lafayette, IN</div><div class="campus-stat"><span class="campus-stat-label">Students</span><span class="campus-stat-value">1,247</span></div><div class="campus-stat"><span class="campus-stat-label">Active Clubs</span><span class="campus-stat-value">24</span></div><div class="campus-stat"><span class="campus-stat-label">Events This Week</span><span class="campus-stat-value">6</span></div><div style="margin-top:10px"><span class="campus-status">✓ Active</span></div></div>
+      <div class="campus-card"><div class="campus-name">Indiana University</div><div class="campus-state">Bloomington, IN</div><div class="campus-stat"><span class="campus-stat-label">Students</span><span class="campus-stat-value">Coming Soon</span></div><div class="campus-stat"><span class="campus-stat-label">Active Clubs</span><span class="campus-stat-value">—</span></div><div class="campus-stat"><span class="campus-stat-label">Events This Week</span><span class="campus-stat-value">—</span></div><div style="margin-top:10px"><span class="campus-status" style="background:#FEF3C7;color:#92400E">⏳ Onboarding</span></div></div>
+      <div class="campus-card"><div class="campus-name">Butler University</div><div class="campus-state">Indianapolis, IN</div><div class="campus-stat"><span class="campus-stat-label">Students</span><span class="campus-stat-value">Coming Soon</span></div><div class="campus-stat"><span class="campus-stat-label">Active Clubs</span><span class="campus-stat-value">—</span></div><div class="campus-stat"><span class="campus-stat-label">Events This Week</span><span class="campus-stat-value">—</span></div><div style="margin-top:10px"><span class="campus-status" style="background:#EDE9FE;color:#7C3AED">🔜 Planned</span></div></div>
+    </div>
+  </div>
+
+  <!-- SETTINGS -->
+  <div class="page" id="page-settings">
+    <div class="topbar"><div><div class="topbar-title">Settings</div><div class="topbar-sub">Manage platform configuration</div></div></div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Platform Settings</div>
+        <div style="display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #F3F4F6"><div><div style="font-size:13px;font-weight:600;color:#1a1a2e">AI Content Moderation</div><div style="font-size:12px;color:#9CA3AF">Auto-flag inappropriate posts</div></div><div onclick="this.style.background=this.style.background==='#7C3AED'?'#D1D5DB':'#7C3AED';toast('Setting updated!')" style="width:44px;height:24px;background:#7C3AED;border-radius:12px;cursor:pointer;transition:all .2s"></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #F3F4F6"><div><div style="font-size:13px;font-weight:600;color:#1a1a2e">Email Notifications</div><div style="font-size:12px;color:#9CA3AF">Alerts for flagged content</div></div><div onclick="this.style.background=this.style.background==='#7C3AED'?'#D1D5DB':'#7C3AED';toast('Setting updated!')" style="width:44px;height:24px;background:#7C3AED;border-radius:12px;cursor:pointer;transition:all .2s"></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center"><div><div style="font-size:13px;font-weight:600;color:#1a1a2e">New Campus Signups</div><div style="font-size:12px;color:#9CA3AF">Require admin approval</div></div><div onclick="this.style.background=this.style.background==='#D1D5DB'?'#7C3AED':'#D1D5DB';toast('Setting updated!')" style="width:44px;height:24px;background:#D1D5DB;border-radius:12px;cursor:pointer;transition:all .2s"></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Admin Account</div>
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <div><label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:4px">Full Name</label><input value="Leighton Bailey" style="width:100%;padding:10px 14px;border:1.5px solid #E9D5FF;border-radius:12px;font-size:13px;font-family:inherit;outline:none" /></div>
+          <div><label style="font-size:12px;font-weight:600;color:#6B7280;display:block;margin-bottom:4px">Email</label><input value="lbailey@onecampus.app" style="width:100%;padding:10px 14px;border:1.5px solid #E9D5FF;border-radius:12px;font-size:13px;font-family:inherit;outline:none" /></div>
+          <button class="btn btn-primary" style="margin-top:4px" onclick="saveSettings()">Save Changes</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- MODAL OVERLAY -->
+<div class="modal-overlay" id="modalOverlay" onclick="closeModalOnBg(event)">
+  <div class="modal-box" id="modalBox">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">Modal</div>
+      <button class="modal-close-btn" onclick="closeModal()">✕</button>
+    </div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ── NAV ── */
+function showPage(name, clickedEl) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (clickedEl) clickedEl.classList.add('active');
+}
+
+/* ── TOAST ── */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2800);
+}
+
+/* ── MODAL CORE ── */
+function openModal(title, bodyHTML) {
+  document.getElementById('modalTitle').textContent = title;
+  document.getElementById('modalBody').innerHTML = bodyHTML;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+function closeModalOnBg(e) {
+  if (e.target === document.getElementById('modalOverlay')) closeModal();
+}
+
+/* ── INVITE USER ── */
+function openInviteUser() {
+  openModal('Invite User', `
+    <div class="mform-group">
+      <label class="mform-label">Email Address *</label>
+      <input class="mform-input" id="inv-email" type="email" placeholder="student@purdue.edu" />
+    </div>
+    <div class="mform-group">
+      <label class="mform-label">Phone Number (optional)</label>
+      <input class="mform-input" id="inv-phone" type="tel" placeholder="+1 (765) 555-0100" />
+    </div>
+    <div class="mform-row">
+      <div class="mform-group">
+        <label class="mform-label">Campus</label>
+        <select class="mform-select" id="inv-campus">
+          <option>Purdue University</option>
+          <option>Indiana University</option>
+          <option>Butler University</option>
+        </select>
+      </div>
+      <div class="mform-group">
+        <label class="mform-label">Role</label>
+        <select class="mform-select" id="inv-role">
+          <option>Student</option>
+          <option>Club Admin</option>
+          <option>Observer</option>
+        </select>
+      </div>
+    </div>
+    <div class="mform-group">
+      <label class="mform-label">Personal Message (optional)</label>
+      <textarea class="mform-textarea" id="inv-msg" placeholder="Hey! Join me on One Campus..."></textarea>
+    </div>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn modal-btn-primary" onclick="submitInvite()">📨 Send Invite</button>
+    </div>`);
+}
+function submitInvite() {
+  const email = document.getElementById('inv-email').value.trim();
+  const phone = document.getElementById('inv-phone').value.trim();
+  if (!email && !phone) { alert('Please enter an email or phone number.'); return; }
+  closeModal();
+  toast('✅ Invite sent to ' + (email || phone) + '!');
+}
+
+/* ── VIEW USER ── */
+function openViewUser(name, email, campus, major, status, pts, clubs, color) {
+  const initials = name.split(' ').map(w=>w[0]).join('');
+  const statusColor = status === 'Active' ? '#065F46' : status === 'Pending' ? '#92400E' : '#991B1B';
+  const statusBg    = status === 'Active' ? '#D1FAE5' : status === 'Pending' ? '#FEF3C7' : '#FEE2E2';
+  openModal('User Profile', `
+    <div class="user-profile-header">
+      <div class="user-profile-avatar" style="background:${color}">${initials}</div>
+      <div>
+        <div class="user-profile-name">${name}</div>
+        <div class="user-profile-email">${email}</div>
+        <span style="font-size:11px;font-weight:600;padding:2px 8px;border-radius:8px;background:${statusBg};color:${statusColor}">${status}</span>
+      </div>
+    </div>
+    <div class="user-stat-grid">
+      <div class="user-stat-box"><strong>${pts || '—'}</strong><span>Points</span></div>
+      <div class="user-stat-box"><strong>${clubs || '—'}</strong><span>Clubs</span></div>
+      <div class="user-stat-box"><strong>${campus}</strong><span>Campus</span></div>
+    </div>
+    <div class="mform-group"><label class="mform-label">Major</label><div style="padding:10px 14px;background:#F9FAFB;border-radius:12px;font-size:13px;color:#374151">${major}</div></div>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Close</button>
+      <button class="modal-btn modal-btn-warning" onclick="closeModal();openWarnUser('${name}')">⚠️ Warn</button>
+      <button class="modal-btn modal-btn-danger"  onclick="closeModal();openBanUser('${name}')">🚫 Ban</button>
+    </div>`);
+}
+
+/* ── WARN USER ── */
+function openWarnUser(name) {
+  openModal('Send Warning to ' + name, `
+    <div class="mform-group">
+      <label class="mform-label">Warning Type</label>
+      <select class="mform-select" id="warn-type">
+        <option>Spam</option>
+        <option>Harassment</option>
+        <option>Misinformation</option>
+        <option>Inappropriate Content</option>
+        <option>Other</option>
+      </select>
+    </div>
+    <div class="mform-group">
+      <label class="mform-label">Message to User</label>
+      <textarea class="mform-textarea" id="warn-msg" placeholder="Your account has been flagged for..."></textarea>
+    </div>
+    <div class="mform-group" style="display:flex;align-items:center;gap:8px">
+      <input type="checkbox" id="warn-escalate" style="width:16px;height:16px;accent-color:#7C3AED" />
+      <label for="warn-escalate" style="font-size:13px;color:#374151">Auto-ban after 3 warnings</label>
+    </div>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn modal-btn-warning" onclick="submitWarn('${name}')">⚠️ Send Warning</button>
+    </div>`);
+}
+function submitWarn(name) {
+  const msg = document.getElementById('warn-msg').value.trim();
+  if (!msg) { alert('Please enter a warning message.'); return; }
+  closeModal();
+  toast('⚠️ Warning sent to ' + name);
+  document.querySelectorAll('td').forEach(td => {
+    if (td.textContent.includes(name)) {
+      const row = td.closest('tr');
+      if (row) { const pill = row.querySelector('.status-pill'); if (pill) { pill.className = 'status-pill status-flagged'; pill.textContent = 'Warned'; } }
+    }
+  });
+}
+
+/* ── BAN USER ── */
+function openBanUser(name) {
+  openModal('Ban User', `
+    <div class="confirm-icon">🚫</div>
+    <div class="confirm-text">You are about to ban <strong>${name}</strong>.<br/>They will lose access to One Campus immediately.</div>
+    <div class="mform-group" style="margin-top:16px">
+      <label class="mform-label">Reason</label>
+      <select class="mform-select" id="ban-reason">
+        <option>Spam</option><option>Harassment</option><option>Fake Account</option><option>Repeated Violations</option><option>Other</option>
+      </select>
+    </div>
+    <div class="mform-group">
+      <label class="mform-label">Duration</label>
+      <select class="mform-select" id="ban-duration">
+        <option>7 Days</option><option>30 Days</option><option>Permanent</option>
+      </select>
+    </div>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn modal-btn-danger" onclick="submitBan('${name}')">🚫 Confirm Ban</button>
+    </div>`);
+}
+function submitBan(name) {
+  const duration = document.getElementById('ban-duration').value;
+  closeModal();
+  toast('🚫 ' + name + ' banned for ' + duration);
+  document.querySelectorAll('td').forEach(td => {
+    if (td.textContent.includes(name)) {
+      const row = td.closest('tr');
+      if (row) {
+        const pill = row.querySelector('.status-pill');
+        if (pill) { pill.className = 'status-pill status-flagged'; pill.textContent = 'Banned'; }
+        const btns = row.querySelector('.action-btns');
+        if (btns) btns.innerHTML = '<span style="font-size:12px;color:#9CA3AF">Banned</span>';
+      }
+    }
+  });
+}
+
+/* ── VERIFY USER ── */
+function verifyUser(btn, name) {
+  const row = btn.closest('tr');
+  const pill = row.querySelector('.status-pill');
+  pill.className = 'status-pill status-active';
+  pill.textContent = 'Active';
+  btn.closest('.action-btns').innerHTML = '<button class="action-btn view" onclick="openViewUser(\'' + name + '\',\'\',\'Purdue\',\'Pre-Med\',\'Active\',\'1,750\',\'1\',\'#EC4899\')">View</button>';
+  toast('✅ ' + name + ' verified!');
+}
+
+/* ── ADD CAMPUS ── */
+function openAddCampus() {
+  openModal('Add New Campus', `
+    <div class="mform-group">
+      <label class="mform-label">University Name *</label>
+      <input class="mform-input" id="camp-name" placeholder="e.g. Indiana University" />
+    </div>
+    <div class="mform-row">
+      <div class="mform-group">
+        <label class="mform-label">City *</label>
+        <input class="mform-input" id="camp-city" placeholder="Bloomington" />
+      </div>
+      <div class="mform-group">
+        <label class="mform-label">State *</label>
+        <input class="mform-input" id="camp-state" placeholder="IN" maxlength="2" />
+      </div>
+    </div>
+    <div class="mform-row">
+      <div class="mform-group">
+        <label class="mform-label">Est. Students</label>
+        <input class="mform-input" id="camp-students" type="number" placeholder="40000" />
+      </div>
+      <div class="mform-group">
+        <label class="mform-label">School Type</label>
+        <select class="mform-select" id="camp-type">
+          <option>Public University</option><option>Private University</option><option>Community College</option>
+        </select>
+      </div>
+    </div>
+    <div class="mform-group">
+      <label class="mform-label">Campus Admin Email *</label>
+      <input class="mform-input" id="camp-email" type="email" placeholder="admin@university.edu" />
+    </div>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn modal-btn-primary" onclick="submitAddCampus()">🏛️ Add Campus</button>
+    </div>`);
+}
+function submitAddCampus() {
+  const name = document.getElementById('camp-name').value.trim();
+  const city = document.getElementById('camp-city').value.trim();
+  const email = document.getElementById('camp-email').value.trim();
+  if (!name || !city || !email) { alert('Please fill in all required fields.'); return; }
+  closeModal();
+  toast('🏛️ ' + name + ' added — onboarding email sent!');
+}
+
+/* ── NEW AD SLOT ── */
+function openNewAdSlot() {
+  openModal('Create Ad Slot', `
+    <div class="mform-group">
+      <label class="mform-label">Slot Name *</label>
+      <input class="mform-input" id="slot-name" placeholder="e.g. Feed Post — Purdue Morning" />
+    </div>
+    <div class="mform-row">
+      <div class="mform-group">
+        <label class="mform-label">Placement</label>
+        <select class="mform-select" id="slot-placement">
+          <option>Sponsored Feed Post</option><option>Banner Ad</option><option>Events Page</option><option>Map Overlay</option>
+        </select>
+      </div>
+      <div class="mform-group">
+        <label class="mform-label">Target Campus</label>
+        <select class="mform-select" id="slot-campus">
+          <option>Purdue University</option><option>All Campuses</option>
+        </select>
+      </div>
+    </div>
+    <div class="mform-group">
+      <label class="mform-label">CPM Rate ($ per 1,000 impressions)</label>
+      <input class="mform-input" id="slot-cpm" type="number" placeholder="e.g. 12.00" />
+    </div>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn modal-btn-primary" onclick="submitNewSlot()">📢 Create Slot</button>
+    </div>`);
+}
+function submitNewSlot() {
+  const name = document.getElementById('slot-name').value.trim();
+  if (!name) { alert('Please enter a slot name.'); return; }
+  closeModal();
+  toast('📢 Ad slot "' + name + '" created!');
+}
+
+/* ── CAMPAIGN ACTIONS ── */
+function pauseCampaign(btn) {
+  const row = btn.closest('tr');
+  const pill = row.querySelector('.status-pill');
+  if (pill.classList.contains('status-active')) {
+    pill.className = 'status-pill status-pending'; pill.textContent = '⏸ Paused';
+    btn.textContent = 'Resume'; btn.onclick = () => resumeCampaign(btn);
+    toast('Campaign paused');
+  }
+}
+function resumeCampaign(btn) {
+  const row = btn.closest('tr');
+  const pill = row.querySelector('.status-pill');
+  pill.className = 'status-pill status-active'; pill.textContent = 'Live';
+  btn.textContent = 'Pause'; btn.onclick = () => pauseCampaign(btn);
+  toast('Campaign resumed');
+}
+function approveCampaign(btn) {
+  const row = btn.closest('tr');
+  const pill = row.querySelector('.status-pill');
+  pill.className = 'status-pill status-active'; pill.textContent = 'Live';
+  btn.closest('.action-btns').innerHTML = '<button class="action-btn view" onclick="toast(\'Viewing campaign\')">View</button><button class="action-btn warn" onclick="pauseCampaign(this)">Pause</button>';
+  toast('✅ Campaign approved and live!');
+}
+function rejectCampaign(btn) {
+  openModal('Reject Campaign', `
+    <div class="confirm-icon">❌</div>
+    <div class="confirm-text">Are you sure you want to reject this campaign?<br/>The advertiser will be notified.</div>
+    <div class="mform-group" style="margin-top:14px">
+      <label class="mform-label">Rejection Reason</label>
+      <select class="mform-select" id="rej-reason">
+        <option>Violates content policy</option><option>Misleading claims</option><option>Inappropriate for students</option><option>Budget too low</option><option>Other</option>
+      </select>
+    </div>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn modal-btn-danger" onclick="confirmRejectCampaign()">❌ Reject Campaign</button>
+    </div>`);
+  window._rejectBtn = btn;
+}
+function confirmRejectCampaign() {
+  const reason = document.getElementById('rej-reason').value;
+  closeModal();
+  if (window._rejectBtn) { const row = window._rejectBtn.closest('tr'); if (row) { row.style.opacity='0'; row.style.transition='opacity .3s'; setTimeout(()=>row.remove(),300); } }
+  toast('Campaign rejected — advertiser notified');
+}
+
+/* ── EXPORT ── */
+function exportReport() {
+  const csv = `One Campus Admin Report - ${new Date().toLocaleDateString()}\n\nMetric,Value\nTotal Users,1247\nActive Today,89\nAd Revenue (MTD),$3420\nFlagged Posts,4\nCampuses,1\n\nTop Advertisers\nDominos,$1120\nChegg,$910\nSpotify,$770\nAmazon Prime,$620`;
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'onecampus-report.csv';
+  a.click();
+  toast('📥 Report downloaded!');
+}
+
+/* ── SETTINGS SAVE ── */
+function saveSettings() {
+  const name = document.querySelector('input[value="Leighton Bailey"]')?.value || 'Leighton Bailey';
+  toast('✅ Settings saved for ' + name + '!');
+}
+
+/* ── CLEAR ALL FLAGGED ── */
+function clearAllFlagged() {
+  openModal('Clear All Flagged Content', `
+    <div class="confirm-icon">🚩</div>
+    <div class="confirm-text">This will dismiss all 4 flagged posts without action.<br/>This cannot be undone.</div>
+    <div class="modal-btn-row">
+      <button class="modal-btn modal-btn-cancel" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn modal-btn-danger" onclick="confirmClearAll()">Clear All</button>
+    </div>`);
+}
+function confirmClearAll() {
+  document.querySelectorAll('.flagged-item').forEach(el => {
+    el.style.opacity = '0'; el.style.transition = 'opacity .3s';
+    setTimeout(() => el.remove(), 300);
+  });
+  closeModal();
+  toast('✅ All flagged content cleared');
+  const sub = document.querySelector('#page-content .topbar-sub');
+  if (sub) sub.textContent = '0 posts need review';
+  document.querySelectorAll('.nav-badge').forEach(b => { if (b.textContent === '4') b.remove(); });
+}
+
+/* ── GROWTH CHART ── */
+const ctx = document.getElementById('growthChart').getContext('2d');
+new Chart(ctx, {
+  type: 'line',
+  data: {
+    labels: ['Apr 14','Apr 21','Apr 28','May 5','May 12','May 19','May 26','Jun 2','Jun 9'],
+    datasets: [{ label: 'Users', data: [120,210,380,520,740,920,1050,1180,1247], borderColor: '#7C3AED', backgroundColor: 'rgba(124,58,237,0.08)', tension: 0.4, fill: true, pointBackgroundColor: '#7C3AED', pointRadius: 4 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF' } }, y: { grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } } } }
+});
+</script>
+</body>
+</html>

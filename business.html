@@ -1,0 +1,767 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Business Portal — One Campus</title>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Inter', sans-serif; background: #FFF9F0; display: flex; min-height: 100vh; }
+
+    .sidebar {
+      width: 220px; background: linear-gradient(160deg,#92400E,#F59E0B);
+      display: flex; flex-direction: column; padding: 24px 0; flex-shrink: 0;
+      position: fixed; top: 0; left: 0; height: 100vh; z-index: 100;
+    }
+    .sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 0 20px 28px; border-bottom: 1px solid rgba(255,255,255,0.15); }
+    .sidebar-logo-icon { width: 36px; height: 36px; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+    .sidebar-logo-text { font-size: 15px; font-weight: 800; color: white; }
+    .sidebar-logo-badge { font-size: 10px; background: rgba(255,255,255,0.25); color: white; padding: 2px 6px; border-radius: 6px; margin-left: 4px; }
+    .sidebar-nav { padding: 16px 12px; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+    .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 12px; color: rgba(255,255,255,0.75); font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.18); color: white; }
+    .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+    .sidebar-footer { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,0.15); }
+    .biz-chip { display: flex; align-items: center; gap: 8px; }
+    .biz-avatar { width: 32px; height: 32px; background: rgba(255,255,255,0.2); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .biz-info { font-size: 12px; color: rgba(255,255,255,0.8); }
+    .biz-info strong { display: block; color: white; font-size: 13px; }
+
+    .main { margin-left: 220px; flex: 1; padding: 28px; }
+    .page { display: none; }
+    .page.active { display: block; }
+
+    .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 24px; }
+    .topbar-title { font-size: 24px; font-weight: 800; color: #1a1a2e; }
+    .topbar-sub { font-size: 13px; color: #6B7280; margin-top: 2px; }
+    .btn { padding: 9px 18px; border-radius: 12px; font-size: 13px; font-weight: 700; cursor: pointer; border: none; }
+    .btn-primary { background: linear-gradient(135deg,#F59E0B,#FF6B35); color: white; }
+    .btn-outline { background: white; color: #F59E0B; border: 1.5px solid #FDE68A; }
+
+    .stats-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; margin-bottom: 24px; }
+    .stat-card { background: white; border-radius: 16px; padding: 18px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); }
+    .stat-icon { width: 40px; height: 40px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; margin-bottom: 12px; }
+    .stat-value { font-size: 26px; font-weight: 900; color: #1a1a2e; margin-bottom: 2px; }
+    .stat-label { font-size: 12px; color: #6B7280; }
+    .stat-change { font-size: 11px; font-weight: 700; margin-top: 4px; color: #22c55e; }
+
+    .card { background: white; border-radius: 16px; padding: 20px; box-shadow: 0 2px 12px rgba(0,0,0,0.05); margin-bottom: 20px; }
+    .card-title { font-size: 15px; font-weight: 800; color: #1a1a2e; margin-bottom: 16px; display: flex; align-items: center; justify-content: space-between; }
+    .card-title span { font-size: 12px; font-weight: 600; color: #F59E0B; cursor: pointer; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .chart-wrap { position: relative; height: 200px; }
+
+    /* CAMPAIGN CARDS */
+    .campaign-card { border: 1.5px solid #F3F4F6; border-radius: 16px; padding: 16px; margin-bottom: 12px; }
+    .campaign-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .campaign-name { font-size: 15px; font-weight: 800; color: #1a1a2e; }
+    .campaign-type { font-size: 11px; color: #9CA3AF; margin-top: 2px; }
+    .status-pill { font-size: 11px; font-weight: 600; padding: 3px 10px; border-radius: 10px; }
+    .status-live { background: #D1FAE5; color: #065F46; }
+    .status-paused { background: #FEF3C7; color: #92400E; }
+    .status-draft { background: #F3F4F6; color: #6B7280; }
+    .campaign-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 12px; }
+    .c-stat { text-align: center; padding: 8px; background: #FAFAFA; border-radius: 10px; }
+    .c-stat-val { font-size: 15px; font-weight: 800; color: #1a1a2e; }
+    .c-stat-label { font-size: 10px; color: #9CA3AF; margin-top: 1px; }
+    .budget-bar-bg { height: 6px; background: #F3F4F6; border-radius: 6px; overflow: hidden; margin-bottom: 6px; }
+    .budget-bar-fill { height: 100%; background: linear-gradient(90deg,#F59E0B,#FF6B35); border-radius: 6px; }
+    .budget-label { display: flex; justify-content: space-between; font-size: 11px; color: #9CA3AF; }
+    .campaign-actions { display: flex; gap: 8px; margin-top: 12px; }
+    .action-btn { padding: 6px 14px; border-radius: 10px; font-size: 12px; font-weight: 700; cursor: pointer; border: none; }
+    .action-btn.edit { background: #FEF3C7; color: #92400E; }
+    .action-btn.pause { background: #F3F4F6; color: #6B7280; }
+    .action-btn.resume { background: #D1FAE5; color: #065F46; }
+    .action-btn.view { background: #EDE9FE; color: #7C3AED; }
+    .action-btn.delete { background: #FEE2E2; color: #EF4444; }
+
+    /* CREATE AD FORM */
+    .form-group { margin-bottom: 16px; }
+    .form-label { font-size: 12px; font-weight: 700; color: #374151; display: block; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .form-input { width: 100%; padding: 10px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s; }
+    .form-input:focus { border-color: #F59E0B; }
+    .form-select { width: 100%; padding: 10px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; cursor: pointer; }
+    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    .form-textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; min-height: 80px; }
+    .upload-zone { border: 2px dashed #FDE68A; border-radius: 14px; padding: 24px; text-align: center; cursor: pointer; background: #FFFBEB; transition: all 0.2s; }
+    .upload-zone:hover { border-color: #F59E0B; background: #FEF3C7; }
+    .upload-icon { font-size: 32px; margin-bottom: 8px; }
+    .upload-text { font-size: 13px; color: #6B7280; }
+    .upload-text strong { color: #F59E0B; }
+
+    /* AD PREVIEW */
+    .ad-preview { border: 1.5px solid #E5E7EB; border-radius: 16px; overflow: hidden; max-width: 320px; }
+    .ad-preview-label { background: #FAFAFA; padding: 6px 12px; font-size: 10px; color: #9CA3AF; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; border-bottom: 1px solid #F3F4F6; display: flex; justify-content: space-between; }
+    .ad-preview-body { padding: 14px; }
+    .ad-brand-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .ad-logo { width: 38px; height: 38px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 18px; background: linear-gradient(135deg,#F59E0B,#FF6B35); }
+    .ad-image-placeholder { height: 100px; background: linear-gradient(135deg,#FEF3C7,#FDE68A); border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 36px; margin-bottom: 10px; }
+    .ad-headline-preview { font-size: 14px; font-weight: 800; color: #1a1a2e; margin-bottom: 4px; }
+    .ad-copy-preview { font-size: 12px; color: #6B7280; margin-bottom: 10px; }
+    .ad-cta-preview { width: 100%; padding: 9px; background: linear-gradient(135deg,#F59E0B,#FF6B35); color: white; border: none; border-radius: 10px; font-size: 13px; font-weight: 700; cursor: pointer; }
+
+    /* AUDIENCE TARGETING */
+    .target-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+    .target-chip { padding: 8px 14px; border-radius: 20px; font-size: 12px; font-weight: 600; border: 1.5px solid #E5E7EB; color: #6B7280; cursor: pointer; text-align: center; transition: all 0.2s; }
+    .target-chip.selected { background: #FEF3C7; border-color: #F59E0B; color: #92400E; }
+
+    /* ANALYTICS */
+    .analytics-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+    .analytics-tab { padding: 8px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; cursor: pointer; border: none; }
+    .analytics-tab.active { background: linear-gradient(135deg,#F59E0B,#FF6B35); color: white; }
+    .analytics-tab:not(.active) { background: white; color: #6B7280; border: 1.5px solid #F3F4F6; }
+
+    /* BILLING */
+    .billing-card { border: 1.5px solid #F3F4F6; border-radius: 14px; padding: 16px; margin-bottom: 12px; display: flex; align-items: center; gap: 14px; }
+    .billing-icon { width: 40px; height: 40px; background: #FEF3C7; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+    .billing-info { flex: 1; }
+    .billing-title { font-size: 14px; font-weight: 700; color: #1a1a2e; }
+    .billing-sub { font-size: 12px; color: #9CA3AF; }
+    .billing-amount { font-size: 16px; font-weight: 800; color: #1a1a2e; }
+
+    .toast { position: fixed; bottom: 24px; right: 24px; background: #1a1a2e; color: white; padding: 12px 20px; border-radius: 14px; font-size: 13px; font-weight: 600; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 9999; }
+    .toast.show { opacity: 1; }
+
+    /* MODAL */
+    .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity 0.2s; }
+    .modal-overlay.open { opacity: 1; pointer-events: all; }
+    .modal-box { background: white; border-radius: 24px; padding: 28px; width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto; transform: scale(0.95) translateY(10px); transition: transform 0.25s; box-shadow: 0 20px 60px rgba(0,0,0,0.2); }
+    .modal-overlay.open .modal-box { transform: scale(1) translateY(0); }
+    .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; }
+    .modal-title { font-size: 18px; font-weight: 800; color: #1a1a2e; }
+    .modal-close-btn { width: 32px; height: 32px; border-radius: 50%; border: none; background: #F3F4F6; font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: #6B7280; }
+    .mform-group { margin-bottom: 14px; }
+    .mform-label { font-size: 12px; font-weight: 700; color: #374151; display: block; margin-bottom: 5px; text-transform: uppercase; letter-spacing: 0.4px; }
+    .mform-input { width: 100%; padding: 10px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; transition: border-color 0.2s; }
+    .mform-input:focus { border-color: #F59E0B; }
+    .mform-select { width: 100%; padding: 10px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; cursor: pointer; background: white; }
+    .mform-textarea { width: 100%; padding: 10px 14px; border: 1.5px solid #E5E7EB; border-radius: 12px; font-size: 13px; font-family: inherit; outline: none; resize: vertical; min-height: 80px; }
+    .mform-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .modal-btn-row { display: flex; gap: 10px; margin-top: 20px; }
+    .modal-btn { flex: 1; padding: 11px; border: none; border-radius: 12px; font-size: 14px; font-weight: 700; cursor: pointer; }
+    .modal-btn-primary { background: linear-gradient(135deg,#F59E0B,#FF6B35); color: white; }
+    .modal-btn-danger  { background: linear-gradient(135deg,#EF4444,#F87171); color: white; }
+    .modal-btn-cancel  { background: #F3F4F6; color: #6B7280; }
+    .modal-btn-success { background: linear-gradient(135deg,#10B981,#34D399); color: white; }
+    .confirm-icon { font-size: 48px; text-align: center; margin-bottom: 12px; }
+    .confirm-text { font-size: 14px; color: #374151; text-align: center; line-height: 1.5; margin-bottom: 4px; }
+    .success-box { background: linear-gradient(135deg,#D1FAE5,#A7F3D0); border-radius: 16px; padding: 20px; text-align: center; margin-bottom: 16px; }
+    .success-box .big-icon { font-size: 40px; margin-bottom: 8px; }
+    .success-box h3 { font-size: 16px; font-weight: 800; color: #065F46; margin-bottom: 4px; }
+    .success-box p { font-size: 13px; color: #047857; }
+    .card-input-row { display: grid; grid-template-columns: 2fr 1fr 1fr; gap: 10px; }
+  </style>
+</head>
+<body>
+
+<div class="sidebar">
+  <div class="sidebar-logo">
+    <div class="sidebar-logo-icon">🎓</div>
+    <div>
+      <span class="sidebar-logo-text">One Campus</span>
+      <span class="sidebar-logo-badge">Business</span>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <a class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">📊</span>Dashboard</a>
+    <a class="nav-item" onclick="showPage('campaigns',this)"><span class="icon">📢</span>My Campaigns</a>
+    <a class="nav-item" onclick="showPage('create',this)"><span class="icon">✏️</span>Create Ad</a>
+    <a class="nav-item" onclick="showPage('analytics',this)"><span class="icon">📈</span>Analytics</a>
+    <a class="nav-item" onclick="showPage('audience',this)"><span class="icon">🎯</span>Audience</a>
+    <a class="nav-item" onclick="showPage('billing',this)"><span class="icon">💳</span>Billing</a>
+  </nav>
+  <div class="sidebar-footer">
+    <div class="biz-chip">
+      <div class="biz-avatar">🍕</div>
+      <div class="biz-info"><strong>Domino's</strong>Advertiser Account</div>
+    </div>
+  </div>
+</div>
+
+<main class="main">
+
+  <!-- DASHBOARD -->
+  <div class="page active" id="page-dashboard">
+    <div class="topbar">
+      <div><div class="topbar-title">Campaign Dashboard</div><div class="topbar-sub">June 2026 — 2 active campaigns running</div></div>
+      <div style="display:flex;gap:10px">
+        <button class="btn btn-outline" onclick="exportCSV('campaigns_report')">📥 Export</button>
+        <button class="btn btn-primary" onclick="showPage('create',document.querySelectorAll('.nav-item')[2])">+ New Campaign</button>
+      </div>
+    </div>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-icon" style="background:#FEF3C7">👁️</div><div class="stat-value">28,400</div><div class="stat-label">Total Impressions</div><div class="stat-change">↑ 14% this week</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5">🖱️</div><div class="stat-value">2,130</div><div class="stat-label">Clicks</div><div class="stat-change">↑ 9% this week</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#EDE9FE">📈</div><div class="stat-value">7.5%</div><div class="stat-label">Click-Through Rate</div><div class="stat-change">↑ 0.6% vs avg</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FEE2E2">💸</div><div class="stat-value">$1,120</div><div class="stat-label">Total Spend</div><div class="stat-change" style="color:#6B7280">$880 remaining</div></div>
+    </div>
+
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Impressions This Week</div>
+        <div class="chart-wrap"><canvas id="impChart"></canvas></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Audience Breakdown</div>
+        <div class="chart-wrap"><canvas id="audienceChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Active Campaigns <span onclick="showPage('campaigns',document.querySelectorAll('.nav-item')[1])">View All →</span></div>
+      <div class="campaign-card">
+        <div class="campaign-header">
+          <div><div class="campaign-name">Dorm Delivery Promo</div><div class="campaign-type">Sponsored Feed Post · Purdue University</div></div>
+          <span class="status-pill status-live">● Live</span>
+        </div>
+        <div class="campaign-stats">
+          <div class="c-stat"><div class="c-stat-val">14,200</div><div class="c-stat-label">Impressions</div></div>
+          <div class="c-stat"><div class="c-stat-val">1,065</div><div class="c-stat-label">Clicks</div></div>
+          <div class="c-stat"><div class="c-stat-val">7.5%</div><div class="c-stat-label">CTR</div></div>
+          <div class="c-stat"><div class="c-stat-val">$560</div><div class="c-stat-label">Spent</div></div>
+        </div>
+        <div class="budget-bar-bg"><div class="budget-bar-fill" style="width:56%"></div></div>
+        <div class="budget-label"><span>$560 spent</span><span>$440 remaining of $1,000</span></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CAMPAIGNS -->
+  <div class="page" id="page-campaigns">
+    <div class="topbar">
+      <div><div class="topbar-title">My Campaigns</div><div class="topbar-sub">2 active · 1 paused · 1 draft</div></div>
+      <button class="btn btn-primary" onclick="showPage('create',document.querySelectorAll('.nav-item')[2])">+ New Campaign</button>
+    </div>
+
+    <div class="campaign-card">
+      <div class="campaign-header">
+        <div><div class="campaign-name">Dorm Delivery Promo</div><div class="campaign-type">Sponsored Feed Post · Purdue University · Jun 1 – Jun 30</div></div>
+        <span class="status-pill status-live">● Live</span>
+      </div>
+      <div class="campaign-stats">
+        <div class="c-stat"><div class="c-stat-val">14,200</div><div class="c-stat-label">Impressions</div></div>
+        <div class="c-stat"><div class="c-stat-val">1,065</div><div class="c-stat-label">Clicks</div></div>
+        <div class="c-stat"><div class="c-stat-val">7.5%</div><div class="c-stat-label">CTR</div></div>
+        <div class="c-stat"><div class="c-stat-val">$560</div><div class="c-stat-label">Spent</div></div>
+      </div>
+      <div class="budget-bar-bg"><div class="budget-bar-fill" style="width:56%"></div></div>
+      <div class="budget-label"><span>$560 spent</span><span>Budget: $1,000</span></div>
+      <div class="campaign-actions">
+        <button class="action-btn edit" onclick="openEditCampaign('Boiler Up Fall Promo', 'Brand Awareness', '$45.00/day', '14,200')">Edit</button>
+        <button class="action-btn pause" onclick="togglePause(this)">Pause</button>
+        <button class="action-btn view" onclick="showPage('analytics',document.querySelectorAll('.nav-item')[3])">Analytics</button>
+      </div>
+    </div>
+
+    <div class="campaign-card">
+      <div class="campaign-header">
+        <div><div class="campaign-name">Late Night Special</div><div class="campaign-type">Banner Ad · Purdue University · Jun 5 – Jun 20</div></div>
+        <span class="status-pill status-live">● Live</span>
+      </div>
+      <div class="campaign-stats">
+        <div class="c-stat"><div class="c-stat-val">8,900</div><div class="c-stat-label">Impressions</div></div>
+        <div class="c-stat"><div class="c-stat-val">712</div><div class="c-stat-label">Clicks</div></div>
+        <div class="c-stat"><div class="c-stat-val">8.0%</div><div class="c-stat-label">CTR</div></div>
+        <div class="c-stat"><div class="c-stat-val">$356</div><div class="c-stat-label">Spent</div></div>
+      </div>
+      <div class="budget-bar-bg"><div class="budget-bar-fill" style="width:71%"></div></div>
+      <div class="budget-label"><span>$356 spent</span><span>Budget: $500</span></div>
+      <div class="campaign-actions">
+        <button class="action-btn edit" onclick="openEditCampaign('Late Night Special', 'Banner Ad', '$25.00/day', '8,900')">Edit</button>
+        <button class="action-btn pause" onclick="togglePause(this)">Pause</button>
+        <button class="action-btn view" onclick="showPage('analytics',document.querySelectorAll('.nav-item')[3])">Analytics</button>
+      </div>
+    </div>
+
+    <div class="campaign-card" style="opacity:0.7">
+      <div class="campaign-header">
+        <div><div class="campaign-name">Back-to-School Push</div><div class="campaign-type">Sponsored Post · All Campuses · Aug 1 – Aug 31</div></div>
+        <span class="status-pill status-draft">Draft</span>
+      </div>
+      <div class="campaign-stats">
+        <div class="c-stat"><div class="c-stat-val">—</div><div class="c-stat-label">Impressions</div></div>
+        <div class="c-stat"><div class="c-stat-val">—</div><div class="c-stat-label">Clicks</div></div>
+        <div class="c-stat"><div class="c-stat-val">—</div><div class="c-stat-label">CTR</div></div>
+        <div class="c-stat"><div class="c-stat-val">$0</div><div class="c-stat-label">Spent</div></div>
+      </div>
+      <div class="campaign-actions">
+        <button class="action-btn edit" onclick="openEditCampaign('Back-to-School Push', 'Sponsored Post', '$60.00/day', '—')">Edit Draft</button>
+        <button class="action-btn resume" onclick="openSubmitReview('Back-to-School Push')">Submit for Review</button>
+        <button class="action-btn delete" onclick="openDeleteDraft(this)">Delete</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CREATE AD -->
+  <div class="page" id="page-create">
+    <div class="topbar">
+      <div><div class="topbar-title">Create New Ad</div><div class="topbar-sub">Reach thousands of students on One Campus</div></div>
+    </div>
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-title">Campaign Details</div>
+          <div class="form-group"><label class="form-label">Campaign Name</label><input class="form-input" placeholder="e.g. Summer Promo 2026" /></div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Ad Format</label><select class="form-select"><option>Sponsored Feed Post</option><option>Banner Ad</option><option>Event Promotion</option><option>Club Spotlight</option></select></div>
+            <div class="form-group"><label class="form-label">Target Campus</label><select class="form-select"><option>Purdue University</option><option>All Campuses</option><option>Indiana University</option></select></div>
+          </div>
+          <div class="form-row">
+            <div class="form-group"><label class="form-label">Start Date</label><input type="date" class="form-input" /></div>
+            <div class="form-group"><label class="form-label">End Date</label><input type="date" class="form-input" /></div>
+          </div>
+          <div class="form-group"><label class="form-label">Daily Budget ($)</label><input class="form-input" placeholder="e.g. 50" type="number" /></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Ad Creative</div>
+          <div class="form-group"><label class="form-label">Headline</label><input class="form-input" placeholder="e.g. 30-min delivery to your dorm 🍕" id="preview-headline" oninput="updatePreview()" /></div>
+          <div class="form-group"><label class="form-label">Ad Copy</label><textarea class="form-textarea" placeholder="Describe your offer in 1-2 sentences..." id="preview-copy" oninput="updatePreview()"></textarea></div>
+          <div class="form-group"><label class="form-label">Call to Action</label><input class="form-input" placeholder="e.g. Order Now" id="preview-cta" oninput="updatePreview()" /></div>
+          <div class="form-group"><label class="form-label">Ad Image / Logo</label>
+            <div class="upload-zone" onclick="toast('Use your device file picker to upload an image.')">
+              <div class="upload-icon">📸</div>
+              <div class="upload-text"><strong>Click to upload</strong> or drag & drop<br/>PNG, JPG up to 5MB</div>
+            </div>
+          </div>
+          <button class="btn btn-primary" style="width:100%;padding:12px" onclick="openSubmitReview('New Campaign')">Submit Campaign →</button>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <div class="card-title">Live Preview</div>
+          <div class="ad-preview">
+            <div class="ad-preview-label"><span>Sponsored</span><span>✕</span></div>
+            <div class="ad-preview-body">
+              <div class="ad-brand-row">
+                <div class="ad-logo">🍕</div>
+                <div>
+                  <div style="font-size:14px;font-weight:800;color:#1a1a2e">Domino's</div>
+                  <div style="font-size:11px;color:#9CA3AF">Food Delivery</div>
+                </div>
+              </div>
+              <div class="ad-image-placeholder">🍕</div>
+              <div class="ad-headline-preview" id="live-headline">Your headline here</div>
+              <div class="ad-copy-preview" id="live-copy">Your ad copy will appear here...</div>
+              <button class="ad-cta-preview" id="live-cta" onclick="toast('CTA clicked!')">Click to Action</button>
+            </div>
+          </div>
+
+          <div style="margin-top:20px">
+            <div class="card-title" style="margin-bottom:12px">Estimated Reach</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#6B7280">Students on Purdue campus</span><span style="font-weight:700">1,247</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#6B7280">Est. daily impressions</span><span style="font-weight:700">800–1,200</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#6B7280">Est. clicks/day (7.5% CTR)</span><span style="font-weight:700">60–90</span></div>
+              <div style="display:flex;justify-content:space-between;font-size:13px"><span style="color:#6B7280">Est. cost per click</span><span style="font-weight:700">$0.52–$0.84</span></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Audience Targeting</div>
+          <div style="font-size:12px;color:#6B7280;margin-bottom:10px">Target students by major (optional)</div>
+          <div class="target-grid">
+            <div class="target-chip" onclick="this.classList.toggle('selected')">Computer Science</div>
+            <div class="target-chip" onclick="this.classList.toggle('selected')">Engineering</div>
+            <div class="target-chip" onclick="this.classList.toggle('selected')">Business</div>
+            <div class="target-chip" onclick="this.classList.toggle('selected')">Pre-Med</div>
+            <div class="target-chip" onclick="this.classList.toggle('selected')">Liberal Arts</div>
+            <div class="target-chip selected" onclick="this.classList.toggle('selected')">All Majors</div>
+          </div>
+          <div style="font-size:12px;color:#6B7280;margin:12px 0 10px">Target by year</div>
+          <div class="target-grid">
+            <div class="target-chip" onclick="this.classList.toggle('selected')">Freshman</div>
+            <div class="target-chip" onclick="this.classList.toggle('selected')">Sophomore</div>
+            <div class="target-chip" onclick="this.classList.toggle('selected')">Junior</div>
+            <div class="target-chip" onclick="this.classList.toggle('selected')">Senior</div>
+            <div class="target-chip selected" onclick="this.classList.toggle('selected')">All Years</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYTICS -->
+  <div class="page" id="page-analytics">
+    <div class="topbar">
+      <div><div class="topbar-title">Analytics</div><div class="topbar-sub">Dorm Delivery Promo · June 2026</div></div>
+      <button class="btn btn-outline" onclick="exportCSV('analytics_report')">📥 Export CSV</button>
+    </div>
+    <div class="analytics-tabs">
+      <button class="analytics-tab active" onclick="setAnalyticsTab(this)">Impressions</button>
+      <button class="analytics-tab" onclick="setAnalyticsTab(this)">Clicks</button>
+      <button class="analytics-tab" onclick="setAnalyticsTab(this)">CTR</button>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-icon" style="background:#FEF3C7">👁️</div><div class="stat-value">14,200</div><div class="stat-label">Impressions</div><div class="stat-change">↑ 14%</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5">🖱️</div><div class="stat-value">1,065</div><div class="stat-label">Clicks</div><div class="stat-change">↑ 9%</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#EDE9FE">📈</div><div class="stat-value">7.5%</div><div class="stat-label">CTR</div><div class="stat-change">↑ 0.6%</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FEE2E2">💰</div><div class="stat-value">$0.52</div><div class="stat-label">Cost Per Click</div><div class="stat-change">↓ $0.04</div></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Performance Over Time</div>
+      <div class="chart-wrap" style="height:240px"><canvas id="analyticsChart"></canvas></div>
+    </div>
+    <div class="two-col">
+      <div class="card">
+        <div class="card-title">Top Performing Times</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #F3F4F6"><span style="font-size:13px;color:#374151">10pm – 12am</span><div style="display:flex;align-items:center;gap:8px"><div style="width:80px;height:6px;background:#F3F4F6;border-radius:6px;overflow:hidden"><div style="width:90%;height:100%;background:linear-gradient(90deg,#F59E0B,#FF6B35);border-radius:6px"></div></div><span style="font-size:12px;font-weight:700;color:#1a1a2e">28%</span></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid #F3F4F6"><span style="font-size:13px;color:#374151">6pm – 8pm</span><div style="display:flex;align-items:center;gap:8px"><div style="width:80px;height:6px;background:#F3F4F6;border-radius:6px;overflow:hidden"><div style="width:70%;height:100%;background:linear-gradient(90deg,#F59E0B,#FF6B35);border-radius:6px"></div></div><span style="font-size:12px;font-weight:700;color:#1a1a2e">22%</span></div></div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0"><span style="font-size:13px;color:#374151">12pm – 2pm</span><div style="display:flex;align-items:center;gap:8px"><div style="width:80px;height:6px;background:#F3F4F6;border-radius:6px;overflow:hidden"><div style="width:55%;height:100%;background:linear-gradient(90deg,#F59E0B,#FF6B35);border-radius:6px"></div></div><span style="font-size:12px;font-weight:700;color:#1a1a2e">17%</span></div></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Audience Who Clicked</div>
+        <div style="display:flex;flex-direction:column;gap:8px">
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F3F4F6;font-size:13px"><span style="color:#374151">Freshmen</span><span style="font-weight:700">34%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F3F4F6;font-size:13px"><span style="color:#374151">Sophomores</span><span style="font-weight:700">28%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #F3F4F6;font-size:13px"><span style="color:#374151">Juniors</span><span style="font-weight:700">22%</span></div>
+          <div style="display:flex;justify-content:space-between;padding:8px 0;font-size:13px"><span style="color:#374151">Seniors</span><span style="font-weight:700">16%</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- AUDIENCE -->
+  <div class="page" id="page-audience">
+    <div class="topbar"><div><div class="topbar-title">Audience Insights</div><div class="topbar-sub">Who's seeing your ads on One Campus</div></div></div>
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-icon" style="background:#FEF3C7">🎓</div><div class="stat-value">1,247</div><div class="stat-label">Total Reachable Users</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#EDE9FE">📚</div><div class="stat-value">12</div><div class="stat-label">Majors Represented</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5">📍</div><div class="stat-value">1</div><div class="stat-label">Active Campus</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FEE2E2">⚡</div><div class="stat-value">89</div><div class="stat-label">Daily Active Users</div></div>
+    </div>
+    <div class="two-col">
+      <div class="card"><div class="card-title">Top Majors</div><div class="chart-wrap"><canvas id="majorsChart"></canvas></div></div>
+      <div class="card"><div class="card-title">Year Breakdown</div><div class="chart-wrap"><canvas id="yearChart"></canvas></div></div>
+    </div>
+  </div>
+
+  <!-- BILLING -->
+  <div class="page" id="page-billing">
+    <div class="topbar"><div><div class="topbar-title">Billing & Payments</div><div class="topbar-sub">Manage your ad spend and invoices</div></div><button class="btn btn-primary" onclick="openAddPayment()">+ Add Payment Method</button></div>
+    <div class="two-col">
+      <div>
+        <div class="card">
+          <div class="card-title">Current Balance</div>
+          <div style="font-size:40px;font-weight:900;color:#1a1a2e;margin-bottom:4px">$880.00</div>
+          <div style="font-size:13px;color:#6B7280;margin-bottom:16px">Remaining ad budget this month</div>
+          <button class="btn btn-primary" style="width:100%" onclick="openAddFunds()">+ Add Funds</button>
+        </div>
+        <div class="card">
+          <div class="card-title">Payment Method</div>
+          <div class="billing-card"><div class="billing-icon">💳</div><div class="billing-info"><div class="billing-title">Visa ending in 4242</div><div class="billing-sub">Expires 08/27 · Auto-pay on</div></div><button class="action-btn edit" onclick="openEditCard()">Edit</button></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Invoice History</div>
+        <div style="display:flex;flex-direction:column">
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #F3F4F6">
+            <div><div style="font-size:13px;font-weight:700;color:#1a1a2e">June 2026 Invoice</div><div style="font-size:12px;color:#9CA3AF">2 campaigns · Purdue</div></div>
+            <div style="text-align:right"><div style="font-size:14px;font-weight:800;color:#1a1a2e">$1,120.00</div><button class="action-btn view" style="margin-top:4px" onclick="downloadInvoice('June 2026','$1,120.00')">Download</button></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid #F3F4F6">
+            <div><div style="font-size:13px;font-weight:700;color:#1a1a2e">May 2026 Invoice</div><div style="font-size:12px;color:#9CA3AF">1 campaign · Purdue</div></div>
+            <div style="text-align:right"><div style="font-size:14px;font-weight:800;color:#1a1a2e">$640.00</div><button class="action-btn view" style="margin-top:4px" onclick="downloadInvoice('May 2026','$640.00')">Download</button></div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 0">
+            <div><div style="font-size:13px;font-weight:700;color:#1a1a2e">April 2026 Invoice</div><div style="font-size:12px;color:#9CA3AF">1 campaign · Purdue</div></div>
+            <div style="text-align:right"><div style="font-size:14px;font-weight:800;color:#1a1a2e">$480.00</div><button class="action-btn view" style="margin-top:4px" onclick="downloadInvoice('April 2026','$480.00')">Download</button></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<div class="toast" id="toast"></div>
+
+<!-- MODAL -->
+<div class="modal-overlay" id="modalOverlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modalBox">
+    <div class="modal-header" id="modalHeader"></div>
+    <div id="modalBody"></div>
+  </div>
+</div>
+
+<script>
+/* ── nav ── */
+function showPage(name, el) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (el) el.classList.add('active');
+  if (name === 'audience') initAudienceCharts();
+  if (name === 'analytics') initAnalyticsChart();
+}
+
+/* ── toast ── */
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* ── modal helpers ── */
+function openModal(title, bodyHTML) {
+  document.getElementById('modalHeader').innerHTML =
+    `<span>${title}</span><button class="modal-close-btn" onclick="closeModal()">✕</button>`;
+  document.getElementById('modalBody').innerHTML = bodyHTML;
+  document.getElementById('modalOverlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('modalOverlay').classList.remove('open');
+}
+function successModal(title, msg) {
+  openModal(title, `<div class="success-box"><div style="font-size:40px">✅</div><div style="font-weight:700;font-size:16px;margin-top:8px">${msg}</div></div>
+    <button class="modal-btn-primary" onclick="closeModal()" style="width:100%;margin-top:8px">Done</button>`);
+}
+
+/* ── export CSV ── */
+function exportCSV(filename) {
+  const rows = [
+    ['Campaign','Impressions','Clicks','CTR','Spent'],
+    ['Boiler Up Fall Promo','14200','1136','8.0%','$560'],
+    ['Late Night Special','8900','712','8.0%','$356'],
+    ['Back-to-School Push','0','0','—','$0']
+  ];
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
+    download: filename + '.csv'
+  });
+  a.click();
+  toast('CSV downloaded!');
+}
+
+/* ── edit campaign ── */
+function openEditCampaign(name, type, budget, impressions) {
+  openModal('Edit Campaign', `
+    <div class="mform-group"><label class="mform-label">Campaign Name</label>
+      <input class="mform-input" id="ec-name" value="${name}"></div>
+    <div class="mform-group"><label class="mform-label">Ad Type</label>
+      <select class="mform-input" id="ec-type">
+        <option ${type==='Brand Awareness'?'selected':''}>Brand Awareness</option>
+        <option ${type==='Banner Ad'?'selected':''}>Banner Ad</option>
+        <option ${type==='Sponsored Post'?'selected':''}>Sponsored Post</option>
+      </select></div>
+    <div class="mform-group"><label class="mform-label">Daily Budget</label>
+      <input class="mform-input" id="ec-budget" value="${budget}"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="modal-btn-secondary" onclick="closeModal()" style="flex:1">Cancel</button>
+      <button class="modal-btn-primary" onclick="submitEditCampaign()" style="flex:2">Save Changes</button>
+    </div>`);
+}
+function submitEditCampaign() {
+  const name = document.getElementById('ec-name').value.trim();
+  if (!name) { toast('Campaign name is required'); return; }
+  successModal('Changes Saved', `"${name}" has been updated!`);
+}
+
+/* ── pause / resume ── */
+function togglePause(btn) {
+  const card = btn.closest('.campaign-card');
+  const pill = card.querySelector('.status-pill');
+  const isPaused = pill.classList.contains('status-paused');
+  if (isPaused) {
+    pill.className = 'status-pill status-live'; pill.textContent = '● Live';
+    btn.textContent = 'Pause'; btn.className = 'action-btn pause';
+    toast('Campaign resumed');
+  } else {
+    pill.className = 'status-pill status-paused'; pill.textContent = '⏸ Paused';
+    btn.textContent = 'Resume'; btn.className = 'action-btn resume';
+    toast('Campaign paused');
+  }
+}
+
+/* ── submit for review ── */
+function openSubmitReview(name) {
+  openModal('Submit for Review', `
+    <p style="color:#6B7280;font-size:14px;margin-bottom:16px">Ready to launch <strong>${name}</strong>? Our team reviews all campaigns within 24 hours.</p>
+    <div class="mform-group"><label class="mform-label">Any notes for the reviewer?</label>
+      <textarea class="mform-input" id="sr-notes" rows="3" placeholder="Optional..."></textarea></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="modal-btn-secondary" onclick="closeModal()" style="flex:1">Cancel</button>
+      <button class="modal-btn-primary" onclick="submitForReview('${name}')" style="flex:2">Submit →</button>
+    </div>`);
+}
+function submitForReview(name) {
+  successModal('Submitted!', `"${name}" is under review.\nWe'll notify you within 24h.`);
+}
+
+/* ── delete draft ── */
+function openDeleteDraft(btn) {
+  const card = btn.closest('.campaign-card');
+  const name = card.querySelector('.campaign-name').textContent;
+  openModal('Delete Draft', `
+    <p style="color:#6B7280;font-size:14px;margin-bottom:20px">Are you sure you want to delete <strong>${name}</strong>? This cannot be undone.</p>
+    <div style="display:flex;gap:8px">
+      <button class="modal-btn-secondary" onclick="closeModal()" style="flex:1">Cancel</button>
+      <button class="modal-btn-danger" onclick="confirmDeleteDraft()" style="flex:1" data-card-id="${name}">Delete</button>
+    </div>`);
+  document.getElementById('modalBox')._card = card;
+}
+function confirmDeleteDraft() {
+  const card = document.getElementById('modalBox')._card;
+  if (card) card.remove();
+  closeModal();
+  toast('Draft deleted');
+}
+
+/* ── add funds ── */
+function openAddFunds() {
+  openModal('Add Funds', `
+    <div class="mform-group"><label class="mform-label">Amount to Add</label>
+      <select class="mform-input" id="af-amount">
+        <option>$50.00</option><option>$100.00</option><option selected>$250.00</option>
+        <option>$500.00</option><option>$1,000.00</option>
+      </select></div>
+    <div class="mform-group"><label class="mform-label">Payment Method</label>
+      <div class="mform-input" style="display:flex;align-items:center;gap:8px">💳 Visa ending in 4242</div></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="modal-btn-secondary" onclick="closeModal()" style="flex:1">Cancel</button>
+      <button class="modal-btn-primary" onclick="submitAddFunds()" style="flex:2">Add Funds</button>
+    </div>`);
+}
+function submitAddFunds() {
+  const amt = document.getElementById('af-amount').value;
+  successModal('Funds Added!', `${amt} has been added to your balance.`);
+}
+
+/* ── add payment method ── */
+function openAddPayment() {
+  openModal('Add Payment Method', `
+    <div class="mform-group"><label class="mform-label">Card Number</label>
+      <input class="mform-input" placeholder="1234 5678 9012 3456" maxlength="19" oninput="fmtCard(this)"></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+      <div class="mform-group"><label class="mform-label">Expiry</label>
+        <input class="mform-input" placeholder="MM/YY" maxlength="5"></div>
+      <div class="mform-group"><label class="mform-label">CVV</label>
+        <input class="mform-input" placeholder="123" maxlength="4" type="password"></div>
+    </div>
+    <div class="mform-group"><label class="mform-label">Name on Card</label>
+      <input class="mform-input" placeholder="Full name"></div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="modal-btn-secondary" onclick="closeModal()" style="flex:1">Cancel</button>
+      <button class="modal-btn-primary" onclick="successModal('Card Added!','Your new card has been saved.')" style="flex:2">Save Card</button>
+    </div>`);
+}
+function fmtCard(el) {
+  el.value = el.value.replace(/\D/g,'').replace(/(.{4})/g,'$1 ').trim().slice(0,19);
+}
+
+/* ── edit card ── */
+function openEditCard() {
+  openModal('Edit Payment Method', `
+    <div style="background:#F9FAFB;border-radius:10px;padding:12px;margin-bottom:16px;display:flex;align-items:center;gap:10px">
+      <span style="font-size:24px">💳</span>
+      <div><div style="font-weight:700">Visa ending in 4242</div><div style="font-size:12px;color:#9CA3AF">Expires 08/27</div></div>
+    </div>
+    <div class="mform-group"><label class="mform-label">New Expiry Date</label>
+      <input class="mform-input" placeholder="MM/YY" maxlength="5" value="08/27"></div>
+    <div class="mform-group" style="display:flex;align-items:center;gap:10px;margin-top:4px">
+      <input type="checkbox" id="autopay" checked style="width:16px;height:16px">
+      <label for="autopay" style="font-size:13px;color:#374151">Auto-pay enabled</label>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="modal-btn-secondary" onclick="closeModal()" style="flex:1">Cancel</button>
+      <button class="modal-btn-primary" onclick="successModal('Card Updated!','Your payment method has been saved.')" style="flex:2">Save</button>
+    </div>`);
+}
+
+/* ── download invoice ── */
+function downloadInvoice(month, amount) {
+  const rows = [
+    ['One Campus Invoice'],
+    ['Period', month + ' 2026'],
+    ['Business', 'Advertiser Account'],
+    [''],
+    ['Campaign', 'Impressions', 'Clicks', 'Amount'],
+    ['Boiler Up Fall Promo', '14,200', '1,136', amount],
+    [''],
+    ['Total', '', '', amount]
+  ];
+  const csv = rows.map(r => r.join(',')).join('\n');
+  const a = Object.assign(document.createElement('a'), {
+    href: URL.createObjectURL(new Blob([csv], { type: 'text/csv' })),
+    download: 'invoice_' + month.replace(' ','_') + '.csv'
+  });
+  a.click();
+  toast('Invoice downloaded!');
+}
+
+function updatePreview() {
+  const h = document.getElementById('preview-headline').value;
+  const c = document.getElementById('preview-copy').value;
+  const cta = document.getElementById('preview-cta').value;
+  document.getElementById('live-headline').textContent = h || 'Your headline here';
+  document.getElementById('live-copy').textContent = c || 'Your ad copy will appear here...';
+  document.getElementById('live-cta').textContent = cta || 'Call to Action';
+}
+
+function setAnalyticsTab(btn) {
+  document.querySelectorAll('.analytics-tab').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+}
+
+// Dashboard charts
+new Chart(document.getElementById('impChart').getContext('2d'), {
+  type: 'bar',
+  data: {
+    labels: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    datasets: [{ label: 'Impressions', data: [1800, 2100, 1950, 2400, 2600, 3200, 2800], backgroundColor: 'rgba(245,158,11,0.8)', borderRadius: 8 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF' } }, y: { grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } } } }
+});
+
+new Chart(document.getElementById('audienceChart').getContext('2d'), {
+  type: 'doughnut',
+  data: {
+    labels: ['CS','Engineering','Business','Pre-Med','Other'],
+    datasets: [{ data: [28, 24, 18, 16, 14], backgroundColor: ['#7C3AED','#F59E0B','#10B981','#EF4444','#0EA5E9'], borderWidth: 0 }]
+  },
+  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
+});
+
+let analyticsInited = false;
+function initAnalyticsChart() {
+  if (analyticsInited) return; analyticsInited = true;
+  new Chart(document.getElementById('analyticsChart').getContext('2d'), {
+    type: 'line',
+    data: {
+      labels: ['Jun 1','Jun 2','Jun 3','Jun 4','Jun 5','Jun 6','Jun 7','Jun 8','Jun 9'],
+      datasets: [
+        { label: 'Impressions', data: [1200,1450,1380,1600,1750,2100,1900,2200,2180], borderColor: '#F59E0B', backgroundColor: 'rgba(245,158,11,0.08)', tension: 0.4, fill: true, yAxisID: 'y' },
+        { label: 'Clicks', data: [90,108,104,120,131,157,142,165,164], borderColor: '#7C3AED', tension: 0.4, fill: false, yAxisID: 'y1' }
+      ]
+    },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { font: { size: 11 } } } }, scales: { y: { grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } }, y1: { position: 'right', grid: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF' } }, x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF' } } } }
+  });
+}
+
+let audienceInited = false;
+function initAudienceCharts() {
+  if (audienceInited) return; audienceInited = true;
+  new Chart(document.getElementById('majorsChart').getContext('2d'), {
+    type: 'bar',
+    data: { labels: ['CS','ME','Business','Pre-Med','EE','Psychology','Other'], datasets: [{ data: [280,210,190,160,140,120,147], backgroundColor: 'rgba(245,158,11,0.8)', borderRadius: 8 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF' } }, y: { grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } } } }
+  });
+  new Chart(document.getElementById('yearChart').getContext('2d'), {
+    type: 'doughnut',
+    data: { labels: ['Freshman','Sophomore','Junior','Senior','Grad'], datasets: [{ data: [380, 310, 280, 210, 67], backgroundColor: ['#F59E0B','#FF6B35','#7C3AED','#10B981','#0EA5E9'], borderWidth: 0 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'right', labels: { font: { size: 11 }, boxWidth: 12 } } } }
+  });
+}
+</script>
+</body>
+</html>

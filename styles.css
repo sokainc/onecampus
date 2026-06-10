@@ -486,6 +486,104 @@ a { color: inherit; text-decoration: none; }
   line-height: 1.75;
 }
 
+/* ── PORTALS ── */
+.portals {
+  padding: 100px 0;
+  background: #F8F7FF;
+  text-align: center;
+}
+.portals .section-title {
+  margin-bottom: 16px;
+}
+.portals-sub {
+  font-size: 1.05rem;
+  color: var(--muted);
+  max-width: 600px;
+  margin: 0 auto 48px;
+  text-align: center;
+  line-height: 1.7;
+}
+.portals-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 24px;
+}
+.portal-card {
+  background: var(--white);
+  border-radius: 24px;
+  padding: 32px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.07);
+  border: 2px solid transparent;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.portal-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0,0,0,.12);
+}
+.portal-student { border-color: #E9D5FF; }
+.portal-business { border-color: #FDE68A; }
+.portal-admin   { border-color: #BFDBFE; }
+.portal-icon {
+  font-size: 36px;
+  line-height: 1;
+}
+.portal-badge {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  width: fit-content;
+}
+.portal-student .portal-badge { background: #EDE9FE; color: #7C3AED; }
+.portal-business .portal-badge { background: #FEF3C7; color: #92400E; }
+.portal-admin .portal-badge   { background: #DBEAFE; color: #1D4ED8; }
+.portal-card h3 {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text);
+}
+.portal-card p {
+  font-size: 0.9rem;
+  color: var(--muted);
+  line-height: 1.6;
+}
+.portal-features {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  flex: 1;
+}
+.portal-features li {
+  font-size: 0.875rem;
+  color: #374151;
+  font-weight: 500;
+}
+.portal-btn {
+  display: block;
+  text-align: center;
+  padding: 12px 20px;
+  border-radius: 14px;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-decoration: none;
+  margin-top: 8px;
+  transition: opacity 0.2s, transform 0.15s;
+}
+.portal-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.portal-btn-student  { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; }
+.portal-btn-business { background: linear-gradient(135deg,#F59E0B,#FF6B35); color: white; }
+.portal-btn-admin    { background: linear-gradient(135deg,#2563EB,#4F46E5); color: white; }
+
+@media (max-width: 900px) {
+  .portals-grid { grid-template-columns: 1fr; max-width: 420px; margin: 0 auto; }
+}
+
 /* ── CTA BAND ── */
 .cta-band {
   background: linear-gradient(135deg, #1E3A8A 0%, #4C1D95 100%);
