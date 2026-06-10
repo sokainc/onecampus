@@ -362,6 +362,60 @@
     .chat-send:active { transform: scale(0.92); }
     .unread-dot { position: absolute; top: -2px; right: -2px; min-width: 17px; height: 17px; background: #EF4444; color: white; font-size: 10px; font-weight: 800; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid white; padding: 0 3px; }
 
+    /* SETTINGS */
+    .settings-gear { width: 36px; height: 36px; border-radius: 50%; border: none; background: white; font-size: 17px; cursor: pointer; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .settings-panel {
+      position: absolute; inset: 0; background: #F5F3FF; z-index: 580;
+      display: flex; flex-direction: column;
+      transform: translateX(100%); transition: transform 0.28s ease;
+    }
+    .settings-panel.open { transform: translateX(0); }
+    .settings-body { flex: 1; overflow-y: auto; padding: 0 18px 24px; scrollbar-width: none; }
+    .settings-body::-webkit-scrollbar { display: none; }
+    .set-section { font-size: 11px; font-weight: 800; color: #9CA3AF; text-transform: uppercase; letter-spacing: 0.6px; margin: 18px 0 8px 4px; }
+    .set-card { background: white; border-radius: 16px; overflow: hidden; }
+    .set-row { display: flex; align-items: center; gap: 12px; padding: 13px 14px; border-bottom: 1px solid #F3F4F6; }
+    .set-row:last-child { border-bottom: none; }
+    .set-icon { width: 34px; height: 34px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 16px; flex-shrink: 0; }
+    .set-name { flex: 1; font-size: 13.5px; font-weight: 700; color: #1a1a2e; }
+    .set-sub { font-size: 11px; color: #9CA3AF; font-weight: 500; }
+    .set-chev { color: #D1D5DB; font-size: 16px; }
+    .switch { position: relative; width: 46px; height: 27px; flex-shrink: 0; cursor: pointer; }
+    .switch input { display: none; }
+    .switch .track { position: absolute; inset: 0; background: #E5E7EB; border-radius: 20px; transition: background 0.2s; }
+    .switch .thumb { position: absolute; top: 3px; left: 3px; width: 21px; height: 21px; background: white; border-radius: 50%; box-shadow: 0 1px 4px rgba(0,0,0,0.2); transition: transform 0.2s; }
+    .switch input:checked + .track { background: #7C3AED; }
+    .switch input:checked + .track .thumb { transform: translateX(19px); }
+    .danger-text { color: #EF4444 !important; }
+
+    /* DARK MODE */
+    .phone.dark { background: #15131F; }
+    .phone.dark .screen-title, .phone.dark .logo-name { color: #C4B5FD; }
+    .phone.dark .screen-sub, .phone.dark .day-name { color: #8B85A0; }
+    .phone.dark .status-bar { color: #E5E7EB; }
+    .phone.dark .battery { border-color: #E5E7EB; }
+    .phone.dark .battery::after { background: #E5E7EB; }
+    .phone.dark .week-strip, .phone.dark .event-card, .phone.dark .post-card, .phone.dark .ad-card,
+    .phone.dark .suggested-card, .phone.dark .badge-card, .phone.dark .progress-card, .phone.dark .create-post,
+    .phone.dark .feed-item, .phone.dark .set-card, .phone.dark .settings-gear { background: #221E33; }
+    .phone.dark .event-name, .phone.dark .post-name, .phone.dark .suggested-name, .phone.dark .badge-name,
+    .phone.dark .day-num, .phone.dark .set-name, .phone.dark .ad-brand-name, .phone.dark .ad-headline, .phone.dark .chat-h-name { color: #F3F4F6; }
+    .phone.dark .post-body, .phone.dark .feed-text { color: #C9C5D8; }
+    .phone.dark .bottom-nav, .phone.dark .chat-header, .phone.dark .chat-input-bar { background: #1B1828; border-color: #2E2942; }
+    .phone.dark .set-row { border-color: #2E2942; }
+    .phone.dark .ad-label-bar { background: #1B1828; border-color: #2E2942; }
+    .phone.dark .post-actions { border-color: #2E2942; }
+    .phone.dark .map-tab:not(.active), .phone.dark .pts-tab:not(.active), .phone.dark .connect-tab:not(.active),
+    .phone.dark .campus-tab:not(.active), .phone.dark .interest-pill:not(.active) { background: #221E33; color: #8B85A0; border-color: #2E2942; }
+    .phone.dark .settings-panel, .phone.dark .chat-panel { background: #15131F; }
+    .phone.dark .modal-sheet { background: #221E33; }
+    .phone.dark .prem-f-name, .phone.dark .ev-label { color: #F3F4F6; }
+    .phone.dark .msg.them { background: #221E33; color: #F3F4F6; }
+    .phone.dark .chat-input, .phone.dark .ev-input, .phone.dark .create-post-input { background: #2E2942; color: #F3F4F6; border-color: #3D3658; }
+    .phone.dark [style*="background:white"], .phone.dark [style*="background: white"] { background: #221E33 !important; }
+    .phone.dark [style*="color:#1a1a2e"] { color: #F3F4F6 !important; }
+    .phone.dark [style*="background:#F5F3FF"] { background: #2E2942 !important; }
+
     /* ADD EVENT FORM */
     .ev-label { font-size: 11px; font-weight: 800; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; margin: 12px 0 6px; }
     .ev-input { width: 100%; border: 1.5px solid #E9D5FF; background: #FAF9FF; border-radius: 14px; padding: 11px 14px; font-size: 14px; font-family: inherit; color: #1a1a2e; outline: none; }
@@ -470,7 +524,10 @@
       <div class="logo-icon">🎓</div>
       <span class="logo-name">One Campus</span>
     </div>
-    <div class="pts-badge">⚡ <span id="pts-display">2,456</span> pts</div>
+    <div style="display:flex;align-items:center;gap:8px">
+      <div class="pts-badge">⚡ <span id="pts-display">2,456</span> pts</div>
+      <button class="settings-gear" onclick="openSettings()">⚙️</button>
+    </div>
   </div>
 
   <div class="screens">
@@ -590,6 +647,18 @@
       <div id="connect-content"></div>
     </div>
 
+  </div>
+
+  <!-- SETTINGS PANEL -->
+  <div class="settings-panel" id="settings-panel">
+    <div class="chat-header">
+      <button class="chat-back" onclick="closeSettings()">‹</button>
+      <div>
+        <div class="chat-h-name">Settings</div>
+        <div class="set-sub">Leighton B. · Purdue University</div>
+      </div>
+    </div>
+    <div class="settings-body" id="settings-body"></div>
   </div>
 
   <!-- DM CHAT PANEL -->
@@ -1293,6 +1362,140 @@ function switchScreen(name, btn) {
   document.getElementById(`screen-${name}`).classList.add('active');
   btn.classList.add('active');
   if (name === 'map') setTimeout(initMap, 100);
+}
+
+// SETTINGS
+const settings = { dark: false, location: true, notifications: true, showOnLeaderboard: true };
+
+function openSettings() {
+  renderSettings();
+  document.getElementById('settings-panel').classList.add('open');
+}
+function closeSettings() {
+  document.getElementById('settings-panel').classList.remove('open');
+}
+
+function settingToggle(key, fnExtra) {
+  return `<label class="switch"><input type="checkbox" ${settings[key] ? 'checked' : ''} onchange="toggleSetting('${key}')"><span class="track"><span class="thumb"></span></span></label>`;
+}
+
+function renderSettings() {
+  document.getElementById('settings-body').innerHTML = `
+    <div class="set-section">Subscription</div>
+    <div class="set-card">
+      ${isPremium ? `
+      <div class="set-row">
+        <div class="set-icon" style="background:linear-gradient(135deg,#F59E0B,#FF6B35)">👑</div>
+        <div style="flex:1"><div class="set-name">One Campus Premium</div><div class="set-sub">$7.99/mo · renews July 10, 2026</div></div>
+        <span style="font-size:11px;font-weight:800;color:#22c55e">ACTIVE</span>
+      </div>
+      <div class="set-row" style="cursor:pointer" onclick="openCancelSub()">
+        <div class="set-icon" style="background:#FEE2E2">✕</div>
+        <div class="set-name danger-text">Cancel Subscription</div>
+        <span class="set-chev">›</span>
+      </div>` : `
+      <div class="set-row" style="cursor:pointer" onclick="closeSettings();openPremiumModal()">
+        <div class="set-icon" style="background:linear-gradient(135deg,#F59E0B,#FF6B35)">👑</div>
+        <div style="flex:1"><div class="set-name">Upgrade to Premium</div><div class="set-sub">2x points · AI organizer · all campuses</div></div>
+        <span class="set-chev">›</span>
+      </div>`}
+    </div>
+
+    <div class="set-section">Appearance</div>
+    <div class="set-card">
+      <div class="set-row">
+        <div class="set-icon" style="background:#EDE9FE">${settings.dark ? '🌙' : '☀️'}</div>
+        <div style="flex:1"><div class="set-name">Dark Mode</div><div class="set-sub">${settings.dark ? 'On — easy on the eyes' : 'Off — light theme'}</div></div>
+        ${settingToggle('dark')}
+      </div>
+    </div>
+
+    <div class="set-section">Privacy</div>
+    <div class="set-card">
+      <div class="set-row">
+        <div class="set-icon" style="background:#E0F2FE">📍</div>
+        <div style="flex:1"><div class="set-name">Share My Location</div><div class="set-sub">${settings.location ? 'Friends can see you on the map' : "You're invisible on the map 👻"}</div></div>
+        ${settingToggle('location')}
+      </div>
+      <div class="set-row">
+        <div class="set-icon" style="background:#FEF3C7">🏆</div>
+        <div style="flex:1"><div class="set-name">Show on Leaderboard</div><div class="set-sub">Appear in weekly rankings</div></div>
+        ${settingToggle('showOnLeaderboard')}
+      </div>
+    </div>
+
+    <div class="set-section">Notifications</div>
+    <div class="set-card">
+      <div class="set-row">
+        <div class="set-icon" style="background:#FCE7F3">🔔</div>
+        <div style="flex:1"><div class="set-name">Push Notifications</div><div class="set-sub">Events, DMs & friend requests</div></div>
+        ${settingToggle('notifications')}
+      </div>
+    </div>
+
+    <div class="set-section">Account</div>
+    <div class="set-card">
+      <div class="set-row" style="cursor:pointer" onclick="showToast('Profile editor — coming soon! ✏️')">
+        <div class="set-icon" style="background:#EDE9FE">👤</div>
+        <div class="set-name">Edit Profile</div>
+        <span class="set-chev">›</span>
+      </div>
+      <div class="set-row" style="cursor:pointer" onclick="showToast('Signed out (demo) 👋')">
+        <div class="set-icon" style="background:#F3F4F6">🚪</div>
+        <div class="set-name">Sign Out</div>
+        <span class="set-chev">›</span>
+      </div>
+    </div>
+    <div style="text-align:center;font-size:11px;color:#9CA3AF;margin-top:16px">One Campus v1.0 · Made with 💜 at Purdue</div>`;
+}
+
+function toggleSetting(key) {
+  settings[key] = !settings[key];
+  if (key === 'dark') {
+    document.querySelector('.phone').classList.toggle('dark', settings.dark);
+    showToast(settings.dark ? '🌙 Dark mode on' : '☀️ Light mode on');
+  } else if (key === 'location') {
+    showToast(settings.location ? '📍 Location sharing on' : '👻 You\'re now invisible on the map');
+  } else if (key === 'notifications') {
+    showToast(settings.notifications ? '🔔 Notifications on' : '🔕 Notifications muted');
+  } else {
+    showToast(settings.showOnLeaderboard ? '🏆 Visible on leaderboard' : 'Hidden from leaderboard');
+  }
+  renderSettings();
+}
+
+function openCancelSub() {
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="prem-hero">
+      <div class="prem-crown">😢</div>
+      <div class="prem-title">Cancel Premium?</div>
+      <div class="prem-price">You'll lose these perks at the end of your billing period:</div>
+    </div>
+    <div class="prem-feature"><div class="prem-f-icon" style="background:linear-gradient(135deg,#FF6B35,#FFB347)">⚡</div><div><div class="prem-f-name">Double Points</div><div class="prem-f-desc">Back to 1x earning on everything.</div></div></div>
+    <div class="prem-feature"><div class="prem-f-icon" style="background:linear-gradient(135deg,#7C3AED,#A855F7)">🤖</div><div><div class="prem-f-name">AI Day / Night Organizer</div><div class="prem-f-desc">No more AI-planned days.</div></div></div>
+    <div class="prem-feature"><div class="prem-f-icon" style="background:linear-gradient(135deg,#0EA5E9,#38BDF8)">🌎</div><div><div class="prem-f-name">Cross-Campus Access</div><div class="prem-f-desc">IU, Notre Dame, Butler & more lock again.</div></div></div>
+    <button class="prem-cta" onclick="closePremiumModal()">Keep Premium 👑</button>
+    <button class="prem-skip danger-text" style="font-weight:700" onclick="confirmCancelSub()">Cancel anyway</button>`;
+  document.getElementById('prem-overlay').classList.add('open');
+}
+
+function confirmCancelSub() {
+  isPremium = false;
+  if (activeCampus !== 'purdue') { activeCampus = 'purdue'; currentCardIndex = 0; renderDiscoverCards(); }
+  renderCampusTabs();
+  document.querySelector('.pts-badge').classList.remove('premium');
+  document.querySelector('.pts-badge').innerHTML = `⚡ <span id="pts-display">${points.toLocaleString()}</span> pts`;
+  document.getElementById('upgrade-banner').innerHTML = `
+    <div class="upgrade-icon">⭐</div>
+    <div class="upgrade-text">
+      <strong>One Campus Premium ✨</strong>
+      <span>2x points · AI organizer · cross-campus</span>
+    </div>
+    <button class="upgrade-btn" onclick="openPremiumModal()">Upgrade</button>`;
+  closePremiumModal();
+  renderSettings();
+  showToast('Subscription canceled — Premium ends July 10 💔');
 }
 
 // ADD EVENT
