@@ -362,6 +362,19 @@
     .chat-send:active { transform: scale(0.92); }
     .unread-dot { position: absolute; top: -2px; right: -2px; min-width: 17px; height: 17px; background: #EF4444; color: white; font-size: 10px; font-weight: 800; border-radius: 10px; display: flex; align-items: center; justify-content: center; border: 2px solid white; padding: 0 3px; }
 
+    /* ADD EVENT FORM */
+    .ev-label { font-size: 11px; font-weight: 800; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; margin: 12px 0 6px; }
+    .ev-input { width: 100%; border: 1.5px solid #E9D5FF; background: #FAF9FF; border-radius: 14px; padding: 11px 14px; font-size: 14px; font-family: inherit; color: #1a1a2e; outline: none; }
+    .ev-input:focus { border-color: #7C3AED; }
+    .ev-row { display: flex; gap: 10px; }
+    .ev-row > * { flex: 1; }
+    .ev-day-row { display: flex; gap: 6px; }
+    .ev-day-pick { flex: 1; padding: 9px 0; border-radius: 12px; border: 1.5px solid #E9D5FF; background: #FAF9FF; font-size: 12px; font-weight: 700; color: #6B7280; cursor: pointer; font-family: inherit; text-align: center; }
+    .ev-day-pick.sel { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; border-color: #7C3AED; }
+    .ev-color-row { display: flex; gap: 10px; }
+    .ev-color { width: 34px; height: 34px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
+    .ev-color.sel { border-color: #1a1a2e; transform: scale(1.1); }
+
     /* PREMIUM */
     .modal-overlay {
       position: absolute; inset: 0; background: rgba(26,26,46,0.55);
@@ -497,7 +510,7 @@
           <div class="screen-title">Events</div>
           <div class="screen-sub">What's happening on campus</div>
         </div>
-        <button class="add-event-btn" onclick="showToast('Add event — Coming soon! 📅')">+</button>
+        <button class="add-event-btn" onclick="openAddEvent()">+</button>
       </div>
       <div class="week-strip"><div class="week-days" id="week-days"></div></div>
       <div class="events-section-title" id="events-count-title">6 UPCOMING EVENTS</div>
@@ -919,7 +932,7 @@ function renderEvents(dayFilter) {
         <div class="event-name">${e.name}</div>
         <div class="event-location">📍 ${e.location}</div>
       </div>
-      <span class="event-badge ${already ? '' : 'badge-' + e.badge}" style="${already ? 'background:#F0FDF4;color:#22c55e' : ''}">${already ? '✓ Going' : e.badge === 'live' ? '🔴 Live' : e.badge === 'today' ? 'Today' : 'Soon'}</span>
+      <span class="event-badge ${already || e.mine ? '' : 'badge-' + e.badge}" style="${already ? 'background:#F0FDF4;color:#22c55e' : e.mine ? 'background:#EDE9FE;color:#7C3AED' : ''}">${e.mine ? '⭐ Host' : already ? '✓ Going' : e.badge === 'live' ? '🔴 Live' : e.badge === 'today' ? 'Today' : 'Soon'}</span>
     </div>`;
   }).join('') : `<div style="text-align:center;padding:30px;color:#9CA3AF;font-size:14px;">No events this day</div>`;
 }
@@ -1122,6 +1135,78 @@ function switchScreen(name, btn) {
   document.getElementById(`screen-${name}`).classList.add('active');
   btn.classList.add('active');
   if (name === 'map') setTimeout(initMap, 100);
+}
+
+// ADD EVENT
+let newEvDay = 0;
+let newEvColor = '#7C3AED';
+
+function openAddEvent() {
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  const colors = ['#7C3AED','#FF1744','#0EA5E9','#10B981','#F59E0B','#EF4444'];
+  newEvDay = 0;
+  newEvColor = '#7C3AED';
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="prem-hero">
+      <div class="prem-crown">📅</div>
+      <div class="prem-title" style="background:linear-gradient(135deg,#7C3AED,#A855F7);-webkit-background-clip:text;background-clip:text;">Create Event</div>
+      <div class="prem-price">Share it with everyone on campus</div>
+    </div>
+    <div class="ev-label">Event Name</div>
+    <input class="ev-input" id="ev-name" placeholder="e.g. CS Study Jam" maxlength="40" />
+    <div class="ev-label">Day</div>
+    <div class="ev-day-row">${dayNames.map((d, i) =>
+      `<button class="ev-day-pick ${i === 0 ? 'sel' : ''}" onclick="pickEvDay(this, ${i})">${d}</button>`).join('')}
+    </div>
+    <div class="ev-row">
+      <div>
+        <div class="ev-label">Time</div>
+        <input class="ev-input" id="ev-time" placeholder="7:00" maxlength="5" />
+      </div>
+      <div>
+        <div class="ev-label">AM / PM</div>
+        <select class="ev-input" id="ev-ampm"><option>PM</option><option>AM</option></select>
+      </div>
+    </div>
+    <div class="ev-label">Location</div>
+    <input class="ev-input" id="ev-location" placeholder="e.g. WALC 2nd Floor" maxlength="30" />
+    <div class="ev-label">Color</div>
+    <div class="ev-color-row">${colors.map((c, i) =>
+      `<div class="ev-color ${i === 0 ? 'sel' : ''}" style="background:${c}" onclick="pickEvColor(this, '${c}')"></div>`).join('')}
+    </div>
+    <button class="prem-cta" style="background:linear-gradient(135deg,#7C3AED,#A855F7);box-shadow:0 6px 20px rgba(124,58,237,0.4)" onclick="submitAddEvent()">Create Event ⚡</button>
+    <button class="prem-skip" onclick="closePremiumModal()">Cancel</button>`;
+  document.getElementById('prem-overlay').classList.add('open');
+}
+
+function pickEvDay(el, i) {
+  document.querySelectorAll('.ev-day-pick').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  newEvDay = i;
+}
+
+function pickEvColor(el, c) {
+  document.querySelectorAll('.ev-color').forEach(b => b.classList.remove('sel'));
+  el.classList.add('sel');
+  newEvColor = c;
+}
+
+function submitAddEvent() {
+  const name = document.getElementById('ev-name').value.trim();
+  let time = document.getElementById('ev-time').value.trim();
+  const ampm = document.getElementById('ev-ampm').value;
+  const location = document.getElementById('ev-location').value.trim();
+  if (!name) { showToast('Give your event a name! ✏️'); return; }
+  if (!time) time = '12:00';
+  if (!/^\d{1,2}(:\d{2})?$/.test(time)) { showToast('Time should look like 7:00'); return; }
+  if (!time.includes(':')) time += ':00';
+  events.push({ name, time, ampm, location: location || 'Purdue Campus', badge: 'soon', color: newEvColor, day: newEvDay, mine: true });
+  closePremiumModal();
+  renderWeekCalendar();
+  renderEvents(null);
+  const earned = addPoints(50);
+  showToast(`📅 "${name}" created! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
 }
 
 // DM / CHAT
