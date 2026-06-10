@@ -1661,10 +1661,108 @@ function openPremiumModal() {
         <div class="prem-f-desc">See clubs, events & people at every local college — IU Bloomington, Notre Dame, Butler, Ball State, Rose-Hulman & IUPUI.</div>
       </div>
     </div>
-    <button class="prem-cta" onclick="subscribePremium()">Start Premium — $7.99/mo</button>
+    <button class="prem-cta" onclick="openPaymentScreen()">Start Premium — $7.99/mo</button>
     <button class="prem-skip" onclick="closePremiumModal()">Maybe later</button>
     <div class="prem-fine">Demo only — no real payment is processed. Renews monthly until canceled.</div>`;
   document.getElementById('prem-overlay').classList.add('open');
+}
+
+// PAYMENT
+function openPaymentScreen() {
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="prem-hero">
+      <div class="prem-crown">💳</div>
+      <div class="prem-title" style="background:linear-gradient(135deg,#7C3AED,#A855F7);-webkit-background-clip:text;background-clip:text;">Checkout</div>
+      <div class="prem-price">One Campus Premium · <strong>$7.99</strong>/month</div>
+    </div>
+
+    <button onclick="payWithApplePay()" style="width:100%;padding:14px;border:none;border-radius:14px;background:#000;color:white;font-size:16px;font-weight:700;cursor:pointer;font-family:inherit;display:flex;align-items:center;justify-content:center;gap:6px">
+       Pay with Apple&nbsp;Pay
+    </button>
+
+    <div style="display:flex;align-items:center;gap:12px;margin:16px 0">
+      <div style="flex:1;height:1px;background:#E5E7EB"></div>
+      <span style="font-size:11px;color:#9CA3AF;font-weight:600">OR PAY WITH CARD</span>
+      <div style="flex:1;height:1px;background:#E5E7EB"></div>
+    </div>
+
+    <div class="ev-label">Card Number</div>
+    <input class="ev-input" id="pay-card" placeholder="1234 5678 9012 3456" inputmode="numeric" maxlength="19" oninput="fmtCardNum(this)" />
+    <div class="ev-row">
+      <div>
+        <div class="ev-label">Expiry</div>
+        <input class="ev-input" id="pay-exp" placeholder="MM/YY" inputmode="numeric" maxlength="5" oninput="fmtExpiry(this)" />
+      </div>
+      <div>
+        <div class="ev-label">CVV</div>
+        <input class="ev-input" id="pay-cvv" placeholder="123" type="password" inputmode="numeric" maxlength="4" />
+      </div>
+    </div>
+    <div class="ev-label">Name on Card</div>
+    <input class="ev-input" id="pay-name" placeholder="Leighton Bailey" />
+
+    <button class="prem-cta" onclick="payWithCard()">Pay $7.99 →</button>
+    <button class="prem-skip" onclick="openPremiumModal()">‹ Back</button>
+    <div class="prem-fine">🔒 Demo checkout — no real payment is processed or stored.</div>`;
+  document.getElementById('prem-overlay').classList.add('open');
+}
+
+function fmtCardNum(el) {
+  el.value = el.value.replace(/\D/g, '').replace(/(.{4})/g, '$1 ').trim().slice(0, 19);
+}
+function fmtExpiry(el) {
+  let v = el.value.replace(/\D/g, '').slice(0, 4);
+  el.value = v.length > 2 ? v.slice(0, 2) + '/' + v.slice(2) : v;
+}
+
+function payWithApplePay() {
+  // simulated Face ID confirmation
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div style="text-align:center;padding:30px 10px">
+      <div style="font-size:54px;animation:bounce 1.2s infinite" id="faceid-icon">👤</div>
+      <div style="font-size:17px;font-weight:800;color:#1a1a2e;margin-top:12px" id="pay-status">Confirm with Face ID</div>
+      <div style="font-size:13px;color:#6B7280;margin-top:4px">One Campus Premium · $7.99/mo</div>
+      <div style="font-size:12px;color:#9CA3AF;margin-top:18px"> Pay · Visa ·· 4242</div>
+    </div>`;
+  setTimeout(() => {
+    const s = document.getElementById('pay-status');
+    const i = document.getElementById('faceid-icon');
+    if (s) { s.textContent = 'Processing...'; i.textContent = '⏳'; }
+  }, 1200);
+  setTimeout(() => {
+    const s = document.getElementById('pay-status');
+    const i = document.getElementById('faceid-icon');
+    if (s) { s.textContent = 'Done ✓'; i.textContent = '✅'; }
+  }, 2200);
+  setTimeout(() => subscribePremium(), 2900);
+}
+
+function payWithCard() {
+  const num = document.getElementById('pay-card').value.replace(/\s/g, '');
+  const exp = document.getElementById('pay-exp').value;
+  const cvv = document.getElementById('pay-cvv').value;
+  const name = document.getElementById('pay-name').value.trim();
+  if (num.length < 15) { showToast('Enter a valid card number 💳'); return; }
+  if (!/^\d{2}\/\d{2}$/.test(exp)) { showToast('Expiry should be MM/YY'); return; }
+  const mm = parseInt(exp.slice(0, 2), 10);
+  if (mm < 1 || mm > 12) { showToast('Expiry month must be 01–12'); return; }
+  if (cvv.length < 3) { showToast('Enter your 3-digit CVV'); return; }
+  if (!name) { showToast('Enter the name on the card ✏️'); return; }
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div style="text-align:center;padding:30px 10px">
+      <div style="font-size:54px" id="card-icon">⏳</div>
+      <div style="font-size:17px;font-weight:800;color:#1a1a2e;margin-top:12px" id="card-status">Processing payment...</div>
+      <div style="font-size:13px;color:#6B7280;margin-top:4px">Visa ·· ${num.slice(-4)} · $7.99</div>
+    </div>`;
+  setTimeout(() => {
+    const s = document.getElementById('card-status');
+    const i = document.getElementById('card-icon');
+    if (s) { s.textContent = 'Payment approved ✓'; i.textContent = '✅'; }
+  }, 1600);
+  setTimeout(() => subscribePremium(), 2300);
 }
 
 function closePremiumModal() {
