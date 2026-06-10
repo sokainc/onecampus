@@ -397,8 +397,9 @@
     .prem-fine { font-size: 10px; color: #C4C4CC; text-align: center; margin-top: 8px; }
     .pts-badge.premium { background: linear-gradient(135deg,#F59E0B,#FF6B35); box-shadow: 0 2px 10px rgba(245,158,11,0.4); }
     .pro-chip { background: linear-gradient(135deg,#F59E0B,#FF6B35); color: white; font-size: 10px; font-weight: 800; padding: 2px 8px; border-radius: 8px; letter-spacing: 0.5px; }
-    .campus-toggle { display: flex; gap: 8px; margin-bottom: 12px; }
-    .campus-tab { flex: 1; padding: 8px; border-radius: 14px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; }
+    .campus-toggle { display: flex; gap: 8px; margin-bottom: 12px; overflow-x: auto; scrollbar-width: none; padding-bottom: 2px; }
+    .campus-toggle::-webkit-scrollbar { display: none; }
+    .campus-tab { flex-shrink: 0; padding: 8px 14px; border-radius: 14px; border: none; font-size: 12px; font-weight: 700; cursor: pointer; font-family: inherit; transition: all 0.2s; white-space: nowrap; }
     .campus-tab.active { background: linear-gradient(135deg,#7C3AED,#A855F7); color: white; }
     .campus-tab:not(.active) { background: white; color: #6B7280; }
     .campus-tab .lock { font-size: 11px; }
@@ -470,10 +471,7 @@
         </div>
         <button style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#A855F7);border:none;font-size:18px;cursor:pointer;color:white;" onclick="showToast('Quick Match on! ⚡')">⚡</button>
       </div>
-      <div class="campus-toggle">
-        <button class="campus-tab active" id="tab-purdue" onclick="setCampus('purdue')">🚂 Purdue</button>
-        <button class="campus-tab" id="tab-iu" onclick="setCampus('iu')"><span class="lock" id="iu-lock">🔒</span> IU Bloomington</button>
-      </div>
+      <div class="campus-toggle" id="campus-toggle"></div>
       <div class="discover-card-stack" id="card-stack"></div>
       <div class="disc-actions">
         <button class="disc-btn skip" onclick="swipeCard('skip')" title="Skip">✕</button>
@@ -720,14 +718,47 @@ const suggested = [
   { name: 'Sofia R.', initial: 'S', color: '#EC4899', detail: 'Business · Invest Club' },
 ];
 
-const iuClubs = [
-  { name: 'IU Computing Club', tag: 'TECH', desc: 'Hoosier hackers — workshops, projects & tech talks at Luddy Hall.', members: 612, location: 'Luddy Hall 1106', grad: 'grad-1' },
-  { name: 'Kelley Consulting Club', tag: 'BUSINESS', desc: 'Real consulting projects for real clients at Kelley School.', members: 289, location: 'Hodge Hall 2055', grad: 'grad-4' },
-  { name: 'IU Outdoor Adventures', tag: 'SPORTS', desc: 'Hiking, climbing & kayaking trips around Bloomington.', members: 458, location: 'SRSC Lobby', grad: 'grad-3' },
-  { name: 'Hoosier Robotics', tag: 'TECH', desc: 'Build battle bots and autonomous rovers with IU engineers.', members: 175, location: 'Luddy 3166', grad: 'grad-5' },
-  { name: 'IU Dance Marathon', tag: 'ARTS', desc: 'The largest student org at IU — 36 hours for Riley Kids.', members: 1043, location: 'IMU Alumni Hall', grad: 'grad-2' },
-  { name: 'Little 500 Cycling', tag: 'SPORTS', desc: 'Train for the legendary Little 500 bike race.', members: 198, location: 'Bill Armstrong Stadium', grad: 'grad-6' },
-];
+const campuses = {
+  purdue: { name: 'Purdue', emoji: '🚂', free: true, clubs: null }, // clubs filled in below
+  iu: { name: 'IU Bloomington', emoji: '🔴', clubs: [
+    { name: 'IU Computing Club', tag: 'TECH', desc: 'Hoosier hackers — workshops, projects & tech talks at Luddy Hall.', members: 612, location: 'Luddy Hall 1106', grad: 'grad-1' },
+    { name: 'Kelley Consulting Club', tag: 'BUSINESS', desc: 'Real consulting projects for real clients at Kelley School.', members: 289, location: 'Hodge Hall 2055', grad: 'grad-4' },
+    { name: 'IU Outdoor Adventures', tag: 'SPORTS', desc: 'Hiking, climbing & kayaking trips around Bloomington.', members: 458, location: 'SRSC Lobby', grad: 'grad-3' },
+    { name: 'Hoosier Robotics', tag: 'TECH', desc: 'Build battle bots and autonomous rovers with IU engineers.', members: 175, location: 'Luddy 3166', grad: 'grad-5' },
+    { name: 'IU Dance Marathon', tag: 'ARTS', desc: 'The largest student org at IU — 36 hours for Riley Kids.', members: 1043, location: 'IMU Alumni Hall', grad: 'grad-2' },
+    { name: 'Little 500 Cycling', tag: 'SPORTS', desc: 'Train for the legendary Little 500 bike race.', members: 198, location: 'Bill Armstrong Stadium', grad: 'grad-6' },
+  ]},
+  nd: { name: 'Notre Dame', emoji: '☘️', clubs: [
+    { name: 'ND Robotics', tag: 'TECH', desc: 'Irish engineering — build robots for national competitions.', members: 156, location: 'Stinson-Remick Hall', grad: 'grad-2' },
+    { name: 'SIBC', tag: 'BUSINESS', desc: 'Student International Business Council — largest club at ND.', members: 890, location: 'Mendoza College', grad: 'grad-4' },
+    { name: 'Bengal Bouts', tag: 'SPORTS', desc: 'Legendary charity boxing tournament since 1931.', members: 320, location: 'Joyce Center', grad: 'grad-1' },
+    { name: 'ND Glee Club', tag: 'ARTS', desc: 'One of America\'s oldest collegiate choirs, est. 1915.', members: 75, location: 'DeBartolo PAC', grad: 'grad-3' },
+  ]},
+  butler: { name: 'Butler', emoji: '🐶', clubs: [
+    { name: 'Butler Esports', tag: 'TECH', desc: 'Varsity-level gaming in a dedicated esports arena.', members: 210, location: 'Esports Park', grad: 'grad-5' },
+    { name: 'Butler Dance Marathon', tag: 'ARTS', desc: 'Dancing for Riley Hospital for Children.', members: 340, location: 'HRC Gym', grad: 'grad-2' },
+    { name: 'Bulldogs Investment Group', tag: 'BUSINESS', desc: 'Manage a live student investment fund.', members: 98, location: 'Lacy School', grad: 'grad-4' },
+    { name: 'Butler Club Volleyball', tag: 'SPORTS', desc: 'Competitive club volleyball, travel tournaments.', members: 64, location: 'HRC Courts', grad: 'grad-6' },
+  ]},
+  ballstate: { name: 'Ball State', emoji: '🐦', clubs: [
+    { name: 'BSU Game Dev Club', tag: 'TECH', desc: 'Design & ship indie games every semester.', members: 145, location: 'Robert Bell 109', grad: 'grad-1' },
+    { name: 'Cardinal Filmworks', tag: 'ARTS', desc: 'Student films from script to screening.', members: 88, location: 'Letterman Building', grad: 'grad-3' },
+    { name: 'BSU Sales Club', tag: 'BUSINESS', desc: 'Pitch competitions & networking with Fortune 500 recruiters.', members: 120, location: 'Whitinger 152', grad: 'grad-4' },
+    { name: 'Cardinal Climbing', tag: 'SPORTS', desc: 'Indoor wall sessions & outdoor trips.', members: 76, location: 'Rec Center Wall', grad: 'grad-5' },
+  ]},
+  rose: { name: 'Rose-Hulman', emoji: '🌹', clubs: [
+    { name: 'Rose Robotics', tag: 'TECH', desc: 'Top-ranked engineering school\'s battle bot team.', members: 110, location: 'Branam Innovation Ctr', grad: 'grad-2' },
+    { name: 'Rose Drone Club', tag: 'TECH', desc: 'Build & race FPV drones with fellow engineers.', members: 67, location: 'Kremer Innovation Ctr', grad: 'grad-5' },
+    { name: 'Engineers in Concert', tag: 'ARTS', desc: 'Proof engineers can play music too.', members: 54, location: 'Hatfield Hall', grad: 'grad-3' },
+    { name: 'Rose Ultimate', tag: 'SPORTS', desc: 'Ultimate frisbee — engineering precision throws.', members: 48, location: 'Cook Stadium Fields', grad: 'grad-6' },
+  ]},
+  iupui: { name: 'IUPUI', emoji: '🏙️', clubs: [
+    { name: 'Jags Hack Club', tag: 'TECH', desc: 'Downtown Indy hackathons & startup nights.', members: 230, location: 'Informatics Bldg', grad: 'grad-1' },
+    { name: 'IUPUI Pre-Med Assoc.', tag: 'SCIENCE', desc: 'Right next to IU School of Medicine — shadowing galore.', members: 410, location: 'Science Building', grad: 'grad-6' },
+    { name: 'Jaguar Business Society', tag: 'BUSINESS', desc: 'Network with Indy\'s biggest employers.', members: 185, location: 'Kelley Indy', grad: 'grad-4' },
+    { name: 'IUPUI Intramurals', tag: 'SPORTS', desc: 'Soccer, hoops & flag football leagues downtown.', members: 520, location: 'The JagPlex', grad: 'grad-3' },
+  ]},
+};
 
 let currentCardIndex = 0;
 let points = 2456;
@@ -741,6 +772,7 @@ const addedFriends = new Set();
 const likedPosts = new Set();
 
 document.addEventListener('DOMContentLoaded', () => {
+  renderCampusTabs();
   renderDiscoverCards();
   renderWeekCalendar();
   renderEvents(null);
@@ -750,23 +782,32 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // DISCOVER
+campuses.purdue.clubs = clubs;
+
 function activeClubs() {
-  const list = activeCampus === 'iu' ? iuClubs : clubs;
+  const list = campuses[activeCampus].clubs;
   if (activeInterest === 'All') return list;
   return list.filter(c => c.tag === activeInterest.toUpperCase());
 }
 
-function setCampus(campus) {
-  if (campus === 'iu' && !isPremium) {
+function renderCampusTabs() {
+  document.getElementById('campus-toggle').innerHTML = Object.entries(campuses).map(([key, c]) => {
+    const locked = !c.free && !isPremium;
+    return `<button class="campus-tab ${key === activeCampus ? 'active' : ''}" onclick="setCampus('${key}')">${locked ? '🔒' : c.emoji} ${c.name}</button>`;
+  }).join('');
+}
+
+function setCampus(key) {
+  const c = campuses[key];
+  if (!c.free && !isPremium) {
     openPremiumModal();
     return;
   }
-  activeCampus = campus;
+  activeCampus = key;
   currentCardIndex = 0;
-  document.getElementById('tab-purdue').classList.toggle('active', campus === 'purdue');
-  document.getElementById('tab-iu').classList.toggle('active', campus === 'iu');
+  renderCampusTabs();
   renderDiscoverCards();
-  showToast(campus === 'iu' ? '🌎 Browsing IU Bloomington — Premium perk!' : '🚂 Back to Purdue');
+  showToast(key === 'purdue' ? '🚂 Back to Purdue' : `${c.emoji} Browsing ${c.name} — Premium perk!`);
 }
 
 function renderDiscoverCards() {
@@ -1171,7 +1212,7 @@ function openPremiumModal() {
       <div class="prem-f-icon" style="background:linear-gradient(135deg,#0EA5E9,#38BDF8)">🌎</div>
       <div>
         <div class="prem-f-name">Cross-Campus Access</div>
-        <div class="prem-f-desc">See clubs, events & people beyond Purdue — connect with students at IU Bloomington and more.</div>
+        <div class="prem-f-desc">See clubs, events & people at every local college — IU Bloomington, Notre Dame, Butler, Ball State, Rose-Hulman & IUPUI.</div>
       </div>
     </div>
     <button class="prem-cta" onclick="subscribePremium()">Start Premium — $7.99/mo</button>
@@ -1190,8 +1231,8 @@ function subscribePremium() {
   // PRO styling on the points badge
   document.querySelector('.pts-badge').classList.add('premium');
   document.querySelector('.pts-badge').innerHTML = `👑 <span id="pts-display">${points.toLocaleString()}</span> pts`;
-  // unlock IU tab
-  document.getElementById('iu-lock').textContent = '🌎';
+  // unlock all local campuses
+  renderCampusTabs();
   // banner becomes the AI planner launcher
   document.getElementById('upgrade-banner').innerHTML = `
     <div class="upgrade-icon">🤖</div>
