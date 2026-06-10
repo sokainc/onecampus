@@ -625,6 +625,10 @@ const clubs = [
   { name: 'Boilermaker Invest Club', tag: 'BUSINESS', desc: 'Manage a real $50k student-run investment portfolio.', members: 156, location: 'Rawls 1071', grad: 'grad-4' },
   { name: 'Purdue Robotics Team', tag: 'TECH', desc: 'Design & build competition robots. VEX & FRC.', members: 234, location: 'ME Building 164', grad: 'grad-5' },
   { name: 'Pre-Med Society', tag: 'SCIENCE', desc: 'MCAT prep, shadowing hours, and med school networking.', members: 567, location: 'LILLY B01', grad: 'grad-6' },
+  { name: 'Purdue Club Soccer', tag: 'SPORTS', desc: 'Competitive & rec soccer — tryouts every fall at the TREC fields.', members: 380, location: 'TREC Fields', grad: 'grad-3' },
+  { name: 'Boiler Barbell', tag: 'SPORTS', desc: 'Powerlifting crew at the CoRec. All levels welcome.', members: 264, location: 'CoRec Weight Room', grad: 'grad-1' },
+  { name: 'Purdue Theatre Co.', tag: 'ARTS', desc: 'Student-run productions every semester. Actors & crew wanted.', members: 142, location: 'PAO Hall', grad: 'grad-2' },
+  { name: 'Hello Walk Singers', tag: 'ARTS', desc: 'A cappella group performing across campus & beyond.', members: 96, location: 'Elliott Hall', grad: 'grad-5' },
 ];
 
 const events = [
@@ -729,6 +733,7 @@ let currentCardIndex = 0;
 let points = 2456;
 let isPremium = false;
 let activeCampus = 'purdue';
+let activeInterest = 'All';
 let mapInitialized = false;
 const joinedClubs = new Set();
 const rsvpdEvents = new Set();
@@ -746,7 +751,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // DISCOVER
 function activeClubs() {
-  return activeCampus === 'iu' ? iuClubs : clubs;
+  const list = activeCampus === 'iu' ? iuClubs : clubs;
+  if (activeInterest === 'All') return list;
+  return list.filter(c => c.tag === activeInterest.toUpperCase());
 }
 
 function setCampus(campus) {
@@ -766,6 +773,14 @@ function renderDiscoverCards() {
   const list = activeClubs();
   const stack = document.getElementById('card-stack');
   stack.innerHTML = '';
+  if (list.length === 0) {
+    stack.innerHTML = `<div style="position:absolute;inset:0;background:white;border-radius:24px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;padding:24px;text-align:center;">
+      <div style="font-size:44px">🔍</div>
+      <div style="font-size:17px;font-weight:800;color:#1a1a2e">No ${activeInterest} clubs yet</div>
+      <div style="font-size:13px;color:#6B7280">Try another interest${isPremium ? ' or check IU Bloomington 🌎' : ', or start this club yourself!'}</div>
+    </div>`;
+    return;
+  }
   const pool = list.slice(currentCardIndex % list.length);
   const show = [...pool, ...list].slice(0, 3);
   show.forEach((club, i) => {
@@ -794,6 +809,7 @@ function swipeCard(action) {
   const front = document.querySelector('.disc-card.front');
   if (!front) return;
   const list = activeClubs();
+  if (list.length === 0) return;
   const club = list[currentCardIndex % list.length];
   front.style.transform = (action === 'join' || action === 'super') ? 'translateX(130%) rotate(15deg)' : 'translateX(-130%) rotate(-15deg)';
   front.style.opacity = '0';
@@ -815,7 +831,11 @@ function swipeCard(action) {
 function toggleInterest(el) {
   document.querySelectorAll('.interest-pill').forEach(p => p.classList.remove('active'));
   el.classList.add('active');
-  showToast(`Filtering by: ${el.textContent}`);
+  activeInterest = el.textContent;
+  currentCardIndex = 0;
+  renderDiscoverCards();
+  const count = activeClubs().length;
+  showToast(activeInterest === 'All' ? `Showing all ${count} clubs` : `${count} ${activeInterest} club${count !== 1 ? 's' : ''} found`);
 }
 
 // EVENTS
