@@ -1,0 +1,8 @@
+# personal notes (Obsidian vault) — keep off GitHub
+One Campus/
+
+# local tool settings
+.claude/
+
+# dependencies (if native app ever runs here)
+node_modules/
