@@ -588,6 +588,7 @@
         <button class="map-tab" onclick="setMapTab(this)">Friends</button>
         <button class="map-tab" onclick="setMapTab(this)">Clubs</button>
       </div>
+      <div id="route-banner" style="display:none;background:white;border-radius:14px;padding:10px 14px;margin-bottom:10px;font-size:13px;color:#1a1a2e;box-shadow:0 2px 12px rgba(0,0,0,0.08)"></div>
       <div id="map-container"></div>
       <div class="nearby-title">NEARBY FRIENDS</div>
       <div class="nearby-friends" id="nearby-friends"></div>
@@ -1080,7 +1081,7 @@ function initMap() {
     const m = L.marker([c.lat - 0.0005, c.lng - 0.0005], {
       icon: L.divIcon({ html: `<div style="width:32px;height:32px;background:white;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;border:2.5px solid #7C3AED;box-shadow:0 3px 10px rgba(124,58,237,0.3)">${c.emoji}</div>`, className: '', iconSize: [32,32], iconAnchor: [16,16] })
     });
-    m.bindPopup(`<div style="font-family:Inter,sans-serif;min-width:150px"><strong>${c.emoji} ${c.name}</strong><br><span style="font-size:11px;color:#6B7280">📍 ${c.where} · 👥 ${c.members} members</span><br><div style="display:flex;gap:6px;margin-top:6px"><button onclick="joinClubFromMap('${c.name.replace(/'/g,"\\'")}')" style="background:linear-gradient(135deg,#7C3AED,#A855F7);color:white;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✓ Join</button><button onclick="openDirections(${c.lat},${c.lng})" style="background:#34A853;color:white;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🧭 Directions</button></div></div>`);
+    m.bindPopup(`<div style="font-family:Inter,sans-serif;min-width:150px"><strong>${c.emoji} ${c.name}</strong><br><span style="font-size:11px;color:#6B7280">📍 ${c.where} · 👥 ${c.members} members</span><br><div style="display:flex;gap:6px;margin-top:6px"><button onclick="joinClubFromMap('${c.name.replace(/'/g,"\\'")}')" style="background:linear-gradient(135deg,#7C3AED,#A855F7);color:white;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✓ Join</button><button onclick="openDirections(${c.lat},${c.lng},'${c.name.replace(/'/g,"\\'")}')" style="background:#34A853;color:white;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🧭 Directions</button></div></div>`);
     return m;
   }));
 
@@ -1089,12 +1090,54 @@ function initMap() {
   clubsLayer.addTo(campusMap);
 }
 
-function openDirections(lat, lng) {
-  window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+// ── IN-APP WALKING DIRECTIONS (no tab switching!) ──
+const YOU = { lat: 40.4286, lng: -86.9138 }; // demo: you're at the Engineering Fountain
+const PLACES = {
+  'WALC': [40.4265, -86.9176], 'PMU': [40.4253, -86.9096], 'CoRec': [40.4215, -86.9238],
+  'ARMS': [40.4278, -86.9165], 'Rawls': [40.4242, -86.9210], 'Stewart': [40.4251, -86.9162],
+  'Lilly': [40.4244, -86.9190], 'LILLY': [40.4244, -86.9190], 'TREC': [40.4190, -86.9221],
+  'ME Building': [40.4283, -86.9134], 'PAO': [40.4257, -86.9186], 'Elliott': [40.4283, -86.9148],
+};
+let routeLayer = null;
+
+async function openDirections(lat, lng, label) {
+  // jump to the map tab so the route is visible
+  switchScreen('map', document.querySelectorAll('.nav-btn')[2]);
+  setTimeout(() => drawRoute(lat, lng, label || 'destination'), 200);
 }
 
 function openDirectionsByName(place) {
-  window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(place + ' Purdue University West Lafayette')}`, '_blank');
+  const key = Object.keys(PLACES).find(k => place.includes(k));
+  if (!key) { showToast('📍 Location not on the campus map yet'); return; }
+  openDirections(PLACES[key][0], PLACES[key][1], place);
+}
+
+async function drawRoute(lat, lng, label) {
+  if (!mapInitialized) initMap();
+  showToast('🚶 Finding the best walking route...');
+  try {
+    const res = await fetch(`https://routing.openstreetmap.de/routed-foot/route/v1/foot/${YOU.lng},${YOU.lat};${lng},${lat}?overview=full&geometries=geojson`);
+    const data = await res.json();
+    const r = data.routes[0];
+    const coords = r.geometry.coordinates.map(([x, y]) => [y, x]);
+    clearRoute();
+    routeLayer = L.layerGroup([
+      L.polyline(coords, { color: '#7C3AED', weight: 5, opacity: 0.85, dashArray: '1 8', lineCap: 'round' }),
+      L.marker([YOU.lat, YOU.lng], { icon: L.divIcon({ html: `<div style="background:#1a1a2e;color:white;padding:3px 9px;border-radius:10px;font-size:10px;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,0.3)">😀 You</div>`, className: '', iconAnchor: [18, 10] }) }),
+    ]).addTo(campusMap);
+    campusMap.fitBounds(L.polyline(coords).getBounds(), { padding: [35, 35] });
+    const mins = Math.max(1, Math.round(r.duration / 60));
+    const banner = document.getElementById('route-banner');
+    banner.innerHTML = `🚶 <strong>${mins} min walk</strong> (${Math.round(r.distance)} m) to ${label} <button onclick="clearRoute(true)" style="background:none;border:none;color:#9CA3AF;font-size:14px;cursor:pointer;margin-left:4px">✕</button>`;
+    banner.style.display = 'block';
+  } catch (e) {
+    showToast('Could not load route — check internet 📶');
+  }
+}
+
+function clearRoute(hideBanner) {
+  if (routeLayer) { routeLayer.remove(); routeLayer = null; }
+  if (hideBanner) document.getElementById('route-banner').style.display = 'none';
 }
 
 function joinClubFromMap(name) {

@@ -4,6 +4,7 @@ import {
   StyleSheet, FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView, Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import MapView, { Marker, Polyline } from 'react-native-maps';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
 import {
@@ -91,13 +92,14 @@ const FRIENDS = [
 ];
 
 const BUILDINGS = [
-  { name: 'WALC', full: 'Wilmeth Active Learning Center', emoji: '📚' },
-  { name: 'PMU', full: 'Purdue Memorial Union', emoji: '🏛️' },
-  { name: 'CoRec', full: 'France A. Córdova Rec Center', emoji: '🏋️' },
-  { name: 'ARMS', full: 'Armstrong Hall', emoji: '🚀' },
-  { name: 'Rawls', full: 'Rawls Hall', emoji: '📈' },
-  { name: 'Stewart Ctr', full: 'Stewart Center', emoji: '🎭' },
+  { name: 'WALC', full: 'Wilmeth Active Learning Center', emoji: '📚', lat: 40.4265, lng: -86.9176 },
+  { name: 'PMU', full: 'Purdue Memorial Union', emoji: '🏛️', lat: 40.4253, lng: -86.9096 },
+  { name: 'CoRec', full: 'France A. Córdova Rec Center', emoji: '🏋️', lat: 40.4215, lng: -86.9238 },
+  { name: 'ARMS', full: 'Armstrong Hall', emoji: '🚀', lat: 40.4278, lng: -86.9165 },
+  { name: 'Rawls', full: 'Rawls Hall', emoji: '📈', lat: 40.4242, lng: -86.9210 },
+  { name: 'Stewart Ctr', full: 'Stewart Center', emoji: '🎭', lat: 40.4251, lng: -86.9162 },
 ];
+const YOU = { lat: 40.4286, lng: -86.9138 }; // demo: Engineering Fountain
 
 const POSTS = [
   { id: 'p1', person: 'Maya L.', initial: 'M', color: '#7C3AED', time: '5m ago', club: 'Purdue Hackers', text: 'Just finished building my first full-stack app at tonight\'s Hack Purdue session 🚀 Anyone want to collab this weekend?', emoji: '💻', likes: 24, comments: 7 },
@@ -416,11 +418,30 @@ export default function App() {
     setSheet('reward');
   };
 
-  /* ── directions ── */
-  const openDirections = (place) => {
-    Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(place + ' Purdue University West Lafayette')}`)
-      .catch(() => showToast('Could not open Maps'));
+  /* ── in-app directions (no leaving the app!) ── */
+  const [routeCoords, setRouteCoords] = useState(null);
+  const [routeInfo, setRouteInfo] = useState(null);
+  const mapRef = useRef(null);
+
+  const openDirections = async (place) => {
+    const b = BUILDINGS.find(x => place.includes(x.name) || place.includes(x.full));
+    if (!b) { showToast('📍 Location not on the campus map yet'); return; }
+    setTab('campus');
+    showToast('🚶 Finding the best walking route...');
+    try {
+      const res = await fetch(`https://routing.openstreetmap.de/routed-foot/route/v1/foot/${YOU.lng},${YOU.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`);
+      const data = await res.json();
+      const r = data.routes[0];
+      const coords = r.geometry.coordinates.map(([x, y]) => ({ latitude: y, longitude: x }));
+      setRouteCoords(coords);
+      setRouteInfo({ label: place, mins: Math.max(1, Math.round(r.duration / 60)), meters: Math.round(r.distance) });
+      setTimeout(() => mapRef.current?.fitToCoordinates(coords, { edgePadding: { top: 50, bottom: 50, left: 50, right: 50 }, animated: true }), 350);
+    } catch (e) {
+      showToast('Could not load route — check internet 📶');
+    }
   };
+
+  const clearRoute = () => { setRouteCoords(null); setRouteInfo(null); };
 
   /* ── chat ── */
   const sendChat = () => {
@@ -547,6 +568,30 @@ export default function App() {
       <Text style={[st.sub, { color: T.subtext }]}>
         {settings.location ? `${FRIENDS.filter(f => f.online).length} friends active right now` : "You're invisible 👻 (location off)"}
       </Text>
+      {routeInfo && (
+        <View style={{ backgroundColor: T.card, borderRadius: 14, padding: 11, marginTop: 10, flexDirection: 'row', alignItems: 'center' }}>
+          <Text style={{ flex: 1, fontSize: 13, color: T.text }}>🚶 <Text style={{ fontWeight: '800' }}>{routeInfo.mins} min walk</Text> ({routeInfo.meters} m) to {routeInfo.label}</Text>
+          <TouchableOpacity onPress={clearRoute}><Text style={{ color: T.subtext, fontSize: 15, paddingHorizontal: 6 }}>✕</Text></TouchableOpacity>
+        </View>
+      )}
+      <View style={{ height: 240, borderRadius: 16, overflow: 'hidden', marginTop: 10 }}>
+        <MapView
+          ref={mapRef}
+          style={{ flex: 1 }}
+          initialRegion={{ latitude: 40.4253, longitude: -86.9160, latitudeDelta: 0.014, longitudeDelta: 0.014 }}
+        >
+          <Marker coordinate={{ latitude: YOU.lat, longitude: YOU.lng }} title="You" description="Engineering Fountain" pinColor="#1a1a2e" />
+          {BUILDINGS.map(b => (
+            <Marker key={b.name} coordinate={{ latitude: b.lat, longitude: b.lng }} title={b.name} description={b.full} pinColor={A} />
+          ))}
+          {settings.location && FRIENDS.filter(f => f.online).map(f => {
+            const b = BUILDINGS.find(x => x.name === f.at);
+            if (!b) return null;
+            return <Marker key={f.name} coordinate={{ latitude: b.lat + 0.0005, longitude: b.lng + 0.0005 }} title={f.name} description={f.major} pinColor={f.color} onCalloutPress={() => setChatWith(f.name)} />;
+          })}
+          {routeCoords && <Polyline coordinates={routeCoords} strokeColor={A} strokeWidth={4} lineDashPattern={[6, 6]} />}
+        </MapView>
+      </View>
       {BUILDINGS.map(b => {
         const here = FRIENDS.filter(f => f.at === b.name && f.online);
         const clubsHere = PURDUE_CLUBS.filter(c => c.location.includes(b.name));
