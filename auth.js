@@ -17,6 +17,8 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const googleProvider = new GoogleAuthProvider();
+// always show the account picker instead of auto-signing into the last account
+googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // ── REAL GOOGLE SIGN-IN (overrides the demo handler in app.js) ──
 window.handleOAuth = async function (provider) {
