@@ -11,6 +11,7 @@ import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   onAuthStateChanged, signOut as fbSignOut, updateProfile,
 } from 'firebase/auth';
+import { initializeFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
 
 /* ─────────── FIREBASE ─────────── */
 const firebaseApp = initializeApp({
@@ -24,6 +25,7 @@ const firebaseApp = initializeApp({
 const auth = initializeAuth(firebaseApp, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
+const db = initializeFirestore(firebaseApp, { experimentalForceLongPolling: true });
 
 /* ─────────── DATA ─────────── */
 const PURDUE_CLUBS = [
@@ -188,14 +190,59 @@ export default function App() {
   const [authName, setAuthName] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
 
+  const dataLoaded = useRef(false);
+  const saveTimer = useRef(null);
+
   React.useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => {
       setUser(u);
       setAuthReady(true);
       if (u && u.displayName) setProfile(p => ({ ...p, name: u.displayName }));
+      if (!u) dataLoaded.current = false;
     });
     return unsub;
   }, []);
+
+  // ── BACKEND: load this user's saved data from Firestore ──
+  React.useEffect(() => {
+    if (!user) return;
+    (async () => {
+      try {
+        const snap = await getDoc(doc(db, 'users', user.uid));
+        if (snap.exists()) {
+          const d = snap.data();
+          if (typeof d.points === 'number') setPoints(d.points);
+          if (Array.isArray(d.joined)) setJoined(d.joined);
+          if (Array.isArray(d.rsvpd)) setRsvpd(d.rsvpd);
+          if (Array.isArray(d.liked)) setLiked(d.liked);
+          if (Array.isArray(d.redeemed)) setRedeemed(d.redeemed);
+          if (typeof d.isPremium === 'boolean') setIsPremium(d.isPremium);
+          if (d.profile) setProfile(d.profile);
+          if (d.accent) setAccent(d.accent);
+          if (typeof d.dark === 'boolean') setDark(d.dark);
+          if (d.settings) setSettings(s => ({ ...s, ...d.settings }));
+          showToast('☁️ Your data is synced!');
+        }
+        dataLoaded.current = true;
+      } catch (e) {
+        showToast('⚠️ Could not load saved data — is Firestore enabled?');
+        dataLoaded.current = true;
+      }
+    })();
+  }, [user]);
+
+  // ── BACKEND: auto-save to Firestore when anything changes (debounced) ──
+  React.useEffect(() => {
+    if (!user || !dataLoaded.current) return;
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      setDoc(doc(db, 'users', user.uid), {
+        points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings,
+        email: user.email, updatedAt: Date.now(),
+      }, { merge: true }).catch(() => {});
+    }, 1200);
+    return () => clearTimeout(saveTimer.current);
+  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, user]);
 
   const doAuth = async () => {
     const email = authEmail.trim();
