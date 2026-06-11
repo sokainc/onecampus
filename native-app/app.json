@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "onecampus-app",
+    "name": "One Campus",
     "slug": "onecampus-app",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -24,6 +24,18 @@
     },
     "web": {
       "favicon": "./assets/favicon.png"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "9c104cf3-538a-4a62-993d-018c35693c9a"
+      }
+    },
+    "owner": "leightonb23",
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/9c104cf3-538a-4a62-993d-018c35693c9a"
     }
   }
 }
