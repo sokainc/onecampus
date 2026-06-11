@@ -4,6 +4,26 @@ import {
   StyleSheet, FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { initializeApp } from 'firebase/app';
+import {
+  initializeAuth, getReactNativePersistence,
+  signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  onAuthStateChanged, signOut as fbSignOut, updateProfile,
+} from 'firebase/auth';
+
+/* ─────────── FIREBASE ─────────── */
+const firebaseApp = initializeApp({
+  apiKey: 'AIzaSyBZme2DEX_aubcTBjMviqgEpPk0Z15CzGs',
+  authDomain: 'one-campus-acdc6.firebaseapp.com',
+  projectId: 'one-campus-acdc6',
+  storageBucket: 'one-campus-acdc6.firebasestorage.app',
+  messagingSenderId: '673557735993',
+  appId: '1:673557735993:web:5084d747e39ee688febbe8',
+});
+const auth = initializeAuth(firebaseApp, {
+  persistence: getReactNativePersistence(AsyncStorage),
+});
 
 /* ─────────── DATA ─────────── */
 const PURDUE_CLUBS = [
@@ -158,6 +178,61 @@ export default function App() {
   const [settings, setSettings] = useState({ location: true, notifications: true, leaderboard: true, notifEvents: true, notifDMs: true, notifRequests: true, quietHours: false });
   const [accent, setAccent] = useState('#7C3AED');
   const [profile, setProfile] = useState({ name: 'Leighton B.', major: 'Purdue University' });
+
+  // ── real auth state ──
+  const [user, setUser] = useState(null);
+  const [authReady, setAuthReady] = useState(false);
+  const [authMode, setAuthMode] = useState('signin'); // 'signin' | 'signup'
+  const [authEmail, setAuthEmail] = useState('');
+  const [authPass, setAuthPass] = useState('');
+  const [authName, setAuthName] = useState('');
+  const [authBusy, setAuthBusy] = useState(false);
+
+  React.useEffect(() => {
+    const unsub = onAuthStateChanged(auth, (u) => {
+      setUser(u);
+      setAuthReady(true);
+      if (u && u.displayName) setProfile(p => ({ ...p, name: u.displayName }));
+    });
+    return unsub;
+  }, []);
+
+  const doAuth = async () => {
+    const email = authEmail.trim();
+    if (!email.includes('@')) { showToast('Enter a valid email 📧'); return; }
+    if (authPass.length < 6) { showToast('Password needs 6+ characters 🔑'); return; }
+    if (authMode === 'signup' && !authName.trim()) { showToast('Enter your name ✏️'); return; }
+    setAuthBusy(true);
+    try {
+      if (authMode === 'signup') {
+        const cred = await createUserWithEmailAndPassword(auth, email, authPass);
+        await updateProfile(cred.user, { displayName: authName.trim() });
+        setProfile(p => ({ ...p, name: authName.trim() }));
+        showToast(`🎉 Account created — welcome, ${authName.trim().split(' ')[0]}!`);
+      } else {
+        const cred = await signInWithEmailAndPassword(auth, email, authPass);
+        showToast(`👋 Welcome back${cred.user.displayName ? ', ' + cred.user.displayName.split(' ')[0] : ''}!`);
+      }
+      setAuthPass('');
+    } catch (err) {
+      const msgs = {
+        'auth/email-already-in-use': 'That email already has an account — try Sign In',
+        'auth/invalid-credential': 'Wrong email or password',
+        'auth/user-not-found': 'No account with that email — try Sign Up',
+        'auth/wrong-password': 'Wrong password',
+        'auth/network-request-failed': 'No internet connection',
+        'auth/too-many-requests': 'Too many tries — wait a minute',
+      };
+      showToast(msgs[err.code] || `Error: ${err.code || err.message}`);
+    }
+    setAuthBusy(false);
+  };
+
+  const doSignOut = async () => {
+    await fbSignOut(auth);
+    setShowSettings(false);
+    showToast('Signed out 👋');
+  };
 
   // add-event form
   const [evName, setEvName] = useState('');
@@ -947,9 +1022,12 @@ export default function App() {
               </View>
               <Text style={{ color: T.subtext }}>›</Text>
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => showToast('Signed out (demo) 👋')} style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+            <TouchableOpacity onPress={doSignOut} style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
               <Text style={{ fontSize: 18 }}>🚪</Text>
-              <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '700', color: '#EF4444' }}>Sign Out</Text>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#EF4444' }}>Sign Out</Text>
+                <Text style={{ fontSize: 11, color: T.subtext }}>{user?.email || ''}</Text>
+              </View>
               <Text style={{ color: T.subtext }}>›</Text>
             </TouchableOpacity>
           </View>
@@ -958,6 +1036,61 @@ export default function App() {
       </SafeAreaView>
     </Modal>
   );
+
+  /* ─────────── LOGIN SCREEN ─────────── */
+  if (!authReady) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ fontSize: 44 }}>🎓</Text>
+        <Text style={{ fontSize: 18, fontWeight: '800', color: A, marginTop: 8 }}>One Campus</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (!user) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+        <StatusBar style={dark ? 'light' : 'dark'} />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 26 }}>
+            <View style={{ alignItems: 'center', marginBottom: 26 }}>
+              <View style={[st.logoIcon, { width: 64, height: 64, borderRadius: 18 }]}><Text style={{ fontSize: 32 }}>🎓</Text></View>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: A, marginTop: 12 }}>One Campus</Text>
+              <Text style={{ fontSize: 13, color: T.subtext, marginTop: 4 }}>Your campus. Your people. One app.</Text>
+            </View>
+
+            <View style={{ flexDirection: 'row', gap: 8, marginBottom: 18 }}>
+              {[['signin', 'Sign In'], ['signup', 'Create Account']].map(([k, label]) => (
+                <TouchableOpacity key={k} onPress={() => setAuthMode(k)} style={[st.tabBtn, { backgroundColor: authMode === k ? A : T.card }]}>
+                  <Text style={{ color: authMode === k ? 'white' : T.subtext, fontSize: 13, fontWeight: '700' }}>{label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            {authMode === 'signup' && (
+              <TextInput value={authName} onChangeText={setAuthName} placeholder="Full name" placeholderTextColor={T.subtext}
+                autoCapitalize="words" style={[st.input, { backgroundColor: T.card, color: T.text, borderColor: T.border }]} />
+            )}
+            <TextInput value={authEmail} onChangeText={setAuthEmail} placeholder="Email" placeholderTextColor={T.subtext}
+              autoCapitalize="none" keyboardType="email-address" autoComplete="email"
+              style={[st.input, { backgroundColor: T.card, color: T.text, borderColor: T.border }]} />
+            <TextInput value={authPass} onChangeText={setAuthPass} placeholder="Password (6+ characters)" placeholderTextColor={T.subtext}
+              secureTextEntry autoCapitalize="none"
+              style={[st.input, { backgroundColor: T.card, color: T.text, borderColor: T.border }]} />
+
+            <TouchableOpacity onPress={doAuth} disabled={authBusy} style={[st.bigBtn, authBusy && { opacity: 0.6 }]}>
+              <Text style={st.bigBtnText}>{authBusy ? 'One sec...' : authMode === 'signup' ? 'Create My Account 🚀' : 'Sign In →'}</Text>
+            </TouchableOpacity>
+
+            <Text style={{ textAlign: 'center', fontSize: 11, color: T.subtext, marginTop: 18, lineHeight: 17 }}>
+              Real accounts powered by Firebase 🔥{'\n'}Google sign-in works on the website — onecampus web portal
+            </Text>
+          </ScrollView>
+        </KeyboardAvoidingView>
+        {toast && <View style={st.toast}><Text style={{ color: 'white', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>{toast}</Text></View>}
+      </SafeAreaView>
+    );
+  }
 
   /* ─────────── MAIN ─────────── */
   const TABS = [
