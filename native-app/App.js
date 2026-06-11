@@ -429,19 +429,33 @@ export default function App() {
     setTab('campus');
     showToast('🚶 Finding the best walking route...');
     try {
-      const res = await fetch(`https://routing.openstreetmap.de/routed-foot/route/v1/foot/${YOU.lng},${YOU.lat};${b.lng},${b.lat}?overview=full&geometries=geojson`);
+      const res = await fetch(`https://routing.openstreetmap.de/routed-foot/route/v1/foot/${YOU.lng},${YOU.lat};${b.lng},${b.lat}?overview=full&geometries=geojson&steps=true`);
       const data = await res.json();
       const r = data.routes[0];
       const coords = r.geometry.coordinates.map(([x, y]) => ({ latitude: y, longitude: x }));
+      const steps = (r.legs[0]?.steps || []).map(stepToText).filter(Boolean);
       setRouteCoords(coords);
-      setRouteInfo({ label: place, mins: Math.max(1, Math.round(r.duration / 60)), meters: Math.round(r.distance) });
+      setRouteInfo({ label: place, mins: Math.max(1, Math.round(r.duration / 60)), meters: Math.round(r.distance), steps });
       setTimeout(() => mapRef.current?.fitToCoordinates(coords, { edgePadding: { top: 50, bottom: 50, left: 50, right: 50 }, animated: true }), 350);
     } catch (e) {
       showToast('Could not load route — check internet 📶');
     }
   };
 
-  const clearRoute = () => { setRouteCoords(null); setRouteInfo(null); };
+  const stepToText = (s) => {
+    const dist = s.distance >= 10 ? ` — ${Math.round(s.distance)} m` : '';
+    const road = s.name ? ` on ${s.name}` : '';
+    const m = s.maneuver || {};
+    const dir = (m.modifier || '').includes('left') ? '←' : (m.modifier || '').includes('right') ? '→' : '↑';
+    if (m.type === 'depart') return `↑ Head out${road}${dist}`;
+    if (m.type === 'arrive') return `🏁 You've arrived!`;
+    if (m.type === 'turn' || m.type === 'end of road' || m.type === 'fork') return `${dir} Turn ${m.modifier || ''}${road}${dist}`;
+    if (m.type === 'new name' || m.type === 'continue') return `↑ Continue${road}${dist}`;
+    return `${dir} ${m.type || 'Continue'}${road}${dist}`;
+  };
+
+  const [showSteps, setShowSteps] = useState(false);
+  const clearRoute = () => { setRouteCoords(null); setRouteInfo(null); setShowSteps(false); };
 
   /* ── chat ── */
   const sendChat = () => {
@@ -569,9 +583,21 @@ export default function App() {
         {settings.location ? `${FRIENDS.filter(f => f.online).length} friends active right now` : "You're invisible 👻 (location off)"}
       </Text>
       {routeInfo && (
-        <View style={{ backgroundColor: T.card, borderRadius: 14, padding: 11, marginTop: 10, flexDirection: 'row', alignItems: 'center' }}>
-          <Text style={{ flex: 1, fontSize: 13, color: T.text }}>🚶 <Text style={{ fontWeight: '800' }}>{routeInfo.mins} min walk</Text> ({routeInfo.meters} m) to {routeInfo.label}</Text>
-          <TouchableOpacity onPress={clearRoute}><Text style={{ color: T.subtext, fontSize: 15, paddingHorizontal: 6 }}>✕</Text></TouchableOpacity>
+        <View style={{ backgroundColor: T.card, borderRadius: 14, padding: 11, marginTop: 10 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+            <Text style={{ flex: 1, fontSize: 13, color: T.text }}>🚶 <Text style={{ fontWeight: '800' }}>{routeInfo.mins} min walk</Text> ({routeInfo.meters} m) to {routeInfo.label}</Text>
+            <TouchableOpacity onPress={() => setShowSteps(s => !s)} style={{ backgroundColor: dark ? '#2E2942' : '#EDE9FE', borderRadius: 9, paddingHorizontal: 9, paddingVertical: 4, marginRight: 4 }}>
+              <Text style={{ color: A, fontSize: 11, fontWeight: '800' }}>{showSteps ? 'Steps ▴' : 'Steps ▾'}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={clearRoute}><Text style={{ color: T.subtext, fontSize: 15, paddingHorizontal: 6 }}>✕</Text></TouchableOpacity>
+          </View>
+          {showSteps && (
+            <View style={{ marginTop: 8, borderTopWidth: 1, borderColor: T.border, paddingTop: 4 }}>
+              {routeInfo.steps.map((s, i) => (
+                <Text key={i} style={{ fontSize: 12.5, color: T.text, paddingVertical: 5, borderBottomWidth: i < routeInfo.steps.length - 1 ? 1 : 0, borderColor: T.border }}>{s}</Text>
+              ))}
+            </View>
+          )}
         </View>
       )}
       <View style={{ height: 240, borderRadius: 16, overflow: 'hidden', marginTop: 10 }}>
