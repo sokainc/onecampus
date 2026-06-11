@@ -1000,7 +1000,7 @@ function renderEvents(dayFilter) {
       <div class="event-time-col"><div class="event-time">${e.time}</div><div class="event-ampm">${e.ampm}</div></div>
       <div class="event-info">
         <div class="event-name">${e.name}</div>
-        <div class="event-location">📍 ${e.location}</div>
+        <div class="event-location">📍 ${e.location} <span onclick="event.stopPropagation();openDirectionsByName('${e.location.replace(/'/g,"\\'")}')" style="color:#34A853;font-weight:700;cursor:pointer">· 🧭 Directions</span></div>
       </div>
       <span class="event-badge ${already || e.mine ? '' : 'badge-' + e.badge}" style="${already ? 'background:#F0FDF4;color:#22c55e' : e.mine ? 'background:#EDE9FE;color:#7C3AED' : ''}">${e.mine ? '⭐ Host' : already ? '✓ Going' : e.badge === 'live' ? '🔴 Live' : e.badge === 'today' ? 'Today' : 'Soon'}</span>
     </div>`;
@@ -1080,13 +1080,21 @@ function initMap() {
     const m = L.marker([c.lat - 0.0005, c.lng - 0.0005], {
       icon: L.divIcon({ html: `<div style="width:32px;height:32px;background:white;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;border:2.5px solid #7C3AED;box-shadow:0 3px 10px rgba(124,58,237,0.3)">${c.emoji}</div>`, className: '', iconSize: [32,32], iconAnchor: [16,16] })
     });
-    m.bindPopup(`<div style="font-family:Inter,sans-serif;min-width:150px"><strong>${c.emoji} ${c.name}</strong><br><span style="font-size:11px;color:#6B7280">📍 ${c.where} · 👥 ${c.members} members</span><br><button onclick="joinClubFromMap('${c.name.replace(/'/g,"\\'")}')" style="margin-top:6px;background:linear-gradient(135deg,#7C3AED,#A855F7);color:white;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✓ Join Club</button></div>`);
+    m.bindPopup(`<div style="font-family:Inter,sans-serif;min-width:150px"><strong>${c.emoji} ${c.name}</strong><br><span style="font-size:11px;color:#6B7280">📍 ${c.where} · 👥 ${c.members} members</span><br><div style="display:flex;gap:6px;margin-top:6px"><button onclick="joinClubFromMap('${c.name.replace(/'/g,"\\'")}')" style="background:linear-gradient(135deg,#7C3AED,#A855F7);color:white;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">✓ Join</button><button onclick="openDirections(${c.lat},${c.lng})" style="background:#34A853;color:white;border:none;border-radius:8px;padding:5px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:inherit">🧭 Directions</button></div></div>`);
     return m;
   }));
 
   // default view: everyone
   friendsLayer.addTo(campusMap);
   clubsLayer.addTo(campusMap);
+}
+
+function openDirections(lat, lng) {
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}`, '_blank');
+}
+
+function openDirectionsByName(place) {
+  window.open(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(place + ' Purdue University West Lafayette')}`, '_blank');
 }
 
 function joinClubFromMap(name) {

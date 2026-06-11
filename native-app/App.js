@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TextInput, Modal,
-  StyleSheet, FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView,
+  StyleSheet, FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView, Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -416,6 +416,12 @@ export default function App() {
     setSheet('reward');
   };
 
+  /* ── directions ── */
+  const openDirections = (place) => {
+    Linking.openURL(`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(place + ' Purdue University West Lafayette')}`)
+      .catch(() => showToast('Could not open Maps'));
+  };
+
   /* ── chat ── */
   const sendChat = () => {
     const text = chatInput.trim();
@@ -518,7 +524,10 @@ export default function App() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{e.name}</Text>
-                <Text style={{ fontSize: 12, color: T.subtext }}>📍 {e.location}</Text>
+                <Text style={{ fontSize: 12, color: T.subtext }}>
+                  📍 {e.location}{'  '}
+                  <Text onPress={() => openDirections(e.location)} style={{ color: '#34A853', fontWeight: '800' }}>🧭 Directions</Text>
+                </Text>
               </View>
               <View style={[st.badge, { backgroundColor: e.mine ? '#EDE9FE' : going ? '#F0FDF4' : '#FEE2E2' }]}>
                 <Text style={{ fontSize: 11, fontWeight: '700', color: e.mine ? A : going ? '#22c55e' : '#EF4444' }}>
@@ -549,6 +558,9 @@ export default function App() {
                 <Text style={{ fontSize: 15, fontWeight: '800', color: T.text }}>{b.name}</Text>
                 <Text style={{ fontSize: 11, color: T.subtext }}>{b.full}</Text>
               </View>
+              <TouchableOpacity onPress={() => openDirections(b.full)} style={{ backgroundColor: '#34A853', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 11 }}>
+                <Text style={{ color: 'white', fontSize: 11, fontWeight: '800' }}>🧭 Directions</Text>
+              </TouchableOpacity>
             </View>
             {here.length > 0 && (
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
