@@ -155,7 +155,9 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [chatWith, setChatWith] = useState(null);
   const [chatTyping, setChatTyping] = useState(false);
-  const [settings, setSettings] = useState({ location: true, notifications: true, leaderboard: true });
+  const [settings, setSettings] = useState({ location: true, notifications: true, leaderboard: true, notifEvents: true, notifDMs: true, notifRequests: true, quietHours: false });
+  const [accent, setAccent] = useState('#7C3AED');
+  const [profile, setProfile] = useState({ name: 'Leighton B.', major: 'Purdue University' });
 
   // add-event form
   const [evName, setEvName] = useState('');
@@ -177,6 +179,9 @@ export default function App() {
   const chatScroll = useRef(null);
 
   const T = dark ? DARKTHEME : LIGHTTHEME;
+  const A = accent;
+  const st = React.useMemo(() => makeStyles(A), [A]);
+  const initials = profile.name.split(' ').map(w => w[0]).join('').slice(0, 2).toUpperCase() || 'LB';
 
   const showToast = (msg) => {
     setToast(msg);
@@ -306,7 +311,7 @@ export default function App() {
   /* ─────────── RENDER HELPERS ─────────── */
 
   const Pill = ({ label, active, onPress }) => (
-    <TouchableOpacity onPress={onPress} style={[st.pill, { backgroundColor: active ? '#7C3AED' : T.card }, !active && { borderWidth: 1, borderColor: T.border }]}>
+    <TouchableOpacity onPress={onPress} style={[st.pill, { backgroundColor: active ? A : T.card }, !active && { borderWidth: 1, borderColor: T.border }]}>
       <Text style={{ color: active ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{label}</Text>
     </TouchableOpacity>
   );
@@ -316,13 +321,13 @@ export default function App() {
     const club = list.length ? list[cardIdx % list.length] : null;
     return (
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-        <Text style={[st.title, { color: '#7C3AED' }]}>Discover</Text>
+        <Text style={[st.title, { color: A }]}>Discover</Text>
         <Text style={[st.sub, { color: T.subtext }]}>Find your people & passions</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
           {Object.entries(CAMPUSES).map(([key, c]) => {
             const locked = !c.free && !isPremium;
             return (
-              <TouchableOpacity key={key} onPress={() => pickCampus(key)} style={[st.pill, { backgroundColor: campus === key ? '#7C3AED' : T.card, marginRight: 8 }]}>
+              <TouchableOpacity key={key} onPress={() => pickCampus(key)} style={[st.pill, { backgroundColor: campus === key ? A : T.card, marginRight: 8 }]}>
                 <Text style={{ color: campus === key ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{locked ? '🔒' : c.emoji} {c.name}</Text>
               </TouchableOpacity>
             );
@@ -349,7 +354,7 @@ export default function App() {
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginVertical: 14 }}>
           <TouchableOpacity onPress={() => swipe('skip')} style={[st.actionBtn, { backgroundColor: T.card }]}><Text style={{ fontSize: 20 }}>✕</Text></TouchableOpacity>
           <TouchableOpacity onPress={() => swipe('super')} style={[st.actionBtn, { backgroundColor: '#FF6B35' }]}><Text style={{ fontSize: 20 }}>⭐</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => swipe('join')} style={[st.actionBtn, { backgroundColor: '#7C3AED' }]}><Text style={{ fontSize: 20, color: 'white' }}>✓</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => swipe('join')} style={[st.actionBtn, { backgroundColor: A }]}><Text style={{ fontSize: 20, color: 'white' }}>✓</Text></TouchableOpacity>
         </View>
         <Text style={[st.sectionLabel, { color: T.subtext }]}>FILTER BY INTEREST</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -365,7 +370,7 @@ export default function App() {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
           <View>
-            <Text style={[st.title, { color: '#7C3AED' }]}>Events</Text>
+            <Text style={[st.title, { color: A }]}>Events</Text>
             <Text style={[st.sub, { color: T.subtext }]}>What's happening on campus</Text>
           </View>
           <TouchableOpacity onPress={() => setSheet('addEvent')} style={st.addBtn}><Text style={{ color: 'white', fontSize: 22 }}>+</Text></TouchableOpacity>
@@ -373,7 +378,7 @@ export default function App() {
         <View style={{ flexDirection: 'row', gap: 6, marginVertical: 12 }}>
           {DAY_NAMES.map((d, i) => (
             <TouchableOpacity key={d} onPress={() => setDayFilter(dayFilter === i ? null : i)}
-              style={[st.dayCell, { backgroundColor: dayFilter === i ? '#7C3AED' : T.card }]}>
+              style={[st.dayCell, { backgroundColor: dayFilter === i ? A : T.card }]}>
               <Text style={{ fontSize: 10, fontWeight: '700', color: dayFilter === i ? 'white' : T.subtext }}>{d}</Text>
               {events.some(e => e.day === i) && <View style={[st.dot, { backgroundColor: dayFilter === i ? 'white' : '#FF4081' }]} />}
             </TouchableOpacity>
@@ -386,7 +391,7 @@ export default function App() {
             <TouchableOpacity key={idx} onPress={() => rsvp(e.name)} style={[st.eventCard, { backgroundColor: T.card }]}>
               <View style={{ width: 4, height: 44, borderRadius: 4, backgroundColor: e.color }} />
               <View style={{ minWidth: 50 }}>
-                <Text style={{ fontSize: 13, fontWeight: '700', color: '#7C3AED' }}>{e.time}</Text>
+                <Text style={{ fontSize: 13, fontWeight: '700', color: A }}>{e.time}</Text>
                 <Text style={{ fontSize: 11, color: T.subtext }}>{e.ampm}</Text>
               </View>
               <View style={{ flex: 1 }}>
@@ -394,7 +399,7 @@ export default function App() {
                 <Text style={{ fontSize: 12, color: T.subtext }}>📍 {e.location}</Text>
               </View>
               <View style={[st.badge, { backgroundColor: e.mine ? '#EDE9FE' : going ? '#F0FDF4' : '#FEE2E2' }]}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: e.mine ? '#7C3AED' : going ? '#22c55e' : '#EF4444' }}>
+                <Text style={{ fontSize: 11, fontWeight: '700', color: e.mine ? A : going ? '#22c55e' : '#EF4444' }}>
                   {e.mine ? '⭐ Host' : going ? '✓ Going' : e.badge === 'live' ? '🔴 Live' : e.badge === 'today' ? 'Today' : 'Soon'}
                 </Text>
               </View>
@@ -407,7 +412,7 @@ export default function App() {
 
   const renderCampus = () => (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={[st.title, { color: '#7C3AED' }]}>Campus</Text>
+      <Text style={[st.title, { color: A }]}>Campus</Text>
       <Text style={[st.sub, { color: T.subtext }]}>
         {settings.location ? `${FRIENDS.filter(f => f.online).length} friends active right now` : "You're invisible 👻 (location off)"}
       </Text>
@@ -440,7 +445,7 @@ export default function App() {
                 showToast(`✓ Joined ${c.name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
               }} style={[st.clubRow, { borderColor: T.border }]}>
                 <Text style={{ fontSize: 12.5, fontWeight: '600', color: T.text, flex: 1 }}>🏛️ {c.name} · {c.members} members</Text>
-                <Text style={{ fontSize: 12, fontWeight: '800', color: joined.includes(c.name) ? '#22c55e' : '#7C3AED' }}>{joined.includes(c.name) ? '✓ Joined' : '+ Join'}</Text>
+                <Text style={{ fontSize: 12, fontWeight: '800', color: joined.includes(c.name) ? '#22c55e' : A }}>{joined.includes(c.name) ? '✓ Joined' : '+ Join'}</Text>
               </TouchableOpacity>
             ))}
           </View>
@@ -453,11 +458,11 @@ export default function App() {
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
       <View style={st.heroCard}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 14 }}>
-          <View style={st.heroAvatar}><Text style={{ color: 'white', fontSize: 20, fontWeight: '800' }}>LB</Text></View>
+          <View style={st.heroAvatar}><Text style={{ color: 'white', fontSize: 20, fontWeight: '800' }}>{initials}</Text></View>
           <View>
-            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '700' }}>Your Campus</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '700' }}>{profile.name}</Text>
             <Text style={{ color: 'white', fontSize: 32, fontWeight: '900' }}>{points.toLocaleString()}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11 }}>Campus Explorer · Purdue {isPremium ? '· 👑 PRO' : ''}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11 }}>Campus Explorer · {profile.major} {isPremium ? '· 👑 PRO' : ''}</Text>
           </View>
         </View>
       </View>
@@ -482,7 +487,7 @@ export default function App() {
       )}
       <View style={{ flexDirection: 'row', gap: 8, marginVertical: 12 }}>
         {[['badges', '🏅 Badges'], ['weekly', '⚡ Weekly'], ['shop', '🎁 Shop']].map(([k, label]) => (
-          <TouchableOpacity key={k} onPress={() => setPtsTab(k)} style={[st.tabBtn, { backgroundColor: ptsTab === k ? '#7C3AED' : T.card }]}>
+          <TouchableOpacity key={k} onPress={() => setPtsTab(k)} style={[st.tabBtn, { backgroundColor: ptsTab === k ? A : T.card }]}>
             <Text style={{ color: ptsTab === k ? 'white' : T.subtext, fontSize: 12, fontWeight: '700' }}>{label}</Text>
           </TouchableOpacity>
         ))}
@@ -494,23 +499,23 @@ export default function App() {
               <Text style={{ fontSize: 26 }}>{b.icon}</Text>
               <Text style={{ fontSize: 13, fontWeight: '700', color: T.text }}>{b.name}</Text>
               <Text style={{ fontSize: 11, color: T.subtext }}>{b.desc}</Text>
-              <Text style={{ fontSize: 11, color: '#7C3AED', fontWeight: '700', marginTop: 3 }}>{b.pts} pts</Text>
+              <Text style={{ fontSize: 11, color: A, fontWeight: '700', marginTop: 3 }}>{b.pts} pts</Text>
             </View>
           ))}
         </View>
       )}
       {ptsTab === 'weekly' && [
-        { name: 'Leighton B.', pts: points, you: true }, { name: 'Maya L.', pts: 2210 }, { name: 'Jordan R.', pts: 1980 }, { name: 'Priya M.', pts: 1750 }, { name: 'Tyler B.', pts: 1600 },
+        { name: profile.name, pts: points, you: true }, { name: 'Maya L.', pts: 2210 }, { name: 'Jordan R.', pts: 1980 }, { name: 'Priya M.', pts: 1750 }, { name: 'Tyler B.', pts: 1600 },
       ].map((u, i) => (
         <View key={u.name} style={[st.leaderRow, { backgroundColor: u.you ? (dark ? '#2E2942' : '#EDE9FE') : T.card }]}>
           <Text style={{ fontSize: 16, minWidth: 30 }}>{['🥇', '🥈', '🥉', '#4', '#5'][i]}</Text>
           <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: T.text }}>{u.name}{u.you ? ' (You)' : ''}</Text>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: '#7C3AED' }}>⚡ {u.pts.toLocaleString()}</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: A }}>⚡ {u.pts.toLocaleString()}</Text>
         </View>
       ))}
       {ptsTab === 'shop' && (
         <View>
-          <Text style={{ textAlign: 'center', fontSize: 12, color: T.subtext, marginBottom: 10 }}>You have <Text style={{ color: '#7C3AED', fontWeight: '800' }}>⚡ {points.toLocaleString()} pts</Text> to spend</Text>
+          <Text style={{ textAlign: 'center', fontSize: 12, color: T.subtext, marginBottom: 10 }}>You have <Text style={{ color: A, fontWeight: '800' }}>⚡ {points.toLocaleString()} pts</Text> to spend</Text>
           {REWARDS.map(r => {
             const afford = points >= r.cost;
             return (
@@ -521,7 +526,7 @@ export default function App() {
                   <Text style={{ fontSize: 11, color: T.subtext }}>{r.desc}</Text>
                   <Text style={{ fontSize: 10, color: T.subtext, opacity: 0.7 }}>{r.sponsor}</Text>
                 </View>
-                <TouchableOpacity onPress={() => redeem(r)} style={[st.redeemBtn, { backgroundColor: afford ? '#7C3AED' : T.border }]}>
+                <TouchableOpacity onPress={() => redeem(r)} style={[st.redeemBtn, { backgroundColor: afford ? A : T.border }]}>
                   <Text style={{ color: afford ? 'white' : T.subtext, fontSize: 11, fontWeight: '800' }}>⚡ {r.cost.toLocaleString()}</Text>
                 </TouchableOpacity>
               </View>
@@ -545,11 +550,11 @@ export default function App() {
 
   const renderConnect = () => (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-      <Text style={[st.title, { color: '#7C3AED' }]}>Connections</Text>
+      <Text style={[st.title, { color: A }]}>Connections</Text>
       <Text style={[st.sub, { color: T.subtext }]}>{FRIENDS.length} friends on campus</Text>
       <View style={{ flexDirection: 'row', gap: 8, marginVertical: 10 }}>
         {[['feed', '🔥 Feed'], ['friends', '👥 Friends']].map(([k, label]) => (
-          <TouchableOpacity key={k} onPress={() => setConnectTab(k)} style={[st.tabBtn, { backgroundColor: connectTab === k ? '#7C3AED' : T.card }]}>
+          <TouchableOpacity key={k} onPress={() => setConnectTab(k)} style={[st.tabBtn, { backgroundColor: connectTab === k ? A : T.card }]}>
             <Text style={{ color: connectTab === k ? 'white' : T.subtext, fontSize: 12, fontWeight: '700' }}>{label}</Text>
           </TouchableOpacity>
         ))}
@@ -561,7 +566,7 @@ export default function App() {
             <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{f.name} {f.online ? '🟢' : ''}</Text>
             <Text style={{ fontSize: 12, color: T.subtext }}>{f.major}</Text>
           </View>
-          <Text style={{ color: '#7C3AED', fontWeight: '800', fontSize: 12 }}>Message 💬</Text>
+          <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>Message 💬</Text>
         </TouchableOpacity>
       )) : POSTS.map((p, i) => (
         <View key={p.id}>
@@ -648,7 +653,7 @@ export default function App() {
                   </View>
                 ) : (<>
                   <Text style={st.sheetEmoji}>💳</Text>
-                  <Text style={[st.sheetTitle, { color: '#7C3AED' }]}>Checkout</Text>
+                  <Text style={[st.sheetTitle, { color: A }]}>Checkout</Text>
                   <Text style={[st.sheetSub, { color: T.subtext }]}>One Campus Premium · $7.99/month</Text>
                   <TouchableOpacity onPress={payApple} style={[st.bigBtn, { backgroundColor: '#000' }]}><Text style={st.bigBtnText}> Pay with Apple Pay</Text></TouchableOpacity>
                   <Text style={{ textAlign: 'center', fontSize: 11, color: T.subtext, marginVertical: 10, fontWeight: '600' }}>— OR PAY WITH CARD —</Text>
@@ -666,7 +671,7 @@ export default function App() {
 
               {sheet === 'planner' && (<>
                 <Text style={st.sheetEmoji}>🤖</Text>
-                <Text style={[st.sheetTitle, { color: '#7C3AED' }]}>Your AI-Planned Day</Text>
+                <Text style={[st.sheetTitle, { color: A }]}>Your AI-Planned Day</Text>
                 <View style={[st.plannerBlock, { backgroundColor: dark ? '#3A2E1E' : '#FEF3C7' }]}>
                   <Text style={{ fontSize: 12, fontWeight: '800', color: dark ? '#FDE68A' : '#92400E', marginBottom: 8 }}>☀️ DAYTIME</Text>
                   {[['8:30 AM', 'Breakfast at PMU — beats the rush'], ['10:00 AM', 'Career Fair @ PMU Ballrooms — 3 friends going'], ['12:30 PM', 'Lunch with Maya — 4 min from you'], ['2:00 PM', 'Study: WALC 2nd floor is 40% empty'], ['4:30 PM', 'CoRec workout with Tyler']].map(([t, w]) => (
@@ -684,13 +689,13 @@ export default function App() {
 
               {sheet === 'addEvent' && (<>
                 <Text style={st.sheetEmoji}>📅</Text>
-                <Text style={[st.sheetTitle, { color: '#7C3AED' }]}>Create Event</Text>
+                <Text style={[st.sheetTitle, { color: A }]}>Create Event</Text>
                 <Text style={[st.label, { color: T.subtext }]}>EVENT NAME</Text>
                 <TextInput value={evName} onChangeText={setEvName} placeholder="e.g. CS Study Jam" placeholderTextColor={T.subtext} style={[st.input, { backgroundColor: T.bg, color: T.text, borderColor: T.border }]} />
                 <Text style={[st.label, { color: T.subtext }]}>DAY</Text>
                 <View style={{ flexDirection: 'row', gap: 5 }}>
                   {DAY_NAMES.map((d, i) => (
-                    <TouchableOpacity key={d} onPress={() => setEvDay(i)} style={[st.dayPick, { backgroundColor: evDay === i ? '#7C3AED' : T.bg, borderColor: T.border }]}>
+                    <TouchableOpacity key={d} onPress={() => setEvDay(i)} style={[st.dayPick, { backgroundColor: evDay === i ? A : T.bg, borderColor: T.border }]}>
                       <Text style={{ fontSize: 11, fontWeight: '700', color: evDay === i ? 'white' : T.subtext }}>{d}</Text>
                     </TouchableOpacity>
                   ))}
@@ -721,7 +726,7 @@ export default function App() {
 
               {sheet === 'charity' && (<>
                 <Text style={st.sheetEmoji}>❤️</Text>
-                <Text style={[st.sheetTitle, { color: '#7C3AED' }]}>Pick Your Cause</Text>
+                <Text style={[st.sheetTitle, { color: A }]}>Pick Your Cause</Text>
                 <Text style={[st.sheetSub, { color: T.subtext }]}>1,000 pts → One Campus donates $1 where you vote</Text>
                 {CAUSES.map(c => (
                   <TouchableOpacity key={c.name} onPress={() => finishRedeem(REWARDS.find(r => r.id === 'charity'), c.name)} style={[st.causeRow, { borderColor: T.border }]}>
@@ -734,12 +739,12 @@ export default function App() {
 
               {sheet === 'reward' && rewardResult && (<>
                 <Text style={st.sheetEmoji}>{rewardResult.cause ? '❤️' : '🎉'}</Text>
-                <Text style={[st.sheetTitle, { color: '#7C3AED' }]}>{rewardResult.cause ? 'Donation Made!' : 'Reward Unlocked!'}</Text>
+                <Text style={[st.sheetTitle, { color: A }]}>{rewardResult.cause ? 'Donation Made!' : 'Reward Unlocked!'}</Text>
                 {rewardResult.cause ? (
                   <Text style={[st.sheetSub, { color: T.subtext }]}>One Campus is donating $1 to {rewardResult.cause} on behalf of students like you. 💜</Text>
                 ) : (<>
                   <Text style={[st.sheetSub, { color: T.subtext }]}>Show this code at the register:</Text>
-                  <View style={[st.codeBox, { borderColor: '#7C3AED' }]}><Text style={{ fontSize: 22, fontWeight: '900', color: '#7C3AED', letterSpacing: 3 }}>{rewardResult.code}</Text></View>
+                  <View style={[st.codeBox, { borderColor: A }]}><Text style={{ fontSize: 22, fontWeight: '900', color: A, letterSpacing: 3 }}>{rewardResult.code}</Text></View>
                 </>)}
                 <Text style={{ textAlign: 'center', fontSize: 12, color: T.subtext, marginTop: 8 }}>New balance: ⚡ {points.toLocaleString()}</Text>
                 <TouchableOpacity onPress={close} style={st.bigBtn}><Text style={st.bigBtnText}>Done</Text></TouchableOpacity>
@@ -762,14 +767,14 @@ export default function App() {
   /* ─────────── CHAT SCREEN ─────────── */
   const renderChat = () => {
     if (!chatWith) return null;
-    const f = FRIENDS.find(x => x.name === chatWith) || { name: chatWith, initial: chatWith[0], color: '#7C3AED', online: true };
+    const f = FRIENDS.find(x => x.name === chatWith) || { name: chatWith, initial: chatWith[0], color: A, online: true };
     const msgs = chats[chatWith] || [];
     return (
       <Modal visible animationType="slide" onRequestClose={() => setChatWith(null)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
           <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
             <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
-              <TouchableOpacity onPress={() => setChatWith(null)}><Text style={{ fontSize: 24, color: '#7C3AED', paddingRight: 10 }}>‹</Text></TouchableOpacity>
+              <TouchableOpacity onPress={() => setChatWith(null)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
               <View style={[st.avatar, { backgroundColor: f.color }]}><Text style={{ color: 'white', fontWeight: '700' }}>{f.initial}</Text></View>
               <View style={{ marginLeft: 10 }}>
                 <Text style={{ fontSize: 15, fontWeight: '800', color: T.text }}>{f.name}</Text>
@@ -807,10 +812,10 @@ export default function App() {
     <Modal visible={showSettings} animationType="slide" onRequestClose={() => setShowSettings(false)}>
       <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
         <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
-          <TouchableOpacity onPress={() => setShowSettings(false)}><Text style={{ fontSize: 24, color: '#7C3AED', paddingRight: 10 }}>‹</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowSettings(false)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
           <View>
             <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>Settings</Text>
-            <Text style={{ fontSize: 11, color: T.subtext }}>Leighton B. · Purdue University</Text>
+            <Text style={{ fontSize: 11, color: T.subtext }}>{profile.name} · {profile.major}</Text>
           </View>
         </View>
         <ScrollView contentContainerStyle={{ padding: 16 }}>
@@ -841,12 +846,42 @@ export default function App() {
               </TouchableOpacity>
             )}
           </View>
+          <Text style={[st.sectionLabel, { color: T.subtext }]}>PROFILE</Text>
+          <View style={[st.setCard, { backgroundColor: T.card }]}>
+            <View style={st.setRow}>
+              <View style={[st.avatar, { backgroundColor: A }]}><Text style={{ color: 'white', fontWeight: '700' }}>{initials}</Text></View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <TextInput value={profile.name} onChangeText={v => setProfile(p => ({ ...p, name: v }))}
+                  placeholder="Your name" placeholderTextColor={T.subtext}
+                  style={{ fontSize: 14, fontWeight: '700', color: T.text, padding: 0 }} />
+                <TextInput value={profile.major} onChangeText={v => setProfile(p => ({ ...p, major: v }))}
+                  placeholder="Your major / school" placeholderTextColor={T.subtext}
+                  style={{ fontSize: 11, color: T.subtext, padding: 0 }} />
+              </View>
+              <Text style={{ fontSize: 11, color: T.subtext }}>✏️ tap to edit</Text>
+            </View>
+          </View>
+
           <Text style={[st.sectionLabel, { color: T.subtext }]}>APPEARANCE</Text>
           <View style={[st.setCard, { backgroundColor: T.card }]}>
             <View style={st.setRow}>
               <Text style={{ fontSize: 18 }}>{dark ? '🌙' : '☀️'}</Text>
               <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '700', color: T.text }}>Dark Mode</Text>
-              <Switch value={dark} onValueChange={v => { setDark(v); showToast(v ? '🌙 Dark mode on' : '☀️ Light mode on'); }} trackColor={{ true: '#7C3AED' }} />
+              <Switch value={dark} onValueChange={v => { setDark(v); showToast(v ? '🌙 Dark mode on' : '☀️ Light mode on'); }} trackColor={{ true: A }} />
+            </View>
+            <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+              <Text style={{ fontSize: 18 }}>🎨</Text>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Accent Color</Text>
+                <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                  {[['#7C3AED', 'Purple'], ['#0EA5E9', 'Blue'], ['#10B981', 'Green'], ['#FF6B35', 'Orange'], ['#EC4899', 'Pink']].map(([c, label]) => (
+                    <TouchableOpacity key={c} onPress={() => { setAccent(c); showToast(`🎨 ${label} theme on!`); }}
+                      style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: c, borderWidth: accent === c ? 3 : 0, borderColor: T.text, alignItems: 'center', justifyContent: 'center' }}>
+                      {accent === c && <Text style={{ color: 'white', fontSize: 12, fontWeight: '900' }}>✓</Text>}
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
             </View>
           </View>
           <Text style={[st.sectionLabel, { color: T.subtext }]}>PRIVACY</Text>
@@ -857,12 +892,12 @@ export default function App() {
                 <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Share My Location</Text>
                 <Text style={{ fontSize: 11, color: T.subtext }}>{settings.location ? 'Friends can see you on campus' : "You're invisible 👻"}</Text>
               </View>
-              <Switch value={settings.location} onValueChange={v => { setSettings(s => ({ ...s, location: v })); showToast(v ? '📍 Location sharing on' : '👻 You\'re now invisible'); }} trackColor={{ true: '#7C3AED' }} />
+              <Switch value={settings.location} onValueChange={v => { setSettings(s => ({ ...s, location: v })); showToast(v ? '📍 Location sharing on' : '👻 You\'re now invisible'); }} trackColor={{ true: A }} />
             </View>
             <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
               <Text style={{ fontSize: 18 }}>🏆</Text>
               <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '700', color: T.text }}>Show on Leaderboard</Text>
-              <Switch value={settings.leaderboard} onValueChange={v => setSettings(s => ({ ...s, leaderboard: v }))} trackColor={{ true: '#7C3AED' }} />
+              <Switch value={settings.leaderboard} onValueChange={v => setSettings(s => ({ ...s, leaderboard: v }))} trackColor={{ true: A }} />
             </View>
           </View>
           <Text style={[st.sectionLabel, { color: T.subtext }]}>NOTIFICATIONS</Text>
@@ -870,8 +905,53 @@ export default function App() {
             <View style={st.setRow}>
               <Text style={{ fontSize: 18 }}>🔔</Text>
               <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '700', color: T.text }}>Push Notifications</Text>
-              <Switch value={settings.notifications} onValueChange={v => setSettings(s => ({ ...s, notifications: v }))} trackColor={{ true: '#7C3AED' }} />
+              <Switch value={settings.notifications} onValueChange={v => { setSettings(s => ({ ...s, notifications: v })); showToast(v ? '🔔 Notifications on' : '🔕 All notifications muted'); }} trackColor={{ true: A }} />
             </View>
+            {settings.notifications && (<>
+              <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+                <Text style={{ fontSize: 16 }}>📅</Text>
+                <Text style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: T.text }}>Event reminders</Text>
+                <Switch value={settings.notifEvents} onValueChange={v => setSettings(s => ({ ...s, notifEvents: v }))} trackColor={{ true: A }} />
+              </View>
+              <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+                <Text style={{ fontSize: 16 }}>💬</Text>
+                <Text style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: T.text }}>Direct messages</Text>
+                <Switch value={settings.notifDMs} onValueChange={v => setSettings(s => ({ ...s, notifDMs: v }))} trackColor={{ true: A }} />
+              </View>
+              <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+                <Text style={{ fontSize: 16 }}>🤝</Text>
+                <Text style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: T.text }}>Friend requests</Text>
+                <Switch value={settings.notifRequests} onValueChange={v => setSettings(s => ({ ...s, notifRequests: v }))} trackColor={{ true: A }} />
+              </View>
+              <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+                <Text style={{ fontSize: 16 }}>😴</Text>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: T.text }}>Quiet Hours</Text>
+                  <Text style={{ fontSize: 11, color: T.subtext }}>{settings.quietHours ? 'Silenced 11 PM – 8 AM' : 'Off — notifications anytime'}</Text>
+                </View>
+                <Switch value={settings.quietHours} onValueChange={v => { setSettings(s => ({ ...s, quietHours: v })); showToast(v ? '😴 Quiet hours: 11 PM – 8 AM' : 'Quiet hours off'); }} trackColor={{ true: A }} />
+              </View>
+            </>)}
+          </View>
+
+          <Text style={[st.sectionLabel, { color: T.subtext }]}>ACCOUNT</Text>
+          <View style={[st.setCard, { backgroundColor: T.card }]}>
+            <TouchableOpacity onPress={() => {
+              setPoints(2456); setJoined([]); setRsvpd([]); setLiked([]); setRedeemed([]); setEvents(INITIAL_EVENTS); setChats(STARTER_CHATS);
+              showToast('🗑️ Demo data reset — fresh start!');
+            }} style={st.setRow}>
+              <Text style={{ fontSize: 18 }}>🗑️</Text>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Reset Demo Data</Text>
+                <Text style={{ fontSize: 11, color: T.subtext }}>Points, clubs, RSVPs & chats back to start</Text>
+              </View>
+              <Text style={{ color: T.subtext }}>›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => showToast('Signed out (demo) 👋')} style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+              <Text style={{ fontSize: 18 }}>🚪</Text>
+              <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '700', color: '#EF4444' }}>Sign Out</Text>
+              <Text style={{ color: T.subtext }}>›</Text>
+            </TouchableOpacity>
           </View>
           <Text style={{ textAlign: 'center', fontSize: 11, color: T.subtext, marginTop: 20 }}>One Campus v1.0 · Made with 💜 at Purdue</Text>
         </ScrollView>
@@ -890,7 +970,7 @@ export default function App() {
       <View style={[st.header, { backgroundColor: T.bg }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View style={st.logoIcon}><Text style={{ fontSize: 18 }}>🎓</Text></View>
-          <Text style={{ fontSize: 17, fontWeight: '800', color: '#7C3AED' }}>One Campus</Text>
+          <Text style={{ fontSize: 17, fontWeight: '800', color: A }}>One Campus</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
           <View style={[st.ptsBadge, isPremium && { backgroundColor: '#F59E0B' }]}>
@@ -908,7 +988,7 @@ export default function App() {
 
       <View style={[st.tabBar, { backgroundColor: T.card, borderColor: T.border }]}>
         {TABS.map(([key, icon, label]) => (
-          <TouchableOpacity key={key} onPress={() => setTab(key)} style={[st.navBtn, tab === key && { backgroundColor: '#7C3AED' }]}>
+          <TouchableOpacity key={key} onPress={() => setTab(key)} style={[st.navBtn, tab === key && { backgroundColor: A }]}>
             <Text style={{ fontSize: 18 }}>{icon}</Text>
             <Text style={{ fontSize: 9, fontWeight: '600', color: tab === key ? 'white' : T.subtext }}>{label}</Text>
           </TouchableOpacity>
@@ -930,9 +1010,9 @@ export default function App() {
 const LIGHTTHEME = { bg: '#F5F3FF', card: '#FFFFFF', text: '#1a1a2e', subtext: '#6B7280', border: '#E9D5FF' };
 const DARKTHEME = { bg: '#15131F', card: '#221E33', text: '#F3F4F6', subtext: '#8B85A0', border: '#2E2942' };
 
-const st = StyleSheet.create({
+const makeStyles = (A) => StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 },
-  logoIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: '#7C3AED', alignItems: 'center', justifyContent: 'center' },
+  logoIcon: { width: 36, height: 36, borderRadius: 11, backgroundColor: A, alignItems: 'center', justifyContent: 'center' },
   ptsBadge: { backgroundColor: '#FF6B35', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 18 },
   gearBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   title: { fontSize: 26, fontWeight: '800' },
@@ -946,7 +1026,7 @@ const st = StyleSheet.create({
   metaPill: { backgroundColor: 'rgba(255,255,255,0.2)', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
   metaPillText: { color: 'white', fontSize: 11, fontWeight: '600' },
   actionBtn: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center', elevation: 3, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 6, shadowOffset: { width: 0, height: 3 } },
-  addBtn: { width: 42, height: 42, borderRadius: 13, backgroundColor: '#7C3AED', alignItems: 'center', justifyContent: 'center' },
+  addBtn: { width: 42, height: 42, borderRadius: 13, backgroundColor: A, alignItems: 'center', justifyContent: 'center' },
   dayCell: { flex: 1, alignItems: 'center', paddingVertical: 9, borderRadius: 12, gap: 3 },
   dot: { width: 5, height: 5, borderRadius: 3 },
   eventCard: { flexDirection: 'row', alignItems: 'center', gap: 12, borderRadius: 14, padding: 12, marginBottom: 8 },
@@ -954,7 +1034,7 @@ const st = StyleSheet.create({
   buildingCard: { borderRadius: 16, padding: 14 },
   friendChip: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 14 },
   clubRow: { flexDirection: 'row', alignItems: 'center', paddingTop: 10, marginTop: 10, borderTopWidth: 1 },
-  heroCard: { backgroundColor: '#7C3AED', borderRadius: 22, padding: 18 },
+  heroCard: { backgroundColor: A, borderRadius: 22, padding: 18 },
   heroAvatar: { width: 54, height: 54, borderRadius: 27, backgroundColor: 'rgba(255,255,255,0.25)', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.4)' },
   upgradeBanner: { flexDirection: 'row', alignItems: 'center', borderRadius: 14, padding: 12, marginTop: 12 },
   upgradeBtn: { backgroundColor: '#FF6B35', paddingHorizontal: 12, paddingVertical: 7, borderRadius: 11 },
@@ -976,7 +1056,7 @@ const st = StyleSheet.create({
   sheetEmoji: { fontSize: 42, textAlign: 'center' },
   sheetTitle: { fontSize: 22, fontWeight: '900', textAlign: 'center', marginTop: 4 },
   sheetSub: { fontSize: 13, textAlign: 'center', marginTop: 4, marginBottom: 12, lineHeight: 19 },
-  bigBtn: { backgroundColor: '#7C3AED', borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
+  bigBtn: { backgroundColor: A, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 12 },
   bigBtnText: { color: 'white', fontSize: 15, fontWeight: '800' },
   skipText: { textAlign: 'center', fontSize: 13, paddingVertical: 11 },
   fine: { fontSize: 10, textAlign: 'center', opacity: 0.7 },
@@ -989,10 +1069,10 @@ const st = StyleSheet.create({
   plannerBlock: { borderRadius: 14, padding: 13, marginBottom: 10 },
   chatHeader: { flexDirection: 'row', alignItems: 'center', padding: 14, borderBottomWidth: 1 },
   msgThem: { alignSelf: 'flex-start', maxWidth: '75%', borderRadius: 16, borderBottomLeftRadius: 5, padding: 11 },
-  msgMe: { alignSelf: 'flex-end', maxWidth: '75%', backgroundColor: '#7C3AED', borderRadius: 16, borderBottomRightRadius: 5, padding: 11 },
+  msgMe: { alignSelf: 'flex-end', maxWidth: '75%', backgroundColor: A, borderRadius: 16, borderBottomRightRadius: 5, padding: 11 },
   chatBar: { flexDirection: 'row', alignItems: 'center', gap: 8, padding: 10, borderTopWidth: 1 },
   chatInput: { flex: 1, borderRadius: 20, paddingHorizontal: 15, paddingVertical: 10, fontSize: 14 },
-  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: '#7C3AED', alignItems: 'center', justifyContent: 'center' },
+  sendBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: A, alignItems: 'center', justifyContent: 'center' },
   setCard: { borderRadius: 14, overflow: 'hidden', marginBottom: 6 },
   setRow: { flexDirection: 'row', alignItems: 'center', padding: 13 },
 });
