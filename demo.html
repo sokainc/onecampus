@@ -1953,6 +1953,11 @@ window.demoAuthAction = async function () {
   }
   try {
     const result = await signInWithPopup(fbAuth, provider);
+    if (!/\.edu$/i.test(result.user.email || '')) {
+      await signOut(fbAuth);
+      showToast('🎓 Students only — sign in with your school (.edu) email');
+      return;
+    }
     showToast(`🎉 Welcome, ${result.user.displayName}!`);
   } catch (err) {
     if (err.code === 'auth/popup-closed-by-user') showToast('Sign-in canceled');

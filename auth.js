@@ -32,6 +32,12 @@ window.handleOAuth = async function (provider) {
   }
   try {
     const result = await signInWithPopup(auth, googleProvider);
+    // One Campus is students-only — require a .edu school email
+    if (!/\.edu$/i.test(result.user.email || '')) {
+      await signOut(auth);
+      showToast('🎓 One Campus is for students — please sign in with your school (.edu) email');
+      return;
+    }
     closeModal();
     showToast(`🎉 Welcome, ${result.user.displayName}!`);
   } catch (err) {
