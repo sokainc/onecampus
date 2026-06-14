@@ -18,10 +18,10 @@ function closeModal() {
   document.body.style.overflow = '';
 }
 
-document.getElementById('openLoginBtn').addEventListener('click', openModal);
-document.getElementById('heroSignIn').addEventListener('click', openModal);
-document.getElementById('whySignIn').addEventListener('click', openModal);
-document.getElementById('ctaSignIn').addEventListener('click', openModal);
+// some of these buttons may not exist on every page — guard each one
+['openLoginBtn', 'heroSignIn', 'whySignIn', 'ctaSignIn'].forEach(id => {
+  document.getElementById(id)?.addEventListener('click', openModal);
+});
 closeBtn.addEventListener('click', closeModal);
 
 overlay.addEventListener('click', (e) => {

@@ -10,13 +10,15 @@ Built by a student, for students. 💜
 
 ## 🚀 What's Inside
 
+**The native app (`native-app/`) is the main product.** The website is the landing page that gets students to download it; `demo.html` is a browser preview of the app.
+
 | File / Folder | What it is |
 |---|---|
-| `index.html` | Marketing website with portal links and **real Google sign-in** (Firebase) |
-| `demo.html` | Full student app demo — works in any browser, fits phone screens |
+| `native-app/` | ⭐ **The product** — true native iPhone & Android app (React Native + Expo SDK 54), published to Expo |
+| `index.html` | Marketing/landing website — drives downloads, with **real Google sign-in** (Firebase) |
+| `demo.html` | Browser preview of the student app (try-before-you-download) |
 | `admin.html` | Admin dashboard — user management, content moderation, ad revenue |
 | `business.html` | Advertiser portal — create ad campaigns, analytics, billing |
-| `native-app/` | **True native app** (React Native + Expo SDK 54) — runs in Expo Go |
 | `daily-updates/` | Daily progress reports |
 | `auth.js` | Firebase authentication for the website |
 
