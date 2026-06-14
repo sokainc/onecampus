@@ -35,12 +35,6 @@ window.handleOAuth = async function (provider) {
   oauthBusy = true;
   try {
     const result = await signInWithPopup(auth, googleProvider);
-    // One Campus is students-only — require a .edu school email
-    if (!/(\.edu|\.k12\.[a-z]{2}\.us)$/i.test(result.user.email || '')) {
-      await signOut(auth);
-      showToast('🎓 One Campus is for students — sign in with your school email (.edu or K-12 school email)');
-      return;
-    }
     closeModal();
     showToast(`🎉 Welcome, ${result.user.displayName}!`);
   } catch (err) {
