@@ -1941,7 +1941,9 @@ onAuthStateChanged(fbAuth, (u) => {
   if (typeof renderSettings === 'function') renderSettings();
 });
 
+let demoAuthBusy = false;
 window.demoAuthAction = async function () {
+  if (demoAuthBusy) return;            // ignore rapid double-taps
   if (window.demoUser) {
     await signOut(fbAuth);
     showToast('Signed out 👋');
@@ -1951,6 +1953,7 @@ window.demoAuthAction = async function () {
     showToast('⚠️ Google sign-in needs the localhost link — open http://localhost:3000/demo.html');
     return;
   }
+  demoAuthBusy = true;
   try {
     const result = await signInWithPopup(fbAuth, provider);
     if (!/\.edu$/i.test(result.user.email || '')) {
@@ -1960,8 +1963,11 @@ window.demoAuthAction = async function () {
     }
     showToast(`🎉 Welcome, ${result.user.displayName}!`);
   } catch (err) {
-    if (err.code === 'auth/popup-closed-by-user') showToast('Sign-in canceled');
+    if (err.code === 'auth/cancelled-popup-request') { /* harmless — another popup took over */ }
+    else if (err.code === 'auth/popup-closed-by-user') showToast('Sign-in canceled');
     else showToast(`Sign-in error: ${err.code || err.message}`);
+  } finally {
+    demoAuthBusy = false;
   }
 };
 </script>

@@ -21,6 +21,7 @@ const googleProvider = new GoogleAuthProvider();
 googleProvider.setCustomParameters({ prompt: 'select_account' });
 
 // ── REAL GOOGLE SIGN-IN (overrides the demo handler in app.js) ──
+let oauthBusy = false;
 window.handleOAuth = async function (provider) {
   if (provider !== 'Google') {
     showToast(`${provider} sign-in coming soon — use Google for now!`);
@@ -30,6 +31,8 @@ window.handleOAuth = async function (provider) {
     showToast('⚠️ Open the site via a local server or the live link for Google sign-in');
     return;
   }
+  if (oauthBusy) return;            // ignore rapid double-clicks
+  oauthBusy = true;
   try {
     const result = await signInWithPopup(auth, googleProvider);
     // One Campus is students-only — require a .edu school email
@@ -41,13 +44,17 @@ window.handleOAuth = async function (provider) {
     closeModal();
     showToast(`🎉 Welcome, ${result.user.displayName}!`);
   } catch (err) {
-    if (err.code === 'auth/popup-closed-by-user') {
+    if (err.code === 'auth/cancelled-popup-request') {
+      /* harmless — another popup request took over */
+    } else if (err.code === 'auth/popup-closed-by-user') {
       showToast('Sign-in canceled');
     } else if (err.code === 'auth/unauthorized-domain') {
       showToast('⚠️ This domain needs to be added in Firebase → Auth → Settings → Authorized domains');
     } else {
       showToast(`Sign-in error: ${err.code || err.message}`);
     }
+  } finally {
+    oauthBusy = false;
   }
 };
 
