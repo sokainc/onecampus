@@ -246,12 +246,12 @@ export default function App() {
     return () => clearTimeout(saveTimer.current);
   }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, user]);
 
-  const isStudentEmail = (e) => /\.edu$/i.test(e.trim());
+  const isStudentEmail = (e) => /(\.edu|\.k12\.[a-z]{2}\.us)$/i.test(e.trim());
 
   const doAuth = async () => {
     const email = authEmail.trim();
     if (!email.includes('@')) { showToast('Enter a valid email 📧'); return; }
-    if (!isStudentEmail(email)) { showToast('🎓 Use your student email (must end in .edu)'); return; }
+    if (!isStudentEmail(email)) { showToast('🎓 Use your school email (.edu or .k12 school email)'); return; }
     if (authPass.length < 6) { showToast('Password needs 6+ characters 🔑'); return; }
     if (authMode === 'signup' && !authName.trim()) { showToast('Enter your name ✏️'); return; }
     setAuthBusy(true);
@@ -1204,7 +1204,7 @@ export default function App() {
               <TextInput value={authName} onChangeText={setAuthName} placeholder="Full name" placeholderTextColor={T.subtext}
                 autoCapitalize="words" style={[st.input, { backgroundColor: T.card, color: T.text, borderColor: T.border }]} />
             )}
-            <TextInput value={authEmail} onChangeText={setAuthEmail} placeholder="Student email (ends in .edu)" placeholderTextColor={T.subtext}
+            <TextInput value={authEmail} onChangeText={setAuthEmail} placeholder="School email (.edu or .k12 school)" placeholderTextColor={T.subtext}
               autoCapitalize="none" keyboardType="email-address" autoComplete="email"
               style={[st.input, { backgroundColor: T.card, color: T.text, borderColor: T.border }]} />
             <TextInput value={authPass} onChangeText={setAuthPass} placeholder="Password (6+ characters)" placeholderTextColor={T.subtext}
@@ -1216,7 +1216,7 @@ export default function App() {
             </TouchableOpacity>
 
             <Text style={{ textAlign: 'center', fontSize: 11, color: T.subtext, marginTop: 18, lineHeight: 17 }}>
-              🎓 One Campus is for students only — sign up with your school email (.edu).{'\n'}Google sign-in available on the website.
+              🎓 One Campus is for students only — sign up with your school email (.edu or K-12 school email).{'\n'}Google sign-in available on the website.
             </Text>
           </ScrollView>
         </KeyboardAvoidingView>

@@ -1956,9 +1956,9 @@ window.demoAuthAction = async function () {
   demoAuthBusy = true;
   try {
     const result = await signInWithPopup(fbAuth, provider);
-    if (!/\.edu$/i.test(result.user.email || '')) {
+    if (!/(\.edu|\.k12\.[a-z]{2}\.us)$/i.test(result.user.email || '')) {
       await signOut(fbAuth);
-      showToast('🎓 Students only — sign in with your school (.edu) email');
+      showToast('🎓 Students only — sign in with your school email (.edu or K-12 school email)');
       return;
     }
     showToast(`🎉 Welcome, ${result.user.displayName}!`);
