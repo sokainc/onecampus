@@ -1430,6 +1430,7 @@ function confirmRedeem(r, cause) {
   points -= r.cost;
   document.getElementById('pts-display').textContent = points.toLocaleString();
   document.getElementById('hero-pts').textContent = points.toLocaleString();
+  window.ocPersist();
   const code = 'OC-' + Math.random().toString(36).slice(2, 7).toUpperCase();
   redeemedRewards.unshift({ icon: r.icon, name: cause ? `$1 donated to ${cause}` : r.name, code: cause ? 'THANK YOU 💜' : code });
   closePremiumModal();
@@ -1590,6 +1591,7 @@ function toggleLike(postId, btn) {
     btn.classList.add('liked');
     btn.innerHTML = `❤️ <span id="likes-${postId}">${post.likes + 1}</span>`;
   }
+  window.ocPersist();
 }
 
 function addFriend(name) {
@@ -1752,6 +1754,7 @@ function confirmCancelSub() {
     <button class="upgrade-btn" onclick="openPremiumModal()">Upgrade</button>`;
   closePremiumModal();
   renderSettings();
+  window.ocPersist();
   showToast('Subscription canceled — Premium ends July 10 💔');
 }
 
@@ -2043,6 +2046,7 @@ function subscribePremium() {
     </div>
     <button class="upgrade-btn" onclick="openAIPlanner()">Open</button>`;
   showToast('👑 Welcome to Premium! 2x points active');
+  window.ocPersist();
 }
 
 function openAIPlanner() {
@@ -2079,6 +2083,7 @@ function addPoints(n) {
   points += earned;
   document.getElementById('pts-display').textContent = points.toLocaleString();
   document.getElementById('hero-pts').textContent = points.toLocaleString();
+  window.ocPersist();
   return earned;
 }
 
@@ -2089,11 +2094,73 @@ function showToast(msg) {
   clearTimeout(t._timer);
   t._timer = setTimeout(() => t.classList.remove('show'), 2500);
 }
+
+// ── DATA PERSISTENCE (per signed-in account) ──
+function applyPremiumUI() {
+  const badge = document.querySelector('.pts-badge');
+  if (isPremium) {
+    badge.classList.add('premium');
+    badge.innerHTML = `👑 <span id="pts-display">${points.toLocaleString()}</span> pts`;
+    document.getElementById('upgrade-banner').innerHTML = `
+      <div class="upgrade-icon">🤖</div>
+      <div class="upgrade-text">
+        <strong>AI Organizer <span class="pro-chip">PRO</span></strong>
+        <span>Your day &amp; night, planned by AI</span>
+      </div>
+      <button class="upgrade-btn" onclick="openAIPlanner()">Open</button>`;
+  } else {
+    badge.classList.remove('premium');
+    badge.innerHTML = `⚡ <span id="pts-display">${points.toLocaleString()}</span> pts`;
+    document.getElementById('upgrade-banner').innerHTML = `
+      <div class="upgrade-icon">⭐</div>
+      <div class="upgrade-text">
+        <strong>One Campus Premium ✨</strong>
+        <span>2x points · AI organizer · cross-campus</span>
+      </div>
+      <button class="upgrade-btn" onclick="openPremiumModal()">Upgrade</button>`;
+  }
+}
+
+// snapshot current state to save to the cloud
+window.ocCollectData = function () {
+  return {
+    points,
+    joinedClubs: [...joinedClubs],
+    rsvpdEvents: [...rsvpdEvents],
+    addedFriends: [...addedFriends],
+    likedPosts: [...likedPosts],
+    isPremium,
+    updatedAt: Date.now(),
+  };
+};
+
+// load a saved state (or reset to a fresh account if none) and refresh the UI
+window.ocApplyData = function (d) {
+  d = d || {};
+  points = typeof d.points === 'number' ? d.points : 2456;
+  joinedClubs.clear(); (d.joinedClubs || []).forEach(x => joinedClubs.add(x));
+  rsvpdEvents.clear(); (d.rsvpdEvents || []).forEach(x => rsvpdEvents.add(x));
+  addedFriends.clear(); (d.addedFriends || []).forEach(x => addedFriends.add(x));
+  likedPosts.clear(); (d.likedPosts || []).forEach(x => likedPosts.add(x));
+  isPremium = !!d.isPremium;
+  currentCardIndex = 0;
+  const pd = document.getElementById('pts-display'); if (pd) pd.textContent = points.toLocaleString();
+  const hp = document.getElementById('hero-pts'); if (hp) hp.textContent = points.toLocaleString();
+  applyPremiumUI();
+  renderCampusTabs();
+  renderDiscoverCards();
+  renderEvents(null);
+  renderConnectContent('feed');
+};
+
+// replaced by the Firebase module once signed in; no-op until then
+window.ocPersist = function () {};
 </script>
 <script type="module">
 // ── REAL FIREBASE AUTH FOR THE DEMO APP ──
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, GoogleAuthProvider, signInWithPopup, onAuthStateChanged, signOut } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getFirestore, doc, getDoc, setDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 const fbApp = initializeApp({
   apiKey: 'AIzaSyBZme2DEX_aubcTBjMviqgEpPk0Z15CzGs',
@@ -2104,15 +2171,42 @@ const fbApp = initializeApp({
   appId: '1:673557735993:web:5084d747e39ee688febbe8',
 });
 const fbAuth = getAuth(fbApp);
+const db = getFirestore(fbApp);
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 
 window.demoUser = null;
+let saveTimer = null;
 
-onAuthStateChanged(fbAuth, (u) => {
+onAuthStateChanged(fbAuth, async (u) => {
   window.demoUser = u;
-  // refresh the settings panel if it's open so the row updates
   if (typeof renderSettings === 'function') renderSettings();
+
+  if (u) {
+    // ── LOAD this account's saved data from the cloud ──
+    try {
+      const snap = await getDoc(doc(db, 'users', u.uid));
+      window.ocApplyData(snap.exists() ? snap.data() : {}); // {} = fresh account → 2,456 starter
+      if (snap.exists()) showToast('☁️ Your data is synced!');
+    } catch (e) {
+      showToast('⚠️ Could not load saved data — is Firestore enabled?');
+    }
+    // ── SAVE this account's data whenever it changes (debounced) ──
+    window.ocPersist = () => {
+      if (!window.demoUser) return;
+      clearTimeout(saveTimer);
+      saveTimer = setTimeout(() => {
+        setDoc(doc(db, 'users', window.demoUser.uid), {
+          ...window.ocCollectData(),
+          email: window.demoUser.email,
+        }, { merge: true }).catch(() => {});
+      }, 1000);
+    };
+  } else {
+    // signed out → stop saving and reset to a clean demo state
+    window.ocPersist = () => {};
+    window.ocApplyData({});
+  }
 });
 
 let demoAuthBusy = false;
