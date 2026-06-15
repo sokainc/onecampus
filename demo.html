@@ -525,7 +525,7 @@
       <span class="logo-name">One Campus</span>
     </div>
     <div style="display:flex;align-items:center;gap:8px">
-      <div class="pts-badge">⚡ <span id="pts-display">2,456</span> pts</div>
+      <div class="pts-badge">⚡ <span id="pts-display">0</span> pts</div>
       <button class="settings-gear" onclick="openSettings()">⚙️</button>
     </div>
   </div>
@@ -614,7 +614,7 @@
           <div class="hero-avatar">LB</div>
           <div class="hero-info">
             <div class="hero-campus-name">Your Campus</div>
-            <div class="hero-pts-big" id="hero-pts">2,456</div>
+            <div class="hero-pts-big" id="hero-pts">0</div>
             <div class="hero-pts-label">Campus Explorer · Purdue</div>
           </div>
         </div>
@@ -858,7 +858,7 @@ const campuses = {
 };
 
 let currentCardIndex = 0;
-let points = 2456;
+let points = 0;
 let isPremium = false;
 let activeCampus = 'purdue';
 let activeInterest = 'All';
@@ -1479,7 +1479,7 @@ function renderPtsContent(tab) {
     c.innerHTML = `<div class="badge-grid">${badges.map(b => `<div class="badge-card"><div class="badge-icon">${b.icon}</div><div class="badge-name">${b.name}</div><div class="badge-desc">${b.desc}</div><div class="badge-pts">${b.pts}</div></div>`).join('')}</div>`;
   } else if (tab === 'weekly') {
     const leaders = [
-      { name: 'Leighton B.', pts: 2456, you: true },
+      { name: 'You', pts: points, you: true },
       { name: 'Maya L.', pts: 2210 },
       { name: 'Jordan R.', pts: 1980 },
       { name: 'Priya M.', pts: 1750 },
@@ -2137,7 +2137,7 @@ window.ocCollectData = function () {
 // load a saved state (or reset to a fresh account if none) and refresh the UI
 window.ocApplyData = function (d) {
   d = d || {};
-  points = typeof d.points === 'number' ? d.points : 2456;
+  points = typeof d.points === 'number' ? d.points : 0;
   joinedClubs.clear(); (d.joinedClubs || []).forEach(x => joinedClubs.add(x));
   rsvpdEvents.clear(); (d.rsvpdEvents || []).forEach(x => rsvpdEvents.add(x));
   addedFriends.clear(); (d.addedFriends || []).forEach(x => addedFriends.add(x));
@@ -2186,7 +2186,7 @@ onAuthStateChanged(fbAuth, async (u) => {
     // ── LOAD this account's saved data from the cloud ──
     try {
       const snap = await getDoc(doc(db, 'users', u.uid));
-      window.ocApplyData(snap.exists() ? snap.data() : {}); // {} = fresh account → 2,456 starter
+      window.ocApplyData(snap.exists() ? snap.data() : {}); // {} = fresh account → 0 pts
       if (snap.exists()) showToast('☁️ Your data is synced!');
     } catch (e) {
       showToast('⚠️ Could not load saved data — is Firestore enabled?');

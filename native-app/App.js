@@ -155,7 +155,7 @@ const EV_COLORS = ['#7C3AED', '#FF1744', '#0EA5E9', '#10B981', '#F59E0B', '#EF44
 /* ─────────── APP ─────────── */
 export default function App() {
   const [tab, setTab] = useState('discover');
-  const [points, setPoints] = useState(2456);
+  const [points, setPoints] = useState(0);
   const [isPremium, setIsPremium] = useState(false);
   const [dark, setDark] = useState(false);
   const [toast, setToast] = useState(null);
@@ -1142,7 +1142,7 @@ export default function App() {
           <Text style={[st.sectionLabel, { color: T.subtext }]}>ACCOUNT</Text>
           <View style={[st.setCard, { backgroundColor: T.card }]}>
             <TouchableOpacity onPress={() => {
-              setPoints(2456); setJoined([]); setRsvpd([]); setLiked([]); setRedeemed([]); setEvents(INITIAL_EVENTS); setChats(STARTER_CHATS);
+              setPoints(0); setJoined([]); setRsvpd([]); setLiked([]); setRedeemed([]); setEvents(INITIAL_EVENTS); setChats(STARTER_CHATS);
               showToast('🗑️ Demo data reset — fresh start!');
             }} style={st.setRow}>
               <Text style={{ fontSize: 18 }}>🗑️</Text>
