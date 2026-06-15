@@ -365,7 +365,8 @@
           <div class="form-group"><label class="form-label">Ad Copy</label><textarea class="form-textarea" placeholder="Describe your offer in 1-2 sentences..." id="preview-copy" oninput="updatePreview()"></textarea></div>
           <div class="form-group"><label class="form-label">Call to Action</label><input class="form-input" placeholder="e.g. Order Now" id="preview-cta" oninput="updatePreview()" /></div>
           <div class="form-group"><label class="form-label">Ad Image / Logo</label>
-            <div class="upload-zone" onclick="toast('Use your device file picker to upload an image.')">
+            <input type="file" id="ad-image-input" accept="image/*" style="display:none" onchange="handleAdImage(this)" />
+            <div class="upload-zone" id="upload-zone" onclick="document.getElementById('ad-image-input').click()">
               <div class="upload-icon">📸</div>
               <div class="upload-text"><strong>Click to upload</strong> or drag & drop<br/>PNG, JPG up to 5MB</div>
             </div>
@@ -387,7 +388,7 @@
                   <div style="font-size:11px;color:#9CA3AF">Food Delivery</div>
                 </div>
               </div>
-              <div class="ad-image-placeholder">🍕</div>
+              <div class="ad-image-placeholder" id="live-image">🍕</div>
               <div class="ad-headline-preview" id="live-headline">Your headline here</div>
               <div class="ad-copy-preview" id="live-copy">Your ad copy will appear here...</div>
               <button class="ad-cta-preview" id="live-cta" onclick="toast('CTA clicked!')">Click to Action</button>
@@ -749,6 +750,26 @@ function updatePreview() {
   document.getElementById('live-headline').textContent = h || 'Your headline here';
   document.getElementById('live-copy').textContent = c || 'Your ad copy will appear here...';
   document.getElementById('live-cta').textContent = cta || 'Call to Action';
+}
+
+function handleAdImage(input) {
+  const file = input.files && input.files[0];
+  if (!file) return;
+  if (file.size > 5 * 1024 * 1024) { toast('Image must be under 5MB'); input.value = ''; return; }
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    // show the uploaded image in the live ad preview
+    const img = document.getElementById('live-image');
+    img.textContent = '';
+    img.style.backgroundImage = `url(${e.target.result})`;
+    img.style.backgroundSize = 'cover';
+    img.style.backgroundPosition = 'center';
+    // confirm in the upload zone
+    const zone = document.getElementById('upload-zone');
+    zone.innerHTML = `<div class="upload-icon">✅</div><div class="upload-text"><strong>${file.name}</strong> uploaded<br/>Click to replace</div>`;
+    toast('Image added to your ad! 🖼️');
+  };
+  reader.readAsDataURL(file);
 }
 
 function setAnalyticsTab(btn) {
