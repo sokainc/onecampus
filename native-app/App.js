@@ -1,6 +1,6 @@
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, Modal,
+  View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Image,
   StyleSheet, FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView, Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
@@ -1175,7 +1175,7 @@ export default function App() {
   if (!authReady) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ fontSize: 44 }}>🎓</Text>
+        <Image source={require('./assets/logo.png')} style={{ width: 96, height: 96, resizeMode: 'contain' }} />
         <Text style={{ fontSize: 18, fontWeight: '800', color: A, marginTop: 8 }}>One Campus</Text>
       </SafeAreaView>
     );
@@ -1188,7 +1188,7 @@ export default function App() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 26 }}>
             <View style={{ alignItems: 'center', marginBottom: 26 }}>
-              <View style={[st.logoIcon, { width: 64, height: 64, borderRadius: 18 }]}><Text style={{ fontSize: 32 }}>🎓</Text></View>
+              <Image source={require('./assets/logo.png')} style={{ width: 120, height: 120, resizeMode: 'contain' }} />
               <Text style={{ fontSize: 26, fontWeight: '900', color: A, marginTop: 12 }}>One Campus</Text>
               <Text style={{ fontSize: 13, color: T.subtext, marginTop: 4 }}>Your campus. Your people. One app.</Text>
             </View>
@@ -1236,7 +1236,7 @@ export default function App() {
       <StatusBar style={dark ? 'light' : 'dark'} />
       <View style={[st.header, { backgroundColor: T.bg }]}>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <View style={st.logoIcon}><Text style={{ fontSize: 18 }}>🎓</Text></View>
+          <View style={[st.logoIcon, { overflow: 'hidden' }]}><Image source={require('./assets/logo-icon.png')} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} /></View>
           <Text style={{ fontSize: 17, fontWeight: '800', color: A }}>One Campus</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
