@@ -5,6 +5,7 @@ import {
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker, Polyline } from 'react-native-maps';
+import { WebView } from 'react-native-webview';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
 import {
@@ -423,23 +424,13 @@ export default function App() {
   const [routeInfo, setRouteInfo] = useState(null);
   const mapRef = useRef(null);
 
-  const openDirections = async (place) => {
+  // open a real Google Maps walking route inside the app (WebView embed — no API key)
+  const [directions, setDirections] = useState(null); // { url, label } | null
+  const openDirections = (place) => {
     const b = BUILDINGS.find(x => place.includes(x.name) || place.includes(x.full));
     if (!b) { showToast('📍 Location not on the campus map yet'); return; }
-    setTab('campus');
-    showToast('🚶 Finding the best walking route...');
-    try {
-      const res = await fetch(`https://routing.openstreetmap.de/routed-foot/route/v1/foot/${YOU.lng},${YOU.lat};${b.lng},${b.lat}?overview=full&geometries=geojson&steps=true`);
-      const data = await res.json();
-      const r = data.routes[0];
-      const coords = r.geometry.coordinates.map(([x, y]) => ({ latitude: y, longitude: x }));
-      const steps = (r.legs[0]?.steps || []).map(stepToText).filter(Boolean);
-      setRouteCoords(coords);
-      setRouteInfo({ label: place, mins: Math.max(1, Math.round(r.duration / 60)), meters: Math.round(r.distance), steps });
-      setTimeout(() => mapRef.current?.fitToCoordinates(coords, { edgePadding: { top: 50, bottom: 50, left: 50, right: 50 }, animated: true }), 350);
-    } catch (e) {
-      showToast('Could not load route — check internet 📶');
-    }
+    const url = `https://maps.google.com/maps?saddr=${YOU.lat},${YOU.lng}&daddr=${b.lat},${b.lng}&mode=walking&output=embed`;
+    setDirections({ url, label: place });
   };
 
   const stepToText = (s) => {
@@ -1265,6 +1256,22 @@ export default function App() {
       {renderSheet()}
       {renderChat()}
       {renderSettingsModal()}
+
+      {/* Google Maps walking-route directions */}
+      <Modal visible={!!directions} animationType="slide" onRequestClose={() => setDirections(null)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+          <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+            <TouchableOpacity onPress={() => setDirections(null)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>🧭 Directions</Text>
+              <Text style={{ fontSize: 11, color: T.subtext }}>Walking route to {directions?.label}</Text>
+            </View>
+          </View>
+          {directions && (
+            <WebView source={{ uri: directions.url }} style={{ flex: 1 }} startInLoadingState />
+          )}
+        </SafeAreaView>
+      </Modal>
     </SafeAreaView>
   );
 }
