@@ -424,6 +424,7 @@ export default function App() {
   const [routeInfo, setRouteInfo] = useState(null);
   const mapRef = useRef(null);
 
+  const [showBusiness, setShowBusiness] = useState(false);
   // open a real Google Maps walking route inside the app (WebView embed — no API key)
   const [directions, setDirections] = useState(null); // { url, label } | null
   const openDirections = (place) => {
@@ -1130,6 +1131,18 @@ export default function App() {
             </>)}
           </View>
 
+          <Text style={[st.sectionLabel, { color: T.subtext }]}>SWITCH MODE</Text>
+          <View style={[st.setCard, { backgroundColor: T.card }]}>
+            <TouchableOpacity onPress={() => { setShowSettings(false); setShowBusiness(true); }} style={st.setRow}>
+              <Text style={{ fontSize: 18 }}>📢</Text>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Switch to Business Portal</Text>
+                <Text style={{ fontSize: 11, color: T.subtext }}>Advertise to students & manage campaigns</Text>
+              </View>
+              <Text style={{ color: T.subtext }}>›</Text>
+            </TouchableOpacity>
+          </View>
+
           <Text style={[st.sectionLabel, { color: T.subtext }]}>ACCOUNT</Text>
           <View style={[st.setCard, { backgroundColor: T.card }]}>
             <TouchableOpacity onPress={() => {
@@ -1256,6 +1269,20 @@ export default function App() {
       {renderSheet()}
       {renderChat()}
       {renderSettingsModal()}
+
+      {/* Business portal (web dashboard) in a WebView */}
+      <Modal visible={showBusiness} animationType="slide" onRequestClose={() => setShowBusiness(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+          <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+            <TouchableOpacity onPress={() => setShowBusiness(false)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+            <View>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>📢 Business Portal</Text>
+              <Text style={{ fontSize: 11, color: T.subtext }}>Advertiser dashboard</Text>
+            </View>
+          </View>
+          <WebView source={{ uri: 'https://sokainc.github.io/onecampus/business.html' }} style={{ flex: 1 }} startInLoadingState />
+        </SafeAreaView>
+      </Modal>
 
       {/* Google Maps walking-route directions */}
       <Modal visible={!!directions} animationType="slide" onRequestClose={() => setDirections(null)}>
