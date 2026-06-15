@@ -36,7 +36,8 @@ window.handleOAuth = async function (provider) {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     closeModal();
-    showToast(`🎉 Welcome, ${result.user.displayName}!`);
+    showToast(`🎉 Welcome, ${result.user.displayName}! Opening One Campus…`);
+    setTimeout(() => { window.location.href = 'demo.html'; }, 800);
   } catch (err) {
     if (err.code === 'auth/cancelled-popup-request') {
       /* harmless — another popup request took over */
@@ -63,15 +64,15 @@ const signInBtn = document.getElementById('openLoginBtn');
 
 onAuthStateChanged(auth, (user) => {
   if (user) {
+    // signed in → button opens One Campus (sign-out lives inside the app's settings)
     signInBtn.innerHTML = `
       <span style="display:inline-flex;align-items:center;gap:8px">
         ${user.photoURL ? `<img src="${user.photoURL}" alt="" style="width:22px;height:22px;border-radius:50%">` : '👤'}
-        ${user.displayName ? user.displayName.split(' ')[0] : 'Account'} · Sign out
+        Open One Campus →
       </span>`;
-    signInBtn.onclick = async (ev) => {
+    signInBtn.onclick = (ev) => {
       ev.stopImmediatePropagation();
-      await signOut(auth);
-      showToast('Signed out 👋');
+      window.location.href = 'demo.html';
     };
   } else {
     signInBtn.textContent = 'Sign In';

@@ -542,6 +542,13 @@
         <button style="width:42px;height:42px;border-radius:50%;background:linear-gradient(135deg,#7C3AED,#A855F7);border:none;font-size:18px;cursor:pointer;color:white;" onclick="showToast('Quick Match on! ⚡')">⚡</button>
       </div>
       <div class="campus-toggle" id="campus-toggle"></div>
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <input id="club-search" type="text" placeholder="🔍 Search clubs & activities..." oninput="onClubSearch(this.value)"
+          style="flex:1;border:1.5px solid #E9D5FF;background:#FAF9FF;border-radius:14px;padding:10px 14px;font-size:13px;font-family:inherit;color:#1a1a2e;outline:none" />
+        <button id="rec-toggle" onclick="toggleRecommended()"
+          style="border:1.5px solid #E9D5FF;background:white;border-radius:14px;padding:0 12px;font-size:12px;font-weight:700;color:#7C3AED;cursor:pointer;white-space:nowrap">✨ Recommended</button>
+      </div>
+      <div id="search-results" style="display:none"></div>
       <div class="discover-card-stack" id="card-stack"></div>
       <div class="disc-actions">
         <button class="disc-btn skip" onclick="swipeCard('skip')" title="Skip">✕</button>
@@ -570,6 +577,12 @@
         <button class="add-event-btn" onclick="openAddEvent()">+</button>
       </div>
       <div class="week-strip"><div class="week-days" id="week-days"></div></div>
+      <div style="display:flex;gap:8px;margin-bottom:12px">
+        <button id="avail-toggle" onclick="toggleAvailability()"
+          style="flex:1;border:1.5px solid #E9D5FF;background:white;border-radius:14px;padding:9px;font-size:12px;font-weight:700;color:#7C3AED;cursor:pointer">🟢 Available only</button>
+        <button onclick="openMyDay()"
+          style="flex:1;border:none;background:linear-gradient(135deg,#7C3AED,#A855F7);border-radius:14px;padding:9px;font-size:12px;font-weight:700;color:white;cursor:pointer">📋 My Day</button>
+      </div>
       <div class="events-section-title" id="events-count-title">6 UPCOMING EVENTS</div>
       <div id="events-list"></div>
     </div>
@@ -849,6 +862,9 @@ let points = 2456;
 let isPremium = false;
 let activeCampus = 'purdue';
 let activeInterest = 'All';
+let clubSearchQuery = '';
+let recommendedOn = false;
+let availableOnly = false;
 let mapInitialized = false;
 const joinedClubs = new Set();
 const rsvpdEvents = new Set();
@@ -869,9 +885,73 @@ document.addEventListener('DOMContentLoaded', () => {
 campuses.purdue.clubs = clubs;
 
 function activeClubs() {
-  const list = campuses[activeCampus].clubs;
-  if (activeInterest === 'All') return list;
-  return list.filter(c => c.tag === activeInterest.toUpperCase());
+  let list = campuses[activeCampus].clubs;
+  // interest filter
+  if (activeInterest !== 'All') list = list.filter(c => c.tag === activeInterest.toUpperCase());
+  // club database search — name, tag, description, location
+  if (clubSearchQuery) {
+    const q = clubSearchQuery.toLowerCase();
+    list = list.filter(c =>
+      c.name.toLowerCase().includes(q) ||
+      c.tag.toLowerCase().includes(q) ||
+      c.desc.toLowerCase().includes(q) ||
+      c.location.toLowerCase().includes(q));
+  }
+  // recommendation sorting
+  if (recommendedOn) list = [...list].sort((a, b) => recommendationScore(b) - recommendationScore(a));
+  return list;
+}
+
+// ── RECOMMENDATION ENGINE ──
+// scores a club by how well it matches what you've already shown interest in
+function recommendationScore(club) {
+  let score = 0;
+  // tags of clubs you've already joined → boost similar clubs
+  const joinedTags = [...joinedClubs].map(name => {
+    const all = Object.values(campuses).flatMap(c => c.clubs);
+    const found = all.find(c => c.name === name);
+    return found ? found.tag : null;
+  }).filter(Boolean);
+  if (joinedTags.includes(club.tag)) score += 50;
+  // matches the interest filter you're browsing
+  if (activeInterest !== 'All' && club.tag === activeInterest.toUpperCase()) score += 30;
+  // popularity (normalized) as a gentle tiebreaker
+  score += Math.min(club.members / 100, 20);
+  // don't re-recommend clubs you already joined
+  if (joinedClubs.has(club.name)) score -= 1000;
+  return score;
+}
+
+function onClubSearch(value) {
+  clubSearchQuery = value.trim();
+  currentCardIndex = 0;
+  const results = document.getElementById('search-results');
+  const stack = document.getElementById('card-stack');
+  if (!clubSearchQuery) { results.style.display = 'none'; stack.style.display = ''; renderDiscoverCards(); return; }
+  // show a results list instead of the swipe stack while searching
+  const found = activeClubs();
+  stack.style.display = 'none';
+  results.style.display = 'block';
+  results.innerHTML = found.length ? found.map(c => {
+    const joined = joinedClubs.has(c.name);
+    return `<div style="background:white;border-radius:14px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;gap:10px">
+      <div style="flex:1">
+        <div style="font-size:14px;font-weight:700;color:#1a1a2e">${c.name}</div>
+        <div style="font-size:11px;color:#9CA3AF">${c.tag} · 👥 ${c.members.toLocaleString()} · 📍 ${c.location}</div>
+      </div>
+      <button onclick="joinClubFromMap('${c.name.replace(/'/g,"\\'")}')" style="background:${joined ? '#F0FDF4' : 'linear-gradient(135deg,#7C3AED,#A855F7)'};color:${joined ? '#22c55e' : 'white'};border:none;border-radius:10px;padding:7px 12px;font-size:12px;font-weight:700;cursor:pointer;white-space:nowrap;font-family:inherit">${joined ? '✓ Joined' : '+ Join'}</button>
+    </div>`;
+  }).join('') : `<div style="text-align:center;padding:24px;color:#9CA3AF;font-size:14px">No clubs match "${clubSearchQuery}"</div>`;
+}
+
+function toggleRecommended() {
+  recommendedOn = !recommendedOn;
+  const btn = document.getElementById('rec-toggle');
+  btn.style.background = recommendedOn ? 'linear-gradient(135deg,#7C3AED,#A855F7)' : 'white';
+  btn.style.color = recommendedOn ? 'white' : '#7C3AED';
+  currentCardIndex = 0;
+  if (clubSearchQuery) onClubSearch(clubSearchQuery); else renderDiscoverCards();
+  showToast(recommendedOn ? '✨ Sorted by what fits you best' : 'Default order');
 }
 
 function renderCampusTabs() {
@@ -992,8 +1072,9 @@ function renderWeekCalendar() {
 function renderEvents(dayFilter) {
   const list = document.getElementById('events-list');
   const title = document.getElementById('events-count-title');
-  const filtered = dayFilter === null ? events : events.filter(e => e.day === dayFilter);
-  title.textContent = `${filtered.length} UPCOMING EVENT${filtered.length !== 1 ? 'S' : ''}`;
+  let filtered = dayFilter === null ? events : events.filter(e => e.day === dayFilter);
+  if (availableOnly) filtered = filtered.filter(isAvailable);
+  title.textContent = `${filtered.length}${availableOnly ? ' AVAILABLE' : ' UPCOMING'} EVENT${filtered.length !== 1 ? 'S' : ''}`;
   list.innerHTML = filtered.length ? filtered.map(e => {
     const already = rsvpdEvents.has(e.name);
     return `<div class="event-card" onclick="rsvpEvent('${e.name.replace(/'/g,"\\'")}')">
@@ -1008,15 +1089,108 @@ function renderEvents(dayFilter) {
   }).join('') : `<div style="text-align:center;padding:30px;color:#9CA3AF;font-size:14px;">No events this day</div>`;
 }
 
+// ── SCHEDULING ENGINE ──
+const EVENT_LENGTH_MIN = 90; // assume events run 90 minutes
+function eventStart(e) {
+  let [h, m] = e.time.split(':').map(Number);
+  if (e.ampm === 'PM' && h !== 12) h += 12;
+  if (e.ampm === 'AM' && h === 12) h = 0;
+  return h * 60 + (m || 0);
+}
+function eventEnd(e) { return eventStart(e) + EVENT_LENGTH_MIN; }
+// two events conflict if same day and their time ranges overlap
+function eventsConflict(a, b) {
+  if (a.day !== b.day) return false;
+  return eventStart(a) < eventEnd(b) && eventStart(b) < eventEnd(a);
+}
+// find which of your RSVP'd events clash with a given event
+function findConflicts(e) {
+  return events.filter(o => o.name !== e.name && rsvpdEvents.has(o.name) && eventsConflict(e, o));
+}
+// an event is "available" if it doesn't clash with anything you've already RSVP'd to
+function isAvailable(e) {
+  if (rsvpdEvents.has(e.name)) return true;
+  return findConflicts(e).length === 0;
+}
+
 function rsvpEvent(name) {
   if (rsvpdEvents.has(name)) {
     showToast(`You're already going to ${name}`);
-  } else {
-    rsvpdEvents.add(name);
-    const earned = addPoints(25);
-    showToast(`RSVP'd to ${name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
-    renderEvents(null);
+    return;
   }
+  const ev = events.find(e => e.name === name);
+  const conflicts = ev ? findConflicts(ev) : [];
+  if (conflicts.length) {
+    // schedule conflict detection — warn before double-booking
+    openConflictModal(ev, conflicts);
+    return;
+  }
+  confirmRsvp(name);
+}
+
+function confirmRsvp(name) {
+  rsvpdEvents.add(name);
+  const earned = addPoints(25);
+  showToast(`RSVP'd to ${name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+  closePremiumModal();
+  renderEvents(null);
+}
+
+function openConflictModal(ev, conflicts) {
+  const list = conflicts.map(c => `<div style="font-size:13px;color:#92400E">• ${c.name} (${c.time} ${c.ampm})</div>`).join('');
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="prem-hero">
+      <div class="prem-crown">⚠️</div>
+      <div class="prem-title" style="background:linear-gradient(135deg,#F59E0B,#FF6B35);-webkit-background-clip:text;background-clip:text;">Schedule Conflict</div>
+      <div class="prem-price"><strong>${ev.name}</strong> (${ev.time} ${ev.ampm}) overlaps with:</div>
+    </div>
+    <div style="background:#FEF3C7;border-radius:14px;padding:12px 14px;margin-bottom:6px">${list}</div>
+    <button class="prem-cta" style="background:linear-gradient(135deg,#7C3AED,#A855F7)" onclick="confirmRsvp('${ev.name.replace(/'/g,"\\'")}')">RSVP anyway</button>
+    <button class="prem-skip" onclick="closePremiumModal()">Cancel</button>`;
+  document.getElementById('prem-overlay').classList.add('open');
+}
+
+function toggleAvailability() {
+  availableOnly = !availableOnly;
+  const btn = document.getElementById('avail-toggle');
+  btn.style.background = availableOnly ? 'linear-gradient(135deg,#7C3AED,#A855F7)' : 'white';
+  btn.style.color = availableOnly ? 'white' : '#7C3AED';
+  renderEvents(null);
+  showToast(availableOnly ? '🟢 Showing only events that fit your schedule' : 'Showing all events');
+}
+
+// ── TIME BLOCKING — build a time-ordered plan of your RSVP'd events ──
+function openMyDay() {
+  const mine = events.filter(e => rsvpdEvents.has(e.name)).sort((a, b) => a.day - b.day || eventStart(a) - eventStart(b));
+  const dayNames = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+  let body;
+  if (!mine.length) {
+    body = `<div style="text-align:center;padding:20px;color:#9CA3AF;font-size:14px">No events yet — RSVP to events and they'll be time-blocked here. 📋</div>`;
+  } else {
+    let lastDay = -1;
+    body = mine.map(e => {
+      const header = e.day !== lastDay ? `<div style="font-size:12px;font-weight:800;color:#7C3AED;margin:12px 0 6px">${dayNames[e.day] || 'Day'}</div>` : '';
+      lastDay = e.day;
+      const endH = Math.floor(eventEnd(e) / 60), endM = eventEnd(e) % 60;
+      const end12 = `${((endH + 11) % 12) + 1}:${String(endM).padStart(2,'0')} ${endH >= 12 ? 'PM' : 'AM'}`;
+      const clash = findConflicts(e).length ? ' <span style="color:#EF4444;font-weight:700">⚠️ overlaps</span>' : '';
+      return `${header}<div style="display:flex;gap:10px;background:#FAF9FF;border-radius:12px;padding:10px 12px;margin-bottom:6px">
+        <div style="min-width:96px;font-size:11px;font-weight:700;color:#7C3AED">${e.time} ${e.ampm}–${end12}</div>
+        <div style="flex:1;font-size:13px;font-weight:600;color:#1a1a2e">${e.name}${clash}<div style="font-size:11px;color:#9CA3AF;font-weight:400">📍 ${e.location}</div></div>
+      </div>`;
+    }).join('');
+  }
+  document.getElementById('prem-sheet').innerHTML = `
+    <div class="sheet-handle"></div>
+    <div class="prem-hero">
+      <div class="prem-crown">📋</div>
+      <div class="prem-title" style="background:linear-gradient(135deg,#7C3AED,#A855F7);-webkit-background-clip:text;background-clip:text;">My Schedule</div>
+      <div class="prem-price">Your RSVP'd events, time-blocked</div>
+    </div>
+    ${body}
+    <button class="prem-cta" style="background:linear-gradient(135deg,#7C3AED,#A855F7)" onclick="closePremiumModal()">Done</button>`;
+  document.getElementById('prem-overlay').classList.add('open');
 }
 
 // MAP
