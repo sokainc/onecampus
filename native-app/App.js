@@ -1268,7 +1268,12 @@ export default function App() {
             </View>
           </View>
           {directions && (
-            <WebView source={{ uri: directions.url }} style={{ flex: 1 }} startInLoadingState />
+            <WebView
+              originWhitelist={['*']}
+              source={{ html: `<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1"></head><body style="margin:0;padding:0"><iframe src="${directions.url}" style="border:0;position:absolute;top:0;left:0;width:100%;height:100%" allowfullscreen loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe></body></html>` }}
+              style={{ flex: 1 }}
+              startInLoadingState
+            />
           )}
         </SafeAreaView>
       </Modal>
