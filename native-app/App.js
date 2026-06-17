@@ -1280,7 +1280,7 @@ export default function App() {
               <Text style={{ fontSize: 11, color: T.subtext }}>Advertiser dashboard</Text>
             </View>
           </View>
-          <WebView source={{ uri: 'https://sokainc.github.io/onecampus/business.html' }} style={{ flex: 1 }} startInLoadingState />
+          <WebView source={{ uri: 'https://gleaming-mochi-1d023d.netlify.app/business.html' }} style={{ flex: 1 }} startInLoadingState />
         </SafeAreaView>
       </Modal>
 
