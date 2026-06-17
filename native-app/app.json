@@ -25,6 +25,9 @@
     "web": {
       "favicon": "./assets/logo-icon.png"
     },
+    "plugins": [
+      ["expo-location", { "locationWhenInUsePermission": "One Campus uses your location to show your spot on the campus map and give walking directions." }]
+    ],
     "extra": {
       "eas": {
         "projectId": "9c104cf3-538a-4a62-993d-018c35693c9a"

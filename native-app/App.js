@@ -6,6 +6,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
+import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
 import {
@@ -543,12 +544,29 @@ export default function App() {
       </SafeAreaView>
     );
   };
+  // real GPS location (falls back to the demo Engineering Fountain spot until granted)
+  const [myLoc, setMyLoc] = useState(null);
+  const requestMyLocation = async () => {
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') { showToast('📍 Location permission denied'); return; }
+      const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
+      const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      setMyLoc(loc);
+      mapRef.current?.animateToRegion({ latitude: loc.lat, longitude: loc.lng, latitudeDelta: 0.012, longitudeDelta: 0.012 }, 600);
+      showToast('📍 Using your real location');
+    } catch (e) {
+      showToast('Could not get location 📶');
+    }
+  };
+
   // open a real Google Maps walking route inside the app (WebView embed — no API key)
   const [directions, setDirections] = useState(null); // { url, label } | null
   const openDirections = (place) => {
     const b = BUILDINGS.find(x => place.includes(x.name) || place.includes(x.full));
     if (!b) { showToast('📍 Location not on the campus map yet'); return; }
-    const url = `https://maps.google.com/maps?saddr=${YOU.lat},${YOU.lng}&daddr=${b.lat},${b.lng}&mode=walking&output=embed`;
+    const origin = myLoc ? `${myLoc.lat},${myLoc.lng}` : `${YOU.lat},${YOU.lng}`;
+    const url = `https://maps.google.com/maps?saddr=${origin}&daddr=${b.lat},${b.lng}&mode=walking&output=embed`;
     setDirections({ url, label: place });
   };
 
@@ -689,9 +707,14 @@ export default function App() {
   const renderCampus = () => (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
       <Text style={[st.title, { color: A }]}>Campus</Text>
-      <Text style={[st.sub, { color: T.subtext }]}>
-        {settings.location ? `${FRIENDS.filter(f => f.online).length} friends active right now` : "You're invisible 👻 (location off)"}
-      </Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Text style={[st.sub, { color: T.subtext, flex: 1 }]}>
+          {myLoc ? '📍 Showing your location' : settings.location ? `${FRIENDS.filter(f => f.online).length} friends active right now` : "You're invisible 👻 (location off)"}
+        </Text>
+        <TouchableOpacity onPress={requestMyLocation} style={{ backgroundColor: A, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 7 }}>
+          <Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>📍 My location</Text>
+        </TouchableOpacity>
+      </View>
       {routeInfo && (
         <View style={{ backgroundColor: T.card, borderRadius: 14, padding: 11, marginTop: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -714,9 +737,10 @@ export default function App() {
         <MapView
           ref={mapRef}
           style={{ flex: 1 }}
+          showsUserLocation={!!myLoc}
           initialRegion={{ latitude: 40.4253, longitude: -86.9160, latitudeDelta: 0.014, longitudeDelta: 0.014 }}
         >
-          <Marker coordinate={{ latitude: YOU.lat, longitude: YOU.lng }} title="You" description="Engineering Fountain" pinColor="#1a1a2e" />
+          {!myLoc && <Marker coordinate={{ latitude: YOU.lat, longitude: YOU.lng }} title="You" description="Engineering Fountain" pinColor="#1a1a2e" />}
           {BUILDINGS.map(b => (
             <Marker key={b.name} coordinate={{ latitude: b.lat, longitude: b.lng }} title={b.name} description={b.full} pinColor={A} />
           ))}
