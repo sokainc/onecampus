@@ -425,6 +425,124 @@ export default function App() {
   const mapRef = useRef(null);
 
   const [showBusiness, setShowBusiness] = useState(false);
+  const [bizTab, setBizTab] = useState('dashboard');
+  const [bizCampaigns, setBizCampaigns] = useState([
+    { name: 'Boiler Up Fall Promo', type: 'Brand Awareness', status: 'live', impressions: 14200, clicks: 1136, days: 56, color: '#F59E0B' },
+    { name: 'Late Night Special', type: 'Banner Ad', status: 'live', impressions: 8900, clicks: 712, days: 36, color: '#FF6B35' },
+    { name: 'Back-to-School Push', type: 'Sponsored Post', status: 'draft', impressions: 0, clicks: 0, days: 0, color: '#7C3AED' },
+  ]);
+  const [bizForm, setBizForm] = useState({ headline: '', copy: '', cta: '', days: '7' });
+
+  const bizTogglePause = (i) => {
+    setBizCampaigns(cs => cs.map((c, idx) => idx === i && c.status !== 'draft'
+      ? { ...c, status: c.status === 'live' ? 'paused' : 'live' } : c));
+  };
+  const bizSubmitAd = () => {
+    if (!bizForm.headline.trim()) { showToast('Add a headline for your ad ✏️'); return; }
+    const days = parseInt(bizForm.days, 10) || 7;
+    setBizCampaigns(cs => [{ name: bizForm.headline.trim(), type: 'Sponsored Post', status: 'live', impressions: 0, clicks: 0, days, color: '#10B981' }, ...cs]);
+    setBizForm({ headline: '', copy: '', cta: '', days: '7' });
+    setBizTab('campaigns');
+    showToast(`📢 Campaign launched! $${days * 10} for ${days} days`);
+  };
+
+  const renderBusinessPortal = () => {
+    const BIZ = '#F59E0B';
+    const bizInput = { borderWidth: 1.5, borderColor: '#FDE68A', backgroundColor: '#FFFBF2', borderRadius: 12, paddingHorizontal: 14, paddingVertical: 11, fontSize: 14, color: '#1a1a2e', marginBottom: 10 };
+    const live = bizCampaigns.filter(c => c.status === 'live');
+    const totalImp = bizCampaigns.reduce((s, c) => s + c.impressions, 0);
+    const totalClicks = bizCampaigns.reduce((s, c) => s + c.clicks, 0);
+    const totalSpend = bizCampaigns.reduce((s, c) => s + c.days * 10, 0);
+    const statusPill = (status) => {
+      const map = { live: ['#DCFCE7', '#16A34A', '● Live'], paused: ['#FEF3C7', '#92400E', '⏸ Paused'], draft: ['#F3F4F6', '#6B7280', 'Draft'] };
+      const [bg, fg, label] = map[status];
+      return <View style={{ backgroundColor: bg, paddingHorizontal: 9, paddingVertical: 3, borderRadius: 9 }}><Text style={{ color: fg, fontSize: 11, fontWeight: '800' }}>{label}</Text></View>;
+    };
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: '#FFF9F0' }}>
+        {/* header */}
+        <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#92400E' }}>
+          <TouchableOpacity onPress={() => setShowBusiness(false)}><Text style={{ fontSize: 24, color: 'white', paddingRight: 10 }}>‹</Text></TouchableOpacity>
+          <Text style={{ fontSize: 17, fontWeight: '800', color: 'white', flex: 1 }}>📢 Business Portal</Text>
+          <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>Advertiser</Text>
+        </View>
+        {/* tabs */}
+        <View style={{ flexDirection: 'row', backgroundColor: '#92400E', paddingHorizontal: 8, paddingBottom: 8, gap: 6 }}>
+          {[['dashboard', '📊 Dashboard'], ['campaigns', '📢 Campaigns'], ['create', '✏️ Create Ad']].map(([k, label]) => (
+            <TouchableOpacity key={k} onPress={() => setBizTab(k)} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: bizTab === k ? 'rgba(255,255,255,0.22)' : 'transparent' }}>
+              <Text style={{ color: 'white', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}>{label}</Text>
+            </TouchableOpacity>
+          ))}
+        </View>
+
+        <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+          {bizTab === 'dashboard' && (<>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+              {[['👁️', totalImp.toLocaleString(), 'Impressions'], ['🖱️', totalClicks.toLocaleString(), 'Clicks'], ['💸', '$' + totalSpend.toLocaleString(), 'Total Spend'], ['📢', String(live.length), 'Active Ads']].map(([ic, val, lbl]) => (
+                <View key={lbl} style={{ width: '47.5%', backgroundColor: 'white', borderRadius: 16, padding: 16 }}>
+                  <Text style={{ fontSize: 20 }}>{ic}</Text>
+                  <Text style={{ fontSize: 22, fontWeight: '900', color: '#1a1a2e', marginTop: 4 }}>{val}</Text>
+                  <Text style={{ fontSize: 12, color: '#6B7280' }}>{lbl}</Text>
+                </View>
+              ))}
+            </View>
+            <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 14, marginTop: 14 }}>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E', marginBottom: 4 }}>💡 How pricing works</Text>
+              <Text style={{ fontSize: 13, color: '#6B7280', lineHeight: 19 }}>Flat rate of <Text style={{ fontWeight: '800', color: '#1a1a2e' }}>$10/day</Text> per ad to reach students on campus. No per-click fees.</Text>
+            </View>
+            <TouchableOpacity onPress={() => setBizTab('create')} style={{ backgroundColor: BIZ, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14 }}>
+              <Text style={{ color: 'white', fontWeight: '800', fontSize: 15 }}>+ Create New Ad</Text>
+            </TouchableOpacity>
+          </>)}
+
+          {bizTab === 'campaigns' && bizCampaigns.map((c, i) => (
+            <View key={i} style={{ backgroundColor: 'white', borderRadius: 16, padding: 14, marginBottom: 10 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                <View style={{ width: 4, height: 38, borderRadius: 4, backgroundColor: c.color, marginRight: 10 }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e' }}>{c.name}</Text>
+                  <Text style={{ fontSize: 12, color: '#9CA3AF' }}>{c.type}{c.days ? ` · ${c.days} days · $${c.days * 10}` : ''}</Text>
+                </View>
+                {statusPill(c.status)}
+              </View>
+              <View style={{ flexDirection: 'row', marginTop: 10 }}>
+                {[[c.impressions.toLocaleString(), 'Impressions'], [c.clicks.toLocaleString(), 'Clicks'], [c.impressions ? ((c.clicks / c.impressions) * 100).toFixed(1) + '%' : '—', 'CTR']].map(([v, l]) => (
+                  <View key={l} style={{ flex: 1 }}><Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e' }}>{v}</Text><Text style={{ fontSize: 11, color: '#9CA3AF' }}>{l}</Text></View>
+                ))}
+              </View>
+              {c.status !== 'draft' && (
+                <TouchableOpacity onPress={() => bizTogglePause(i)} style={{ marginTop: 10, alignSelf: 'flex-start', backgroundColor: '#FFF4E0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 7 }}>
+                  <Text style={{ color: '#92400E', fontWeight: '700', fontSize: 12 }}>{c.status === 'live' ? '⏸ Pause' : '▶ Resume'}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          ))}
+
+          {bizTab === 'create' && (<>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E', marginBottom: 6 }}>AD CREATIVE</Text>
+            <TextInput value={bizForm.headline} onChangeText={v => setBizForm(f => ({ ...f, headline: v }))} placeholder="Headline (e.g. 30-min delivery 🍕)" placeholderTextColor="#9CA3AF" style={bizInput} />
+            <TextInput value={bizForm.copy} onChangeText={v => setBizForm(f => ({ ...f, copy: v }))} placeholder="Ad copy — describe your offer" placeholderTextColor="#9CA3AF" multiline style={[bizInput, { height: 70, textAlignVertical: 'top' }]} />
+            <TextInput value={bizForm.cta} onChangeText={v => setBizForm(f => ({ ...f, cta: v }))} placeholder="Button text (e.g. Order Now)" placeholderTextColor="#9CA3AF" style={bizInput} />
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E', marginVertical: 6 }}>DAYS TO RUN</Text>
+            <TextInput value={bizForm.days} onChangeText={v => setBizForm(f => ({ ...f, days: v.replace(/[^0-9]/g, '') }))} keyboardType="number-pad" placeholder="7" placeholderTextColor="#9CA3AF" style={bizInput} />
+            <Text style={{ fontSize: 13, color: '#6B7280', marginBottom: 12 }}>Cost: <Text style={{ fontWeight: '800', color: '#1a1a2e' }}>${(parseInt(bizForm.days, 10) || 0) * 10}</Text> ({bizForm.days || 0} days × $10/day)</Text>
+
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E', marginBottom: 6 }}>LIVE PREVIEW</Text>
+            <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#F3F4F6' }}>
+              <Text style={{ fontSize: 10, color: '#9CA3AF', fontWeight: '700', marginBottom: 6 }}>SPONSORED</Text>
+              <View style={{ height: 90, borderRadius: 12, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 30 }}>📢</Text></View>
+              <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', marginTop: 8 }}>{bizForm.headline || 'Your headline here'}</Text>
+              <Text style={{ fontSize: 12, color: '#6B7280', marginVertical: 4 }}>{bizForm.copy || 'Your ad copy will appear here…'}</Text>
+              <View style={{ backgroundColor: BIZ, borderRadius: 10, paddingVertical: 9, alignItems: 'center', marginTop: 4 }}><Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{bizForm.cta || 'Call to Action'}</Text></View>
+            </View>
+            <TouchableOpacity onPress={bizSubmitAd} style={{ backgroundColor: BIZ, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14 }}>
+              <Text style={{ color: 'white', fontWeight: '800', fontSize: 15 }}>Launch Campaign →</Text>
+            </TouchableOpacity>
+          </>)}
+        </ScrollView>
+      </SafeAreaView>
+    );
+  };
   // open a real Google Maps walking route inside the app (WebView embed — no API key)
   const [directions, setDirections] = useState(null); // { url, label } | null
   const openDirections = (place) => {
@@ -1270,18 +1388,9 @@ export default function App() {
       {renderChat()}
       {renderSettingsModal()}
 
-      {/* Business portal (web dashboard) in a WebView */}
+      {/* Business portal — native mobile screens */}
       <Modal visible={showBusiness} animationType="slide" onRequestClose={() => setShowBusiness(false)}>
-        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
-          <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
-            <TouchableOpacity onPress={() => setShowBusiness(false)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
-            <View>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>📢 Business Portal</Text>
-              <Text style={{ fontSize: 11, color: T.subtext }}>Advertiser dashboard</Text>
-            </View>
-          </View>
-          <WebView source={{ uri: 'https://gleaming-mochi-1d023d.netlify.app/business.html' }} style={{ flex: 1 }} startInLoadingState />
-        </SafeAreaView>
+        {renderBusinessPortal()}
       </Modal>
 
       {/* Google Maps walking-route directions */}
