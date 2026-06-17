@@ -194,6 +194,24 @@ export default function App() {
   const [authName, setAuthName] = useState('');
   const [authBusy, setAuthBusy] = useState(false);
 
+  // ── onboarding ──
+  const [dataReady, setDataReady] = useState(false);
+  const [onboarded, setOnboarded] = useState(false);
+  const [homeCampus, setHomeCampus] = useState('purdue');
+  const [onbStep, setOnbStep] = useState(0);
+  const [obCampus, setObCampus] = useState('purdue');
+  const [obMajor, setObMajor] = useState('');
+  const [obInterests, setObInterests] = useState([]);
+
+  const finishOnboarding = () => {
+    setHomeCampus(obCampus);
+    setActiveCampus(obCampus);
+    setCardIdx(0);
+    if (obMajor.trim()) setProfile(p => ({ ...p, major: obMajor.trim() }));
+    setOnboarded(true);
+    showToast('🎉 Welcome to One Campus!');
+  };
+
   const dataLoaded = useRef(false);
   const saveTimer = useRef(null);
 
@@ -202,7 +220,7 @@ export default function App() {
       setUser(u);
       setAuthReady(true);
       if (u && u.displayName) setProfile(p => ({ ...p, name: u.displayName }));
-      if (!u) dataLoaded.current = false;
+      if (!u) { dataLoaded.current = false; setDataReady(false); setOnboarded(false); setOnbStep(0); }
     });
     return unsub;
   }, []);
@@ -225,12 +243,17 @@ export default function App() {
           if (d.accent) setAccent(d.accent);
           if (typeof d.dark === 'boolean') setDark(d.dark);
           if (d.settings) setSettings(s => ({ ...s, ...d.settings }));
+          if (typeof d.onboarded === 'boolean') setOnboarded(d.onboarded);
+          if (d.homeCampus) { setHomeCampus(d.homeCampus); setActiveCampus(d.homeCampus); }
+          if (Array.isArray(d.interests)) setObInterests(d.interests);
           showToast('☁️ Your data is synced!');
         }
         dataLoaded.current = true;
+        setDataReady(true);
       } catch (e) {
         showToast('⚠️ Could not load saved data — is Firestore enabled?');
         dataLoaded.current = true;
+        setDataReady(true);
       }
     })();
   }, [user]);
@@ -242,11 +265,12 @@ export default function App() {
     saveTimer.current = setTimeout(() => {
       setDoc(doc(db, 'users', user.uid), {
         points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings,
+        onboarded, homeCampus, interests: obInterests,
         email: user.email, updatedAt: Date.now(),
       }, { merge: true }).catch(() => {});
     }, 1200);
     return () => clearTimeout(saveTimer.current);
-  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, user]);
+  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, user]);
 
   const doAuth = async () => {
     const email = authEmail.trim();
@@ -346,7 +370,7 @@ export default function App() {
   };
 
   const pickCampus = (key) => {
-    if (!CAMPUSES[key].free && !isPremium) { setSheet('paywall'); return; }
+    if (!CAMPUSES[key].free && !isPremium && key !== homeCampus) { setSheet('paywall'); return; }
     setCampus(key);
     setCardIdx(0);
     showToast(key === 'purdue' ? '🚂 Back to Purdue' : `${CAMPUSES[key].emoji} Browsing ${CAMPUSES[key].name} — Premium perk!`);
@@ -616,7 +640,7 @@ export default function App() {
         <Text style={[st.sub, { color: T.subtext }]}>Find your people & passions</Text>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
           {Object.entries(CAMPUSES).map(([key, c]) => {
-            const locked = !c.free && !isPremium;
+            const locked = !c.free && !isPremium && key !== homeCampus;
             return (
               <TouchableOpacity key={key} onPress={() => pickCampus(key)} style={[st.pill, { backgroundColor: campus === key ? A : T.card, marginRight: 8 }]}>
                 <Text style={{ color: campus === key ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{locked ? '🔒' : c.emoji} {c.name}</Text>
@@ -1363,6 +1387,89 @@ export default function App() {
             </Text>
           </ScrollView>
         </KeyboardAvoidingView>
+        {toast && <View style={st.toast}><Text style={{ color: 'white', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>{toast}</Text></View>}
+      </SafeAreaView>
+    );
+  }
+
+  // brief splash while we load this user's saved data (avoids flashing onboarding for returning users)
+  if (!dataReady) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' }}>
+        <Image source={require('./assets/logo.png')} style={{ width: 90, height: 90, resizeMode: 'contain' }} />
+        <Text style={{ color: T.subtext, marginTop: 12 }}>Loading your campus…</Text>
+      </SafeAreaView>
+    );
+  }
+
+  /* ─────────── ONBOARDING ─────────── */
+  if (!onboarded) {
+    const ONB_INTERESTS = ['Tech', 'Engineering', 'Business', 'Science', 'Arts', 'Sports', 'Music', 'Greek Life', 'Gaming', 'Volunteering'];
+    const toggleInterest = (i) => setObInterests(arr => arr.includes(i) ? arr.filter(x => x !== i) : [...arr, i]);
+    const canContinue = onbStep === 0 ? !!obCampus : onbStep === 1 ? obMajor.trim().length > 0 : obInterests.length > 0;
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+        <StatusBar style={dark ? 'light' : 'dark'} />
+        <View style={{ flex: 1, padding: 24 }}>
+          {/* progress dots */}
+          <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginTop: 8, marginBottom: 24 }}>
+            {[0, 1, 2].map(s => (
+              <View key={s} style={{ width: s === onbStep ? 28 : 8, height: 8, borderRadius: 4, backgroundColor: s <= onbStep ? A : T.border }} />
+            ))}
+          </View>
+
+          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
+            {onbStep === 0 && (<>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: T.text }}>Pick your campus 🎓</Text>
+              <Text style={{ fontSize: 14, color: T.subtext, marginTop: 4, marginBottom: 18 }}>This is your home campus — it's always free.</Text>
+              {Object.entries(CAMPUSES).map(([key, c]) => (
+                <TouchableOpacity key={key} onPress={() => setObCampus(key)}
+                  style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 10, borderWidth: 2, borderColor: obCampus === key ? A : T.border, backgroundColor: obCampus === key ? (dark ? '#2E2942' : '#F5F3FF') : T.card }}>
+                  <Text style={{ fontSize: 24 }}>{c.emoji}</Text>
+                  <Text style={{ flex: 1, fontSize: 16, fontWeight: '700', color: T.text, marginLeft: 12 }}>{c.name}</Text>
+                  {obCampus === key && <Text style={{ color: A, fontSize: 18, fontWeight: '900' }}>✓</Text>}
+                </TouchableOpacity>
+              ))}
+            </>)}
+
+            {onbStep === 1 && (<>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: T.text }}>What's your major? 📚</Text>
+              <Text style={{ fontSize: 14, color: T.subtext, marginTop: 4, marginBottom: 18 }}>We'll use it to suggest clubs and people.</Text>
+              <TextInput value={obMajor} onChangeText={setObMajor} placeholder="e.g. Computer Science" placeholderTextColor={T.subtext}
+                style={{ borderWidth: 1.5, borderColor: T.border, backgroundColor: T.card, borderRadius: 14, padding: 14, fontSize: 16, color: T.text }} />
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 14 }}>
+                {['Computer Science', 'Engineering', 'Business', 'Biology', 'Psychology', 'Nursing', 'Undecided'].map(m => (
+                  <TouchableOpacity key={m} onPress={() => setObMajor(m)} style={{ paddingHorizontal: 13, paddingVertical: 8, borderRadius: 18, backgroundColor: obMajor === m ? A : T.card, borderWidth: 1, borderColor: obMajor === m ? A : T.border }}>
+                    <Text style={{ color: obMajor === m ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{m}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>)}
+
+            {onbStep === 2 && (<>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: T.text }}>What are you into? ✨</Text>
+              <Text style={{ fontSize: 14, color: T.subtext, marginTop: 4, marginBottom: 18 }}>Pick a few — tap to select.</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
+                {ONB_INTERESTS.map(i => {
+                  const on = obInterests.includes(i);
+                  return (
+                    <TouchableOpacity key={i} onPress={() => toggleInterest(i)} style={{ paddingHorizontal: 16, paddingVertical: 11, borderRadius: 22, backgroundColor: on ? A : T.card, borderWidth: 1.5, borderColor: on ? A : T.border }}>
+                      <Text style={{ color: on ? 'white' : T.text, fontWeight: '700', fontSize: 14 }}>{on ? '✓ ' : ''}{i}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            </>)}
+          </ScrollView>
+
+          <TouchableOpacity disabled={!canContinue} onPress={() => onbStep < 2 ? setOnbStep(onbStep + 1) : finishOnboarding()}
+            style={[st.bigBtn, !canContinue && { opacity: 0.4 }]}>
+            <Text style={st.bigBtnText}>{onbStep < 2 ? 'Continue →' : "Let's go! 🎉"}</Text>
+          </TouchableOpacity>
+          {onbStep > 0 && (
+            <TouchableOpacity onPress={() => setOnbStep(onbStep - 1)}><Text style={{ textAlign: 'center', color: T.subtext, paddingVertical: 10 }}>‹ Back</Text></TouchableOpacity>
+          )}
+        </View>
         {toast && <View style={st.toast}><Text style={{ color: 'white', fontWeight: '600', fontSize: 13, textAlign: 'center' }}>{toast}</Text></View>}
       </SafeAreaView>
     );
