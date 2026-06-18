@@ -35,6 +35,20 @@
     .admin-info { font-size: 12px; color: rgba(255,255,255,0.8); }
     .admin-info strong { display: block; color: white; font-size: 13px; }
 
+    /* ── ADMIN LOGIN GATE ── */
+    #admin-login { position: fixed; inset: 0; z-index: 3000; background: linear-gradient(150deg,#0F172A,#1E1B4B); display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .alogin-card { background: #1E293B; border-radius: 24px; padding: 36px 32px; width: 100%; max-width: 390px; box-shadow: 0 30px 80px rgba(0,0,0,0.5); border: 1px solid rgba(255,255,255,0.08); }
+    .alogin-lock { width: 60px; height: 60px; border-radius: 16px; background: linear-gradient(135deg,#6366F1,#8B5CF6); display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 16px; }
+    .alogin-title { font-size: 21px; font-weight: 900; color: white; text-align: center; }
+    .alogin-sub { font-size: 13px; color: #94A3B8; text-align: center; margin-top: 4px; margin-bottom: 22px; }
+    .alogin-input { width: 100%; border: 1.5px solid #334155; background: #0F172A; border-radius: 12px; padding: 12px 14px; font-size: 14px; font-family: inherit; color: white; outline: none; margin-bottom: 10px; }
+    .alogin-input:focus { border-color: #6366F1; }
+    .alogin-btn { width: 100%; padding: 13px; border: none; border-radius: 12px; background: linear-gradient(135deg,#6366F1,#8B5CF6); color: white; font-size: 15px; font-weight: 800; cursor: pointer; font-family: inherit; }
+    .alogin-google { width: 100%; padding: 11px; border: 1px solid #334155; border-radius: 12px; background: #0F172A; color: white; font-size: 13px; font-weight: 700; cursor: pointer; font-family: inherit; display: flex; align-items: center; justify-content: center; gap: 8px; margin-top: 10px; }
+    .alogin-msg { font-size: 12px; text-align: center; margin-top: 14px; color: #94A3B8; min-height: 16px; }
+    .alogin-msg.error { color: #F87171; }
+    .admin-signout { margin-top: 10px; width: 100%; background: rgba(255,255,255,0.15); color: white; border: none; border-radius: 10px; padding: 7px; font-size: 11px; font-weight: 700; cursor: pointer; font-family: inherit; }
+
     /* MAIN */
     .main { margin-left: 220px; flex: 1; padding: 28px; min-height: 100vh; }
     .page { display: none; }
@@ -166,6 +180,23 @@
 </head>
 <body>
 
+<!-- ADMIN LOGIN GATE -->
+<div id="admin-login">
+  <div class="alogin-card">
+    <div class="alogin-lock">🔒</div>
+    <div class="alogin-title">Admin Access</div>
+    <div class="alogin-sub">Restricted — authorized administrators only</div>
+    <input class="alogin-input" id="admin-email" type="email" placeholder="Admin email" autocomplete="email" />
+    <input class="alogin-input" id="admin-pass" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')adminDoAuth()" />
+    <button class="alogin-btn" onclick="adminDoAuth()">Sign In →</button>
+    <button class="alogin-google" onclick="adminGoogle()">
+      <svg width="16" height="16" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.5 0 6.6 1.2 9.1 3.6l6.8-6.8C35.9 2.4 30.5 0 24 0 14.6 0 6.5 5.4 2.6 13.2l7.9 6.2C12.4 13.7 17.7 9.5 24 9.5z"/><path fill="#4285F4" d="M47 24.5c0-1.6-.1-3.1-.4-4.5H24v9h12.9c-.6 3-2.3 5.5-4.8 7.2l7.7 6c4.5-4.2 7.2-10.4 7.2-17.7z"/><path fill="#FBBC05" d="M10.5 28.6c-.5-1.5-.8-3-.8-4.6s.3-3.1.8-4.6l-7.9-6.2C.9 16.5 0 20.1 0 24s.9 7.5 2.6 10.8l7.9-6.2z"/><path fill="#34A853" d="M24 48c6.5 0 11.9-2.1 15.9-5.8l-7.7-6c-2.1 1.4-4.9 2.3-8.2 2.3-6.3 0-11.6-4.2-13.5-9.9l-7.9 6.2C6.5 42.6 14.6 48 24 48z"/></svg>
+      Continue with Google
+    </button>
+    <div class="alogin-msg" id="admin-msg">🔐 Your account must be on the admin list.</div>
+  </div>
+</div>
+
 <div class="sidebar">
   <div class="sidebar-logo">
     <div class="sidebar-logo-icon">🎓</div>
@@ -184,9 +215,10 @@
   </nav>
   <div class="sidebar-footer">
     <div class="admin-chip">
-      <div class="admin-avatar">LB</div>
-      <div class="admin-info"><strong>Leighton B.</strong>Super Admin</div>
+      <div class="admin-avatar" id="admin-av">A</div>
+      <div class="admin-info"><strong id="admin-chip-name">Admin</strong><span id="admin-chip-email">Super Admin</span></div>
     </div>
+    <button class="admin-signout" onclick="adminSignOut()">Sign Out</button>
   </div>
 </div>
 
@@ -793,6 +825,72 @@ new Chart(ctx, {
     datasets: [{ label: 'Users', data: [120,210,380,520,740,920,1050,1180,1247], borderColor: '#7C3AED', backgroundColor: 'rgba(124,58,237,0.08)', tension: 0.4, fill: true, pointBackgroundColor: '#7C3AED', pointRadius: 4 }]
   },
   options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF' } }, y: { grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } } } }
+});
+</script>
+
+<script type="module">
+// ── ADMIN AUTH (Firebase + email allowlist) ──
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import {
+  getAuth, GoogleAuthProvider, signInWithPopup,
+  signInWithEmailAndPassword, onAuthStateChanged, signOut,
+} from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+
+// 🔑 ONLY these emails can access the admin dashboard. Add more here as needed.
+const ADMIN_EMAILS = [
+  'leightonbailey4523@gmail.com',
+];
+
+const fbApp = initializeApp({
+  apiKey: 'AIzaSyBZme2DEX_aubcTBjMviqgEpPk0Z15CzGs',
+  authDomain: 'one-campus-acdc6.firebaseapp.com',
+  projectId: 'one-campus-acdc6',
+  storageBucket: 'one-campus-acdc6.firebasestorage.app',
+  messagingSenderId: '673557735993',
+  appId: '1:673557735993:web:5084d747e39ee688febbe8',
+});
+const auth = getAuth(fbApp);
+const provider = new GoogleAuthProvider();
+provider.setCustomParameters({ prompt: 'select_account' });
+const $ = (id) => document.getElementById(id);
+const setMsg = (m, err) => { const el = $('admin-msg'); el.textContent = m; el.classList.toggle('error', !!err); };
+const isAdmin = (email) => ADMIN_EMAILS.map(e => e.toLowerCase()).includes((email || '').toLowerCase());
+
+window.adminDoAuth = async function () {
+  const email = $('admin-email').value.trim();
+  const pass = $('admin-pass').value;
+  if (!email || !pass) { setMsg('Enter your email and password', true); return; }
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch (err) {
+    setMsg(err.code === 'auth/invalid-credential' ? 'Wrong email or password' : (err.code || err.message), true);
+  }
+};
+
+window.adminGoogle = async function () {
+  if (location.protocol === 'file:') { setMsg('Open via http://localhost:3000/admin.html for Google sign-in', true); return; }
+  try { await signInWithPopup(auth, provider); }
+  catch (err) { if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') setMsg(err.code || err.message, true); }
+};
+
+window.adminSignOut = async function () { await signOut(auth); };
+
+onAuthStateChanged(auth, (user) => {
+  if (user && isAdmin(user.email)) {
+    // ✅ authorized admin
+    $('admin-login').style.display = 'none';
+    const name = user.displayName || user.email.split('@')[0];
+    $('admin-chip-name').textContent = name;
+    $('admin-chip-email').textContent = user.email;
+    $('admin-av').textContent = (name[0] || 'A').toUpperCase();
+  } else if (user) {
+    // signed in but NOT an admin — block and sign out
+    setMsg('⛔ This account is not an admin.', true);
+    $('admin-login').style.display = 'flex';
+    signOut(auth);
+  } else {
+    $('admin-login').style.display = 'flex';
+  }
 });
 </script>
 </body>
