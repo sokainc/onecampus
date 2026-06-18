@@ -7,6 +7,12 @@ import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
 import * as Location from 'expo-location';
+import * as Notifications from 'expo-notifications';
+
+// show notifications even when the app is open
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
+});
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { initializeApp } from 'firebase/app';
 import {
@@ -454,11 +460,42 @@ export default function App() {
   };
 
   /* ── events ── */
+  // ── NOTIFICATIONS ──
+  const ensureNotifPermission = async () => {
+    const { status } = await Notifications.getPermissionsAsync();
+    if (status === 'granted') return true;
+    const req = await Notifications.requestPermissionsAsync();
+    return req.status === 'granted';
+  };
+
+  const scheduleEventReminder = async (ev) => {
+    if (!settings.notifications) return;
+    const ok = await ensureNotifPermission();
+    if (!ok) return;
+    // demo: fire shortly after RSVP so you can see it works (real app would fire 1hr before)
+    await Notifications.scheduleNotificationAsync({
+      content: { title: `⏰ ${ev.name}`, body: `Starts ${ev.time} ${ev.ampm} at ${ev.location} — see you there!` },
+      trigger: { seconds: 10 },
+    });
+  };
+
+  const sendTestNotification = async () => {
+    const ok = await ensureNotifPermission();
+    if (!ok) { showToast('🔕 Enable notifications in your phone settings'); return; }
+    await Notifications.scheduleNotificationAsync({
+      content: { title: '🎓 One Campus', body: "Notifications are on! We'll remind you about events & messages." },
+      trigger: { seconds: 3 },
+    });
+    showToast('🔔 Test notification sent — watch for it!');
+  };
+
   const rsvp = (name) => {
     if (rsvpd.includes(name)) { showToast(`You're already going to ${name}`); return; }
     setRsvpd(r => [...r, name]);
     const earned = addPoints(25);
-    showToast(`RSVP'd to ${name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+    const ev = events.find(e => e.name === name);
+    if (ev) scheduleEventReminder(ev);
+    showToast(`RSVP'd to ${name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''} · 🔔 reminder set`);
   };
 
   const createEvent = () => {
@@ -1372,9 +1409,14 @@ export default function App() {
             <View style={st.setRow}>
               <Text style={{ fontSize: 18 }}>🔔</Text>
               <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '700', color: T.text }}>Push Notifications</Text>
-              <Switch value={settings.notifications} onValueChange={v => { setSettings(s => ({ ...s, notifications: v })); showToast(v ? '🔔 Notifications on' : '🔕 All notifications muted'); }} trackColor={{ true: A }} />
+              <Switch value={settings.notifications} onValueChange={async v => { setSettings(s => ({ ...s, notifications: v })); if (v) { const ok = await ensureNotifPermission(); showToast(ok ? '🔔 Notifications on' : '🔕 Allow notifications in phone settings'); } else showToast('🔕 All notifications muted'); }} trackColor={{ true: A }} />
             </View>
             {settings.notifications && (<>
+              <TouchableOpacity onPress={sendTestNotification} style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+                <Text style={{ fontSize: 16 }}>🧪</Text>
+                <Text style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: A }}>Send a test notification</Text>
+                <Text style={{ color: T.subtext }}>›</Text>
+              </TouchableOpacity>
               <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
                 <Text style={{ fontSize: 16 }}>📅</Text>
                 <Text style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: T.text }}>Event reminders</Text>
