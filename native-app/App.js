@@ -157,6 +157,15 @@ const STARTER_CHATS = {
 
 const AUTO_REPLIES = ['Sounds good! 🙌', 'Haha for sure', 'Okay see you there!', 'Perfect 👍', 'Yesss let\'s do it', 'Bet. See you on campus!'];
 const INTERESTS = ['All', 'Tech', 'Engineering', 'Business', 'Science', 'Arts', 'Sports'];
+// extra info shown on the club detail page, derived from the club's category
+const TAG_INFO = {
+  TECH: { meets: 'Weekly · evenings', perks: ['Hands-on build projects & hackathons', 'Coding, hardware & design workshops', 'Network with tech recruiters'] },
+  ENGINEERING: { meets: 'Bi-weekly · evenings', perks: ['Team design & build competitions', 'Resume help & professional development', 'Industry guest speakers'] },
+  BUSINESS: { meets: 'Weekly', perks: ['Real-world case & consulting projects', 'Networking with companies & alumni', 'Pitch competitions'] },
+  SCIENCE: { meets: 'Weekly', perks: ['Research & lab opportunities', 'Exam prep & study groups', 'Grad/med school guidance'] },
+  SPORTS: { meets: 'Multiple times per week', perks: ['Practices, games & tournaments', 'All skill levels welcome', 'Team trips & socials'] },
+  ARTS: { meets: 'Weekly · evenings', perks: ['Performances & showcases', 'Creative workshops', 'Open to all majors'] },
+};
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 const EV_COLORS = ['#7C3AED', '#FF1744', '#0EA5E9', '#10B981', '#F59E0B', '#EF4444'];
 
@@ -564,6 +573,13 @@ export default function App() {
   const mapRef = useRef(null);
 
   const [showBusiness, setShowBusiness] = useState(false);
+  const [clubDetail, setClubDetail] = useState(null);
+  const joinClubByName = (name) => {
+    if (joined.includes(name)) { showToast(`Already a member of ${name}`); return; }
+    setJoined(j => [...j, name]);
+    const earned = addPoints(75);
+    showToast(`✓ Joined ${name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+  };
   const [bizTab, setBizTab] = useState('dashboard');
   const [bizCampaigns, setBizCampaigns] = useState([
     { name: 'Boiler Up Fall Promo', type: 'Brand Awareness', status: 'live', impressions: 14200, clicks: 1136, days: 56, color: '#F59E0B' },
@@ -763,7 +779,7 @@ export default function App() {
           })}
         </ScrollView>
         {club ? (
-          <View style={[st.clubCard, { backgroundColor: club.colors[0] }]}>
+          <TouchableOpacity activeOpacity={0.9} onPress={() => setClubDetail(club)} style={[st.clubCard, { backgroundColor: club.colors[0] }]}>
             <View style={st.clubTag}><Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{club.tag}</Text></View>
             <Text style={st.clubName}>{club.name}</Text>
             <Text style={st.clubDesc}>{club.desc}</Text>
@@ -772,7 +788,8 @@ export default function App() {
               <View style={st.metaPill}><Text style={st.metaPillText}>📍 {club.location}</Text></View>
               {joined.includes(club.name) && <View style={[st.metaPill, { backgroundColor: 'rgba(255,255,255,0.45)' }]}><Text style={st.metaPillText}>✓ Joined</Text></View>}
             </View>
-          </View>
+            <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '700', marginTop: 10 }}>ⓘ Tap for full details</Text>
+          </TouchableOpacity>
         ) : (
           <View style={[st.clubCard, { backgroundColor: T.card, alignItems: 'center', justifyContent: 'center' }]}>
             <Text style={{ fontSize: 40 }}>🔍</Text>
@@ -1664,6 +1681,59 @@ export default function App() {
       {renderSheet()}
       {renderChat()}
       {renderSettingsModal()}
+
+      {/* Club detail page */}
+      <Modal visible={!!clubDetail} animationType="slide" onRequestClose={() => setClubDetail(null)}>
+        {clubDetail && (() => {
+          const info = TAG_INFO[clubDetail.tag] || { meets: 'Check the club page', perks: [] };
+          const isMember = joined.includes(clubDetail.name);
+          return (
+            <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+              <ScrollView contentContainerStyle={{ paddingBottom: 24 }}>
+                {/* colored header */}
+                <View style={{ backgroundColor: clubDetail.colors[0], padding: 20, paddingTop: 16 }}>
+                  <TouchableOpacity onPress={() => setClubDetail(null)}><Text style={{ fontSize: 26, color: 'white' }}>‹</Text></TouchableOpacity>
+                  <View style={[st.clubTag, { marginTop: 8 }]}><Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{clubDetail.tag}</Text></View>
+                  <Text style={{ fontSize: 28, fontWeight: '900', color: 'white', marginTop: 6 }}>{clubDetail.name}</Text>
+                  <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                    <View style={st.metaPill}><Text style={st.metaPillText}>👥 {clubDetail.members.toLocaleString()} members</Text></View>
+                    <View style={st.metaPill}><Text style={st.metaPillText}>📍 {clubDetail.location}</Text></View>
+                    <View style={st.metaPill}><Text style={st.metaPillText}>🗓️ {info.meets}</Text></View>
+                  </View>
+                </View>
+                <View style={{ padding: 20 }}>
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: T.subtext, letterSpacing: 0.5 }}>ABOUT</Text>
+                  <Text style={{ fontSize: 15, color: T.text, lineHeight: 22, marginTop: 6 }}>{clubDetail.desc}</Text>
+
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: T.subtext, letterSpacing: 0.5, marginTop: 20 }}>WHAT YOU'LL DO</Text>
+                  {info.perks.map((p, i) => (
+                    <View key={i} style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+                      <Text style={{ color: A, fontWeight: '900' }}>✓</Text>
+                      <Text style={{ flex: 1, fontSize: 14, color: T.text, lineHeight: 20 }}>{p}</Text>
+                    </View>
+                  ))}
+
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 20, backgroundColor: T.card, borderRadius: 14, padding: 14 }}>
+                    <Text style={{ fontSize: 22 }}>📍</Text>
+                    <View style={{ flex: 1 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Where they meet</Text>
+                      <Text style={{ fontSize: 13, color: T.subtext }}>{clubDetail.location} · {info.meets}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => { setClubDetail(null); openDirections(clubDetail.location); }}>
+                      <Text style={{ color: '#34A853', fontWeight: '800', fontSize: 13 }}>🧭 Directions</Text>
+                    </TouchableOpacity>
+                  </View>
+
+                  <TouchableOpacity disabled={isMember} onPress={() => { joinClubByName(clubDetail.name); setClubDetail(null); }}
+                    style={[st.bigBtn, { backgroundColor: isMember ? '#22c55e' : A, marginTop: 22 }]}>
+                    <Text style={st.bigBtnText}>{isMember ? "✓ You're a member" : '+ Join this club'}</Text>
+                  </TouchableOpacity>
+                </View>
+              </ScrollView>
+            </SafeAreaView>
+          );
+        })()}
+      </Modal>
 
       {/* Comments on a feed post */}
       <Modal visible={!!commentOn} animationType="slide" onRequestClose={() => setCommentOn(null)}>
