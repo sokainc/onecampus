@@ -210,7 +210,7 @@ export default function App() {
 
   const finishOnboarding = () => {
     setHomeCampus(obCampus);
-    setActiveCampus(obCampus);
+    setCampus(obCampus);
     setCardIdx(0);
     if (obMajor.trim()) setProfile(p => ({ ...p, major: obMajor.trim() }));
     setOnboarded(true);
@@ -249,7 +249,7 @@ export default function App() {
           if (typeof d.dark === 'boolean') setDark(d.dark);
           if (d.settings) setSettings(s => ({ ...s, ...d.settings }));
           if (typeof d.onboarded === 'boolean') setOnboarded(d.onboarded);
-          if (d.homeCampus) { setHomeCampus(d.homeCampus); setActiveCampus(d.homeCampus); }
+          if (d.homeCampus) { setHomeCampus(d.homeCampus); setCampus(d.homeCampus); }
           if (Array.isArray(d.interests)) setObInterests(d.interests);
           showToast('☁️ Your data is synced!');
         }
