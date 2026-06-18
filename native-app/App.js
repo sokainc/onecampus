@@ -157,6 +157,21 @@ const STARTER_CHATS = {
 
 const AUTO_REPLIES = ['Sounds good! 🙌', 'Haha for sure', 'Okay see you there!', 'Perfect 👍', 'Yesss let\'s do it', 'Bet. See you on campus!'];
 const INTERESTS = ['All', 'Tech', 'Engineering', 'Business', 'Science', 'Arts', 'Sports'];
+// pick a representative emoji "picture" for any club from its name/category
+const clubIcon = (club) => {
+  const n = (club.name || '').toLowerCase();
+  const pairs = [
+    [['robot'], '🤖'], [['drone'], '🛸'], [['hack', 'comput', 'code', 'software'], '💻'], [['game', 'esport'], '🎮'],
+    [['soccer'], '⚽'], [['barbell', 'lifting', 'powerlift', 'fit', 'gym'], '🏋️'], [['volleyball'], '🏐'], [['ultimate', 'frisbee'], '🥏'],
+    [['box', 'bout'], '🥊'], [['cycl', '500'], '🚴'], [['climb', 'outdoor', 'adventure'], '🧗'], [['run', '5k'], '🏃'],
+    [['theatre', 'theater', 'drama'], '🎭'], [['sing', 'cappella', 'glee', 'choir', 'concert', 'music'], '🎵'], [['dance'], '💃'], [['film'], '🎬'],
+    [['invest', 'business', 'consult', 'sales', 'kelley', 'sibc', 'finance'], '📈'], [['med', 'bio', 'health', 'nurs'], '🩺'],
+    [['nsbe', 'swe', 'engineer'], '⚙️'], [['rocket', 'aero', 'space', 'astro'], '🚀'],
+  ];
+  for (const [keys, icon] of pairs) if (keys.some(k => n.includes(k))) return icon;
+  return { TECH: '💻', ENGINEERING: '⚙️', BUSINESS: '📈', SCIENCE: '🔬', SPORTS: '🏆', ARTS: '🎨' }[club.tag] || '🎓';
+};
+
 // extra info shown on the club detail page, derived from the club's category
 const TAG_INFO = {
   TECH: { meets: 'Weekly · evenings', perks: ['Hands-on build projects & hackathons', 'Coding, hardware & design workshops', 'Network with tech recruiters'] },
@@ -779,16 +794,22 @@ export default function App() {
           })}
         </ScrollView>
         {club ? (
-          <TouchableOpacity activeOpacity={0.9} onPress={() => setClubDetail(club)} style={[st.clubCard, { backgroundColor: club.colors[0] }]}>
-            <View style={st.clubTag}><Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{club.tag}</Text></View>
-            <Text style={st.clubName}>{club.name}</Text>
-            <Text style={st.clubDesc}>{club.desc}</Text>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-              <View style={st.metaPill}><Text style={st.metaPillText}>👥 {club.members.toLocaleString()}</Text></View>
-              <View style={st.metaPill}><Text style={st.metaPillText}>📍 {club.location}</Text></View>
-              {joined.includes(club.name) && <View style={[st.metaPill, { backgroundColor: 'rgba(255,255,255,0.45)' }]}><Text style={st.metaPillText}>✓ Joined</Text></View>}
+          <TouchableOpacity activeOpacity={0.9} onPress={() => setClubDetail(club)} style={[st.clubCard, { backgroundColor: club.colors[0], padding: 0, overflow: 'hidden', justifyContent: 'flex-start' }]}>
+            {/* "picture" — big icon on a tinted band */}
+            <View style={{ height: 130, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
+              <Text style={{ fontSize: 64 }}>{clubIcon(club)}</Text>
             </View>
-            <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, fontWeight: '700', marginTop: 10 }}>ⓘ Tap for full details</Text>
+            <View style={{ padding: 18 }}>
+              <View style={st.clubTag}><Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{club.tag}</Text></View>
+              <Text style={st.clubName}>{club.name}</Text>
+              <Text style={st.clubDesc} numberOfLines={2}>{club.desc}</Text>
+              <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                <View style={st.metaPill}><Text style={st.metaPillText}>👥 {club.members.toLocaleString()}</Text></View>
+                <View style={st.metaPill}><Text style={st.metaPillText}>📍 {club.location}</Text></View>
+                {joined.includes(club.name) && <View style={[st.metaPill, { backgroundColor: 'rgba(255,255,255,0.45)' }]}><Text style={st.metaPillText}>✓ Joined</Text></View>}
+              </View>
+              <Text style={{ color: 'white', fontSize: 12, fontWeight: '800', marginTop: 10 }}>ⓘ Tap to view full details →</Text>
+            </View>
           </TouchableOpacity>
         ) : (
           <View style={[st.clubCard, { backgroundColor: T.card, alignItems: 'center', justifyContent: 'center' }]}>
@@ -1693,6 +1714,7 @@ export default function App() {
                 {/* colored header */}
                 <View style={{ backgroundColor: clubDetail.colors[0], padding: 20, paddingTop: 16 }}>
                   <TouchableOpacity onPress={() => setClubDetail(null)}><Text style={{ fontSize: 26, color: 'white' }}>‹</Text></TouchableOpacity>
+                  <Text style={{ fontSize: 72, textAlign: 'center', marginVertical: 6 }}>{clubIcon(clubDetail)}</Text>
                   <View style={[st.clubTag, { marginTop: 8 }]}><Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{clubDetail.tag}</Text></View>
                   <Text style={{ fontSize: 28, fontWeight: '900', color: 'white', marginTop: 6 }}>{clubDetail.name}</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
