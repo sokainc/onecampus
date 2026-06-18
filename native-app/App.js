@@ -14,7 +14,7 @@ import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   onAuthStateChanged, signOut as fbSignOut, updateProfile,
 } from 'firebase/auth';
-import { initializeFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
+import { initializeFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, updateDoc, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 
 /* ─────────── FIREBASE ─────────── */
 const firebaseApp = initializeApp({
@@ -175,6 +175,11 @@ export default function App() {
   const [dayFilter, setDayFilter] = useState(null);
   const [ptsTab, setPtsTab] = useState('badges');
   const [connectTab, setConnectTab] = useState('feed');
+  // ── shared feed (real, everyone sees it) ──
+  const [feedPosts, setFeedPosts] = useState([]);
+  const [postText, setPostText] = useState('');
+  const [commentOn, setCommentOn] = useState(null); // post being commented on
+  const [commentText, setCommentText] = useState('');
 
   const [sheet, setSheet] = useState(null); // 'paywall' | 'payment' | 'planner' | 'addEvent' | 'charity' | 'reward' | 'cancelSub'
   const [rewardResult, setRewardResult] = useState(null);
@@ -271,6 +276,78 @@ export default function App() {
     }, 1200);
     return () => clearTimeout(saveTimer.current);
   }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, user]);
+
+  // ── SHARED FEED: live-listen to everyone's posts ──
+  React.useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50));
+    const unsub = onSnapshot(q, (snap) => {
+      setFeedPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => { /* permission/offline — ignore */ });
+    return unsub;
+  }, [user]);
+
+  const createPost = async () => {
+    const text = postText.trim();
+    if (!text) return;
+    setPostText('');
+    try {
+      await addDoc(collection(db, 'posts'), {
+        uid: user.uid,
+        author: profile.name || 'Student',
+        major: profile.major || '',
+        text,
+        likedBy: [],
+        comments: [],
+        createdAt: serverTimestamp(),
+      });
+      const earned = addPoints(20);
+      showToast(`Posted to the feed! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+    } catch (e) {
+      showToast('⚠️ Could not post — is the "posts" rule set in Firestore?');
+    }
+  };
+
+  const toggleLikePost = async (post) => {
+    const liked = (post.likedBy || []).includes(user.uid);
+    try {
+      await updateDoc(doc(db, 'posts', post.id), {
+        likedBy: liked ? arrayRemove(user.uid) : arrayUnion(user.uid),
+      });
+    } catch (e) {}
+  };
+
+  const sendComment = async () => {
+    const text = commentText.trim();
+    if (!text || !commentOn) return;
+    setCommentText('');
+    try {
+      await updateDoc(doc(db, 'posts', commentOn.id), {
+        comments: arrayUnion({ uid: user.uid, author: profile.name || 'Student', text, at: Date.now() }),
+      });
+    } catch (e) { showToast('Could not comment'); }
+  };
+
+  const deletePost = async (post) => {
+    try { await deleteDoc(doc(db, 'posts', post.id)); showToast('Post deleted'); } catch (e) {}
+  };
+
+  const postColor = (name) => {
+    const colors = ['#7C3AED', '#EF4444', '#10B981', '#EC4899', '#0EA5E9', '#F59E0B', '#06B6D4'];
+    let h = 0; for (let i = 0; i < name.length; i++) h = name.charCodeAt(i) + ((h << 5) - h);
+    return colors[Math.abs(h) % colors.length];
+  };
+
+  const timeAgo = (createdAt) => {
+    if (!createdAt) return 'just now';
+    const ms = Date.now() - (createdAt.toMillis ? createdAt.toMillis() : createdAt);
+    const m = Math.floor(ms / 60000);
+    if (m < 1) return 'just now';
+    if (m < 60) return `${m}m ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24) return `${h}h ago`;
+    return `${Math.floor(h / 24)}d ago`;
+  };
 
   const doAuth = async () => {
     const email = authEmail.trim();
@@ -931,49 +1008,76 @@ export default function App() {
           </View>
           <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>Message 💬</Text>
         </TouchableOpacity>
-      )) : POSTS.map((p, i) => (
-        <View key={p.id}>
-          <View style={[st.postCard, { backgroundColor: T.card }]}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <View style={[st.avatar, { backgroundColor: p.color }]}><Text style={{ color: 'white', fontWeight: '700' }}>{p.initial}</Text></View>
-              <View style={{ flex: 1 }}>
-                <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.person} {p.club ? `· ${p.club}` : ''}</Text>
-                <Text style={{ fontSize: 11, color: T.subtext }}>{p.time}</Text>
-              </View>
-            </View>
-            <Text style={{ fontSize: 13, color: T.text, marginVertical: 8, lineHeight: 19 }}>{p.emoji} {p.text}</Text>
-            <View style={{ flexDirection: 'row', gap: 18 }}>
-              <TouchableOpacity onPress={() => setLiked(l => l.includes(p.id) ? l.filter(x => x !== p.id) : [...l, p.id])}>
-                <Text style={{ fontSize: 13, color: liked.includes(p.id) ? '#EF4444' : T.subtext, fontWeight: '700' }}>
-                  {liked.includes(p.id) ? '❤️' : '🤍'} {p.likes + (liked.includes(p.id) ? 1 : 0)}
-                </Text>
-              </TouchableOpacity>
-              <Text style={{ fontSize: 13, color: T.subtext, fontWeight: '700' }}>💬 {p.comments}</Text>
-              <TouchableOpacity onPress={() => showToast('Shared! 🔗')}><Text style={{ fontSize: 13, color: T.subtext, fontWeight: '700' }}>🔗 Share</Text></TouchableOpacity>
-            </View>
+      )) : (<>
+        {/* composer */}
+        <View style={[st.postCard, { backgroundColor: T.card }]}>
+          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
+            <View style={[st.avatar, { backgroundColor: A }]}><Text style={{ color: 'white', fontWeight: '700' }}>{initials}</Text></View>
+            <TextInput value={postText} onChangeText={setPostText} placeholder="Share something with campus…" placeholderTextColor={T.subtext}
+              multiline style={{ flex: 1, fontSize: 14, color: T.text, minHeight: 40, paddingTop: 8 }} />
           </View>
-          {(i + 1) % 2 === 0 && ADS[Math.floor(i / 2)] && (() => {
-            const ad = ADS[Math.floor(i / 2)];
-            return (
-              <View style={[st.postCard, { backgroundColor: T.card, borderWidth: 1, borderColor: T.border }]}>
-                <Text style={{ fontSize: 10, color: T.subtext, fontWeight: '700', letterSpacing: 0.5, marginBottom: 6 }}>SPONSORED</Text>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                  <View style={[st.avatar, { backgroundColor: ad.color, borderRadius: 12 }]}><Text style={{ fontSize: 18 }}>{ad.logo}</Text></View>
-                  <View>
-                    <Text style={{ fontSize: 14, fontWeight: '800', color: T.text }}>{ad.brand}</Text>
-                    <Text style={{ fontSize: 11, color: T.subtext }}>{ad.cat}</Text>
-                  </View>
-                </View>
-                <Text style={{ fontSize: 14, fontWeight: '800', color: T.text, marginTop: 8 }}>{ad.headline}</Text>
-                <Text style={{ fontSize: 12, color: T.subtext, marginVertical: 4 }}>{ad.copy}</Text>
-                <TouchableOpacity onPress={() => showToast(`Opening ${ad.brand}... 🔗`)} style={[st.ctaBtn, { backgroundColor: ad.color }]}>
-                  <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{ad.cta}</Text>
-                </TouchableOpacity>
-              </View>
-            );
-          })()}
+          <TouchableOpacity onPress={createPost} disabled={!postText.trim()}
+            style={{ alignSelf: 'flex-end', backgroundColor: A, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 8, marginTop: 8, opacity: postText.trim() ? 1 : 0.4 }}>
+            <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Post</Text>
+          </TouchableOpacity>
         </View>
-      ))}
+
+        {feedPosts.length === 0 && (
+          <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+            <Text style={{ fontSize: 40 }}>🔥</Text>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: T.text, marginTop: 6 }}>No posts yet</Text>
+            <Text style={{ fontSize: 13, color: T.subtext, marginTop: 2 }}>Be the first to post to your campus!</Text>
+          </View>
+        )}
+
+        {feedPosts.map((p, i) => {
+          const likeCount = (p.likedBy || []).length;
+          const iLiked = (p.likedBy || []).includes(user.uid);
+          const cColor = postColor(p.author || '?');
+          return (
+            <View key={p.id}>
+              <View style={[st.postCard, { backgroundColor: T.card }]}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                  <View style={[st.avatar, { backgroundColor: cColor }]}><Text style={{ color: 'white', fontWeight: '700' }}>{(p.author || '?')[0].toUpperCase()}</Text></View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.author}{p.major ? ` · ${p.major}` : ''}</Text>
+                    <Text style={{ fontSize: 11, color: T.subtext }}>{timeAgo(p.createdAt)}</Text>
+                  </View>
+                  {p.uid === user.uid && (
+                    <TouchableOpacity onPress={() => deletePost(p)}><Text style={{ fontSize: 16, color: T.subtext }}>🗑️</Text></TouchableOpacity>
+                  )}
+                </View>
+                <Text style={{ fontSize: 14, color: T.text, marginVertical: 8, lineHeight: 20 }}>{p.text}</Text>
+                <View style={{ flexDirection: 'row', gap: 20, borderTopWidth: 1, borderColor: T.border, paddingTop: 8 }}>
+                  <TouchableOpacity onPress={() => toggleLikePost(p)}>
+                    <Text style={{ fontSize: 13, color: iLiked ? '#EF4444' : T.subtext, fontWeight: '700' }}>{iLiked ? '❤️' : '🤍'} {likeCount}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => setCommentOn(p)}>
+                    <Text style={{ fontSize: 13, color: T.subtext, fontWeight: '700' }}>💬 {(p.comments || []).length}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              {(i + 1) % 3 === 0 && ADS[Math.floor(i / 3) % ADS.length] && (() => {
+                const ad = ADS[Math.floor(i / 3) % ADS.length];
+                return (
+                  <View style={[st.postCard, { backgroundColor: T.card, borderWidth: 1, borderColor: T.border }]}>
+                    <Text style={{ fontSize: 10, color: T.subtext, fontWeight: '700', letterSpacing: 0.5, marginBottom: 6 }}>SPONSORED</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+                      <View style={[st.avatar, { backgroundColor: ad.color, borderRadius: 12 }]}><Text style={{ fontSize: 18 }}>{ad.logo}</Text></View>
+                      <View><Text style={{ fontSize: 14, fontWeight: '800', color: T.text }}>{ad.brand}</Text><Text style={{ fontSize: 11, color: T.subtext }}>{ad.cat}</Text></View>
+                    </View>
+                    <Text style={{ fontSize: 14, fontWeight: '800', color: T.text, marginTop: 8 }}>{ad.headline}</Text>
+                    <Text style={{ fontSize: 12, color: T.subtext, marginVertical: 4 }}>{ad.copy}</Text>
+                    <TouchableOpacity onPress={() => showToast(`Opening ${ad.brand}... 🔗`)} style={[st.ctaBtn, { backgroundColor: ad.color }]}>
+                      <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{ad.cta}</Text>
+                    </TouchableOpacity>
+                  </View>
+                );
+              })()}
+            </View>
+          );
+        })}
+      </>)}
     </ScrollView>
   );
 
@@ -1518,6 +1622,43 @@ export default function App() {
       {renderSheet()}
       {renderChat()}
       {renderSettingsModal()}
+
+      {/* Comments on a feed post */}
+      <Modal visible={!!commentOn} animationType="slide" onRequestClose={() => setCommentOn(null)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+          <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+            <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+              <TouchableOpacity onPress={() => setCommentOn(null)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>Comments</Text>
+            </View>
+            <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+              {commentOn && (
+                <View style={[st.postCard, { backgroundColor: T.card, marginBottom: 12 }]}>
+                  <Text style={{ fontSize: 13, fontWeight: '700', color: T.text }}>{commentOn.author}</Text>
+                  <Text style={{ fontSize: 14, color: T.text, marginTop: 4 }}>{commentOn.text}</Text>
+                </View>
+              )}
+              {(feedPosts.find(p => p.id === commentOn?.id)?.comments || []).map((c, i) => (
+                <View key={i} style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
+                  <View style={[st.avatar, { backgroundColor: postColor(c.author || '?'), width: 32, height: 32, borderRadius: 16 }]}><Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{(c.author || '?')[0].toUpperCase()}</Text></View>
+                  <View style={{ flex: 1, backgroundColor: T.card, borderRadius: 14, padding: 10 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: T.text }}>{c.author}</Text>
+                    <Text style={{ fontSize: 13.5, color: T.text, marginTop: 2 }}>{c.text}</Text>
+                  </View>
+                </View>
+              ))}
+              {commentOn && (feedPosts.find(p => p.id === commentOn.id)?.comments || []).length === 0 && (
+                <Text style={{ textAlign: 'center', color: T.subtext, marginTop: 20 }}>No comments yet — say something!</Text>
+              )}
+            </ScrollView>
+            <View style={[st.chatBar, { backgroundColor: T.card, borderColor: T.border }]}>
+              <TextInput value={commentText} onChangeText={setCommentText} placeholder="Add a comment…" placeholderTextColor={T.subtext}
+                onSubmitEditing={sendComment} returnKeyType="send" style={[st.chatInput, { backgroundColor: T.bg, color: T.text }]} />
+              <TouchableOpacity onPress={sendComment} style={st.sendBtn}><Text style={{ color: 'white', fontSize: 16 }}>➤</Text></TouchableOpacity>
+            </View>
+          </KeyboardAvoidingView>
+        </SafeAreaView>
+      </Modal>
 
       {/* Business portal — native mobile screens */}
       <Modal visible={showBusiness} animationType="slide" onRequestClose={() => setShowBusiness(false)}>
