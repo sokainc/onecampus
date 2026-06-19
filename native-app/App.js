@@ -6,6 +6,7 @@ import {
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
+import { Ionicons } from '@expo/vector-icons';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 
@@ -157,20 +158,25 @@ const STARTER_CHATS = {
 
 const AUTO_REPLIES = ['Sounds good! 🙌', 'Haha for sure', 'Okay see you there!', 'Perfect 👍', 'Yesss let\'s do it', 'Bet. See you on campus!'];
 const INTERESTS = ['All', 'Tech', 'Engineering', 'Business', 'Science', 'Arts', 'Sports'];
-// pick a representative emoji "picture" for any club from its name/category
+// pick a representative Ionicons name for any club from its name/category
 const clubIcon = (club) => {
   const n = (club.name || '').toLowerCase();
   const pairs = [
-    [['robot'], '🤖'], [['drone'], '🛸'], [['hack', 'comput', 'code', 'software'], '💻'], [['game', 'esport'], '🎮'],
-    [['soccer'], '⚽'], [['barbell', 'lifting', 'powerlift', 'fit', 'gym'], '🏋️'], [['volleyball'], '🏐'], [['ultimate', 'frisbee'], '🥏'],
-    [['box', 'bout'], '🥊'], [['cycl', '500'], '🚴'], [['climb', 'outdoor', 'adventure'], '🧗'], [['run', '5k'], '🏃'],
-    [['theatre', 'theater', 'drama'], '🎭'], [['sing', 'cappella', 'glee', 'choir', 'concert', 'music'], '🎵'], [['dance'], '💃'], [['film'], '🎬'],
-    [['invest', 'business', 'consult', 'sales', 'kelley', 'sibc', 'finance'], '📈'], [['med', 'bio', 'health', 'nurs'], '🩺'],
-    [['nsbe', 'swe', 'engineer'], '⚙️'], [['rocket', 'aero', 'space', 'astro'], '🚀'],
+    [['robot'], 'hardware-chip'], [['drone'], 'airplane'], [['hack', 'comput', 'code', 'software'], 'laptop'], [['game', 'esport'], 'game-controller'],
+    [['soccer'], 'football'], [['barbell', 'lifting', 'powerlift', 'fit', 'gym'], 'barbell'], [['volleyball'], 'basketball'], [['ultimate', 'frisbee'], 'disc'],
+    [['box', 'bout'], 'fitness'], [['cycl', '500'], 'bicycle'], [['climb', 'outdoor', 'adventure'], 'trail-sign'], [['run', '5k'], 'walk'],
+    [['theatre', 'theater', 'drama'], 'film'], [['sing', 'cappella', 'glee', 'choir', 'concert', 'music'], 'musical-notes'], [['dance'], 'body'], [['film'], 'videocam'],
+    [['invest', 'business', 'consult', 'sales', 'kelley', 'sibc', 'finance'], 'trending-up'], [['med', 'bio', 'health', 'nurs'], 'medkit'],
+    [['nsbe', 'swe', 'engineer'], 'construct'], [['rocket', 'aero', 'space', 'astro'], 'rocket'],
   ];
   for (const [keys, icon] of pairs) if (keys.some(k => n.includes(k))) return icon;
-  return { TECH: '💻', ENGINEERING: '⚙️', BUSINESS: '📈', SCIENCE: '🔬', SPORTS: '🏆', ARTS: '🎨' }[club.tag] || '🎓';
+  return { TECH: 'laptop', ENGINEERING: 'construct', BUSINESS: 'trending-up', SCIENCE: 'flask', SPORTS: 'trophy', ARTS: 'color-palette' }[club.tag] || 'school';
 };
+
+// Ionicons name for a campus building
+const buildingIcon = (name) => ({
+  'WALC': 'library', 'PMU': 'business', 'CoRec': 'barbell', 'ARMS': 'rocket', 'Rawls': 'trending-up', 'Stewart Ctr': 'film',
+}[name] || 'location');
 
 // extra info shown on the club detail page, derived from the club's category
 const TAG_INFO = {
@@ -797,7 +803,7 @@ export default function App() {
           <TouchableOpacity activeOpacity={0.9} onPress={() => setClubDetail(club)} style={[st.clubCard, { backgroundColor: club.colors[0], padding: 0, overflow: 'hidden', justifyContent: 'flex-start' }]}>
             {/* "picture" — big icon on a tinted band */}
             <View style={{ height: 130, backgroundColor: 'rgba(255,255,255,0.16)', alignItems: 'center', justifyContent: 'center' }}>
-              <Text style={{ fontSize: 64 }}>{clubIcon(club)}</Text>
+              <Ionicons name={clubIcon(club)} size={58} color="white" />
             </View>
             <View style={{ padding: 18 }}>
               <View style={st.clubTag}><Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{club.tag}</Text></View>
@@ -865,7 +871,7 @@ export default function App() {
                 <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{e.name}</Text>
                 <Text style={{ fontSize: 12, color: T.subtext }}>
                   📍 {e.location}{'  '}
-                  <Text onPress={() => openDirections(e.location)} style={{ color: '#34A853', fontWeight: '800' }}>🧭 Directions</Text>
+                  <Text onPress={() => openDirections(e.location)} style={{ color: '#34A853', fontWeight: '800' }}><Ionicons name="navigate" size={12} color="#34A853" /> Directions</Text>
                 </Text>
               </View>
               <View style={[st.badge, { backgroundColor: e.mine ? '#EDE9FE' : going ? '#F0FDF4' : '#FEE2E2' }]}>
@@ -885,16 +891,17 @@ export default function App() {
       <Text style={[st.title, { color: A }]}>Campus</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text style={[st.sub, { color: T.subtext, flex: 1 }]}>
-          {myLoc ? '📍 Showing your location' : settings.location ? `${FRIENDS.filter(f => f.online).length} friends active right now` : "You're invisible 👻 (location off)"}
+          {myLoc ? 'Showing your location' : settings.location ? `${FRIENDS.filter(f => f.online).length} friends active right now` : "You're invisible (location off)"}
         </Text>
-        <TouchableOpacity onPress={requestMyLocation} style={{ backgroundColor: A, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 7 }}>
-          <Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>📍 My location</Text>
+        <TouchableOpacity onPress={requestMyLocation} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: A, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 7 }}>
+          <Ionicons name="locate" size={12} color="white" />
+          <Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>My location</Text>
         </TouchableOpacity>
       </View>
       {routeInfo && (
         <View style={{ backgroundColor: T.card, borderRadius: 14, padding: 11, marginTop: 10 }}>
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-            <Text style={{ flex: 1, fontSize: 13, color: T.text }}>🚶 <Text style={{ fontWeight: '800' }}>{routeInfo.mins} min walk</Text> ({routeInfo.meters} m) to {routeInfo.label}</Text>
+            <Text style={{ flex: 1, fontSize: 13, color: T.text }}><Ionicons name="walk" size={14} color={T.text} /> <Text style={{ fontWeight: '800' }}>{routeInfo.mins} min walk</Text> ({routeInfo.meters} m) to {routeInfo.label}</Text>
             <TouchableOpacity onPress={() => setShowSteps(s => !s)} style={{ backgroundColor: dark ? '#2E2942' : '#EDE9FE', borderRadius: 9, paddingHorizontal: 9, paddingVertical: 4, marginRight: 4 }}>
               <Text style={{ color: A, fontSize: 11, fontWeight: '800' }}>{showSteps ? 'Steps ▴' : 'Steps ▾'}</Text>
             </TouchableOpacity>
@@ -934,13 +941,14 @@ export default function App() {
         return (
           <View key={b.name} style={[st.buildingCard, { backgroundColor: T.card, marginTop: 10 }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-              <Text style={{ fontSize: 24 }}>{b.emoji}</Text>
+              <Ionicons name={buildingIcon(b.name)} size={22} color={A} />
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 15, fontWeight: '800', color: T.text }}>{b.name}</Text>
                 <Text style={{ fontSize: 11, color: T.subtext }}>{b.full}</Text>
               </View>
-              <TouchableOpacity onPress={() => openDirections(b.full)} style={{ backgroundColor: '#34A853', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 11 }}>
-                <Text style={{ color: 'white', fontSize: 11, fontWeight: '800' }}>🧭 Directions</Text>
+              <TouchableOpacity onPress={() => openDirections(b.full)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#34A853', paddingHorizontal: 10, paddingVertical: 7, borderRadius: 11 }}>
+                <Ionicons name="navigate" size={12} color="white" />
+                <Text style={{ color: 'white', fontSize: 11, fontWeight: '800' }}>Directions</Text>
               </TouchableOpacity>
             </View>
             {here.length > 0 && (
@@ -1068,7 +1076,7 @@ export default function App() {
       <Text style={[st.title, { color: A }]}>Connections</Text>
       <Text style={[st.sub, { color: T.subtext }]}>{FRIENDS.length} friends on campus</Text>
       <View style={{ flexDirection: 'row', gap: 8, marginVertical: 10 }}>
-        {[['feed', '🔥 Feed'], ['friends', '👥 Friends']].map(([k, label]) => (
+        {[['feed', 'Feed'], ['friends', 'Friends']].map(([k, label]) => (
           <TouchableOpacity key={k} onPress={() => setConnectTab(k)} style={[st.tabBtn, { backgroundColor: connectTab === k ? A : T.card }]}>
             <Text style={{ color: connectTab === k ? 'white' : T.subtext, fontSize: 12, fontWeight: '700' }}>{label}</Text>
           </TouchableOpacity>
@@ -1099,7 +1107,7 @@ export default function App() {
 
         {feedPosts.length === 0 && (
           <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-            <Text style={{ fontSize: 40 }}>🔥</Text>
+            <Ionicons name="chatbubbles-outline" size={40} color={T.subtext} />
             <Text style={{ fontSize: 15, fontWeight: '800', color: T.text, marginTop: 6 }}>No posts yet</Text>
             <Text style={{ fontSize: 13, color: T.subtext, marginTop: 2 }}>Be the first to post to your campus!</Text>
           </View>
@@ -1567,7 +1575,7 @@ export default function App() {
             </TouchableOpacity>
 
             <Text style={{ textAlign: 'center', fontSize: 11, color: T.subtext, marginTop: 18, lineHeight: 17 }}>
-              Real accounts powered by Firebase 🔥{'\n'}Google sign-in available on the website.
+              Real accounts powered by Firebase.{'\n'}Google sign-in available on the website.
             </Text>
           </ScrollView>
         </KeyboardAvoidingView>
@@ -1661,7 +1669,7 @@ export default function App() {
 
   /* ─────────── MAIN ─────────── */
   const TABS = [
-    ['discover', '🧭', 'Discover'], ['events', '📅', 'Events'], ['campus', '🗺️', 'Campus'], ['points', '🏆', 'Points'], ['connect', '👥', 'Connect'],
+    ['discover', 'compass', 'Discover'], ['events', 'calendar', 'Events'], ['campus', 'map', 'Campus'], ['points', 'trophy', 'Points'], ['connect', 'people', 'Connect'],
   ];
 
   return (
@@ -1676,7 +1684,7 @@ export default function App() {
           <View style={[st.ptsBadge, isPremium && { backgroundColor: '#F59E0B' }]}>
             <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{isPremium ? '👑' : '⚡'} {points.toLocaleString()} pts</Text>
           </View>
-          <TouchableOpacity onPress={() => setShowSettings(true)} style={[st.gearBtn, { backgroundColor: T.card }]}><Text style={{ fontSize: 15 }}>⚙️</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowSettings(true)} style={[st.gearBtn, { backgroundColor: T.card }]}><Ionicons name="settings-outline" size={17} color={T.text} /></TouchableOpacity>
         </View>
       </View>
 
@@ -1689,7 +1697,7 @@ export default function App() {
       <View style={[st.tabBar, { backgroundColor: T.card, borderColor: T.border }]}>
         {TABS.map(([key, icon, label]) => (
           <TouchableOpacity key={key} onPress={() => setTab(key)} style={[st.navBtn, tab === key && { backgroundColor: A }]}>
-            <Text style={{ fontSize: 18 }}>{icon}</Text>
+            <Ionicons name={tab === key ? icon : `${icon}-outline`} size={20} color={tab === key ? 'white' : T.subtext} />
             <Text style={{ fontSize: 9, fontWeight: '600', color: tab === key ? 'white' : T.subtext }}>{label}</Text>
           </TouchableOpacity>
         ))}
@@ -1714,7 +1722,7 @@ export default function App() {
                 {/* colored header */}
                 <View style={{ backgroundColor: clubDetail.colors[0], padding: 20, paddingTop: 16 }}>
                   <TouchableOpacity onPress={() => setClubDetail(null)}><Text style={{ fontSize: 26, color: 'white' }}>‹</Text></TouchableOpacity>
-                  <Text style={{ fontSize: 72, textAlign: 'center', marginVertical: 6 }}>{clubIcon(clubDetail)}</Text>
+                  <View style={{ alignItems: 'center', marginVertical: 6 }}><Ionicons name={clubIcon(clubDetail)} size={64} color="white" /></View>
                   <View style={[st.clubTag, { marginTop: 8 }]}><Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{clubDetail.tag}</Text></View>
                   <Text style={{ fontSize: 28, fontWeight: '900', color: 'white', marginTop: 6 }}>{clubDetail.name}</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
@@ -1742,7 +1750,7 @@ export default function App() {
                       <Text style={{ fontSize: 13, color: T.subtext }}>{clubDetail.location} · {info.meets}</Text>
                     </View>
                     <TouchableOpacity onPress={() => { setClubDetail(null); openDirections(clubDetail.location); }}>
-                      <Text style={{ color: '#34A853', fontWeight: '800', fontSize: 13 }}>🧭 Directions</Text>
+                      <Text style={{ color: '#34A853', fontWeight: '800', fontSize: 13 }}><Ionicons name="navigate" size={13} color="#34A853" /> Directions</Text>
                     </TouchableOpacity>
                   </View>
 
@@ -1805,7 +1813,7 @@ export default function App() {
           <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
             <TouchableOpacity onPress={() => setDirections(null)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
             <View>
-              <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>🧭 Directions</Text>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}><Ionicons name="navigate" size={16} color={T.text} /> Directions</Text>
               <Text style={{ fontSize: 11, color: T.subtext }}>Walking route to {directions?.label}</Text>
             </View>
           </View>

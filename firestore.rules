@@ -1,0 +1,28 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Each user can only read/write their OWN profile/save document.
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Shared campus feed — everyone signed in can see all posts.
+    match /posts/{postId} {
+      // Anyone signed in can read the feed.
+      allow read: if request.auth != null;
+
+      // You can only create a post as yourself (uid must match your account).
+      allow create: if request.auth != null
+                    && request.resource.data.uid == request.auth.uid;
+
+      // Anyone signed in can update a post (needed for likes + comments).
+      allow update: if request.auth != null;
+
+      // Only the original author can delete their own post.
+      allow delete: if request.auth != null
+                    && resource.data.uid == request.auth.uid;
+    }
+  }
+}
