@@ -119,32 +119,32 @@ const POSTS = [
 ];
 
 const ADS = [
-  { id: 'ad1', brand: "Domino's", cat: 'Food Delivery', logo: '🍕', color: '#E63946', headline: '30-min delivery to your dorm 🍕', copy: 'Large pizza to your room for $7.99. Code BOILER at checkout.', cta: 'Order Now' },
-  { id: 'ad2', brand: 'Chegg', cat: 'Textbooks', logo: '📚', color: '#F4792B', headline: 'Rent textbooks from $9.99 📖', copy: 'Stop overpaying at the bookstore. 24/7 homework help included.', cta: 'Save on Books' },
-  { id: 'ad3', brand: 'Spotify', cat: 'Student Discount', logo: '🎵', color: '#1DB954', headline: 'Premium — 3 months free 🎧', copy: 'Verified students get 3 months free, then $5.99/mo.', cta: 'Get Free Trial' },
+  { id: 'ad1', brand: "Domino's", cat: 'Food Delivery', logo: 'pizza', color: '#E63946', headline: '30-min delivery to your dorm', copy: 'Large pizza to your room for $7.99. Code BOILER at checkout.', cta: 'Order Now' },
+  { id: 'ad2', brand: 'Chegg', cat: 'Textbooks', logo: 'book', color: '#F4792B', headline: 'Rent textbooks from $9.99', copy: 'Stop overpaying at the bookstore. 24/7 homework help included.', cta: 'Save on Books' },
+  { id: 'ad3', brand: 'Spotify', cat: 'Student Discount', logo: 'musical-notes', color: '#1DB954', headline: 'Premium — 3 months free', copy: 'Verified students get 3 months free, then $5.99/mo.', cta: 'Get Free Trial' },
 ];
 
 const BADGES = [
-  { icon: '🔥', name: 'On Fire', desc: '7-day streak', pts: '+500' },
-  { icon: '🚀', name: 'Early Adopter', desc: 'Joined Week 1', pts: '+250' },
-  { icon: '🤝', name: 'Connector', desc: '10 friends made', pts: '+300' },
-  { icon: '📅', name: 'Event Goer', desc: '5 events attended', pts: '+400' },
-  { icon: '🏛️', name: 'Club Hopper', desc: 'Joined 3 clubs', pts: '+350' },
-  { icon: '⭐', name: 'Top Contributor', desc: 'Weekly #1 rank', pts: '+600' },
+  { icon: 'flame', name: 'On Fire', desc: '7-day streak', pts: '+500' },
+  { icon: 'rocket', name: 'Early Adopter', desc: 'Joined Week 1', pts: '+250' },
+  { icon: 'people', name: 'Connector', desc: '10 friends made', pts: '+300' },
+  { icon: 'calendar', name: 'Event Goer', desc: '5 events attended', pts: '+400' },
+  { icon: 'business', name: 'Club Hopper', desc: 'Joined 3 clubs', pts: '+350' },
+  { icon: 'star', name: 'Top Contributor', desc: 'Weekly #1 rank', pts: '+600' },
 ];
 
 const REWARDS = [
-  { id: 'coffee', icon: '☕', name: 'Free Drink at Greyhouse', desc: 'Any drink at Greyhouse Coffee', cost: 1000, sponsor: 'Sponsored by Greyhouse' },
-  { id: 'charity', icon: '❤️', name: 'Donate $1 to a Cause', desc: 'One Campus donates to a student-voted cause', cost: 1000, sponsor: 'Community impact' },
-  { id: 'dominos', icon: '🍕', name: "$5 off Domino's", desc: 'Code applied at checkout', cost: 2000, sponsor: "Sponsored by Domino's" },
-  { id: 'chickfila', icon: '🐔', name: 'Free Chick-fil-A Entrée', desc: 'Any entrée at the PMU Chick-fil-A', cost: 3000, sponsor: 'Sponsored by Chick-fil-A' },
+  { id: 'coffee', icon: 'cafe', name: 'Free Drink at Greyhouse', desc: 'Any drink at Greyhouse Coffee', cost: 1000, sponsor: 'Sponsored by Greyhouse' },
+  { id: 'charity', icon: 'heart', name: 'Donate $1 to a Cause', desc: 'One Campus donates to a student-voted cause', cost: 1000, sponsor: 'Community impact' },
+  { id: 'dominos', icon: 'pizza', name: "$5 off Domino's", desc: 'Code applied at checkout', cost: 2000, sponsor: "Sponsored by Domino's" },
+  { id: 'chickfila', icon: 'fast-food', name: 'Free Chick-fil-A Entrée', desc: 'Any entrée at the PMU Chick-fil-A', cost: 3000, sponsor: 'Sponsored by Chick-fil-A' },
 ];
 
 const CAUSES = [
-  { emoji: '🏥', name: "Riley Children's Hospital" },
-  { emoji: '🍲', name: 'Lafayette Food Bank' },
-  { emoji: '🧠', name: 'Student Mental Health Fund' },
-  { emoji: '🐾', name: 'Local Animal Shelter' },
+  { emoji: 'medkit', name: "Riley Children's Hospital" },
+  { emoji: 'fast-food', name: 'Lafayette Food Bank' },
+  { emoji: 'happy', name: 'Student Mental Health Fund' },
+  { emoji: 'paw', name: 'Local Animal Shelter' },
 ];
 
 const STARTER_CHATS = {
@@ -204,6 +204,9 @@ export default function App() {
   const [events, setEvents] = useState(INITIAL_EVENTS);
   const [redeemed, setRedeemed] = useState([]);
   const [chats, setChats] = useState(STARTER_CHATS);
+  // ── daily streak (Premium gets streak insurance) ──
+  const [streak, setStreak] = useState(0);
+  const [lastActive, setLastActive] = useState(null); // 'YYYY-MM-DD' of last day opened
 
   const [campus, setCampus] = useState('purdue');
   const [interest, setInterest] = useState('All');
@@ -222,7 +225,7 @@ export default function App() {
   const [showSettings, setShowSettings] = useState(false);
   const [chatWith, setChatWith] = useState(null);
   const [chatTyping, setChatTyping] = useState(false);
-  const [settings, setSettings] = useState({ location: true, notifications: true, leaderboard: true, notifEvents: true, notifDMs: true, notifRequests: true, quietHours: false });
+  const [settings, setSettings] = useState({ location: true, notifications: true, leaderboard: true, notifEvents: true, notifDMs: true, notifRequests: true, quietHours: false, friendAlerts: false });
   const [accent, setAccent] = useState('#7C3AED');
   const [profile, setProfile] = useState({ name: 'Leighton B.', major: 'Purdue University' });
 
@@ -250,7 +253,7 @@ export default function App() {
     setCardIdx(0);
     if (obMajor.trim()) setProfile(p => ({ ...p, major: obMajor.trim() }));
     setOnboarded(true);
-    showToast('🎉 Welcome to One Campus!');
+    showToast('Welcome to One Campus!');
   };
 
   const dataLoaded = useRef(false);
@@ -287,12 +290,14 @@ export default function App() {
           if (typeof d.onboarded === 'boolean') setOnboarded(d.onboarded);
           if (d.homeCampus) { setHomeCampus(d.homeCampus); setCampus(d.homeCampus); }
           if (Array.isArray(d.interests)) setObInterests(d.interests);
-          showToast('☁️ Your data is synced!');
+          if (typeof d.streak === 'number') setStreak(d.streak);
+          if (d.lastActive) setLastActive(d.lastActive);
+          showToast('Your data is synced');
         }
         dataLoaded.current = true;
         setDataReady(true);
       } catch (e) {
-        showToast('⚠️ Could not load saved data — is Firestore enabled?');
+        showToast('Could not load saved data — is Firestore enabled?');
         dataLoaded.current = true;
         setDataReady(true);
       }
@@ -306,12 +311,33 @@ export default function App() {
     saveTimer.current = setTimeout(() => {
       setDoc(doc(db, 'users', user.uid), {
         points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings,
-        onboarded, homeCampus, interests: obInterests,
+        onboarded, homeCampus, interests: obInterests, streak, lastActive,
         email: user.email, updatedAt: Date.now(),
       }, { merge: true }).catch(() => {});
     }, 1200);
     return () => clearTimeout(saveTimer.current);
-  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, user]);
+  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, streak, lastActive, user]);
+
+  // ── DAILY STREAK: runs once data is loaded; Premium "streak insurance" forgives one missed day ──
+  React.useEffect(() => {
+    if (!user || !dataReady) return;
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    if (lastActive === todayStr) return; // already counted today
+    let next = 1, insured = false;
+    if (lastActive) {
+      const prev = new Date(lastActive + 'T00:00:00');
+      const gap = Math.round((today - prev) / 86400000);
+      if (gap === 1) next = streak + 1;                        // consecutive day
+      else if (gap >= 2 && isPremium) { next = streak + 1; insured = true; } // insurance forgives the miss
+      else if (gap >= 2) next = 1;                             // streak broken
+      else next = streak || 1;
+    }
+    setStreak(next);
+    setLastActive(todayStr);
+    if (insured) showToast(`Streak insurance saved your ${next}-day streak`);
+    else if (next > 1) showToast(`${next}-day streak! Keep it going`);
+  }, [user, dataReady]);
 
   // ── SHARED FEED: live-listen to everyone's posts ──
   React.useEffect(() => {
@@ -335,12 +361,13 @@ export default function App() {
         text,
         likedBy: [],
         comments: [],
+        premium: isPremium, // Premium posts get a spotlight in the feed
         createdAt: serverTimestamp(),
       });
       const earned = addPoints(20);
-      showToast(`Posted to the feed! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+      showToast(`Posted to the feed! +${earned} pts${isPremium ? ' (2x)' : ''}`);
     } catch (e) {
-      showToast('⚠️ Could not post — is the "posts" rule set in Firestore?');
+      showToast('Could not post — is the "posts" rule set in Firestore?');
     }
   };
 
@@ -387,19 +414,19 @@ export default function App() {
 
   const doAuth = async () => {
     const email = authEmail.trim();
-    if (!email.includes('@')) { showToast('Enter a valid email 📧'); return; }
-    if (authPass.length < 6) { showToast('Password needs 6+ characters 🔑'); return; }
-    if (authMode === 'signup' && !authName.trim()) { showToast('Enter your name ✏️'); return; }
+    if (!email.includes('@')) { showToast('Enter a valid email'); return; }
+    if (authPass.length < 6) { showToast('Password needs 6+ characters'); return; }
+    if (authMode === 'signup' && !authName.trim()) { showToast('Enter your name'); return; }
     setAuthBusy(true);
     try {
       if (authMode === 'signup') {
         const cred = await createUserWithEmailAndPassword(auth, email, authPass);
         await updateProfile(cred.user, { displayName: authName.trim() });
         setProfile(p => ({ ...p, name: authName.trim() }));
-        showToast(`🎉 Account created — welcome, ${authName.trim().split(' ')[0]}!`);
+        showToast(`Account created — welcome, ${authName.trim().split(' ')[0]}!`);
       } else {
         const cred = await signInWithEmailAndPassword(auth, email, authPass);
-        showToast(`👋 Welcome back${cred.user.displayName ? ', ' + cred.user.displayName.split(' ')[0] : ''}!`);
+        showToast(`Welcome back${cred.user.displayName ? ', ' + cred.user.displayName.split(' ')[0] : ''}!`);
       }
       setAuthPass('');
     } catch (err) {
@@ -419,7 +446,7 @@ export default function App() {
   const doSignOut = async () => {
     await fbSignOut(auth);
     setShowSettings(false);
-    showToast('Signed out 👋');
+    showToast('Signed out');
   };
 
   // add-event form
@@ -474,7 +501,7 @@ export default function App() {
       } else {
         setJoined(j => [...j, club.name]);
         const earned = addPoints(action === 'super' ? 150 : 75);
-        showToast(`${action === 'super' ? '⭐ Super joined' : '✓ Joined'} ${club.name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+        showToast(`${action === 'super' ? 'Super joined' : 'Joined'} ${club.name}! +${earned} pts${isPremium ? ' (2x)' : ''}`);
       }
     } else {
       showToast('Skipped — next up!');
@@ -486,7 +513,7 @@ export default function App() {
     if (!CAMPUSES[key].free && !isPremium && key !== homeCampus) { setSheet('paywall'); return; }
     setCampus(key);
     setCardIdx(0);
-    showToast(key === 'purdue' ? '🚂 Back to Purdue' : `${CAMPUSES[key].emoji} Browsing ${CAMPUSES[key].name} — Premium perk!`);
+    showToast(key === 'purdue' ? 'Back to Purdue' : `Browsing ${CAMPUSES[key].name} — Premium perk!`);
   };
 
   /* ── events ── */
@@ -511,12 +538,36 @@ export default function App() {
 
   const sendTestNotification = async () => {
     const ok = await ensureNotifPermission();
-    if (!ok) { showToast('🔕 Enable notifications in your phone settings'); return; }
+    if (!ok) { showToast('Enable notifications in your phone settings'); return; }
     await Notifications.scheduleNotificationAsync({
-      content: { title: '🎓 One Campus', body: "Notifications are on! We'll remind you about events & messages." },
+      content: { title: 'One Campus', body: "Notifications are on! We'll remind you about events & messages." },
       trigger: { seconds: 3 },
     });
-    showToast('🔔 Test notification sent — watch for it!');
+    showToast('Test notification sent — watch for it!');
+  };
+
+  // Premium: friend & event alerts via local notifications (real cross-user push needs a server — that's a separate paid step)
+  const toggleFriendAlerts = async (v) => {
+    if (!isPremium) { setShowSettings(false); setSheet('paywall'); return; }
+    setSettings(s => ({ ...s, friendAlerts: v }));
+    if (!v) { showToast('Friend & event alerts off'); return; }
+    const ok = await ensureNotifPermission();
+    if (!ok) { showToast('Allow notifications in phone settings'); setSettings(s => ({ ...s, friendAlerts: false })); return; }
+    const activeFriends = FRIENDS.filter(f => f.online);
+    const nextEvent = events.find(e => rsvpd.includes(e.name)) || events[0];
+    if (activeFriends.length) {
+      await Notifications.scheduleNotificationAsync({
+        content: { title: 'One Campus', body: `${activeFriends[0].name}${activeFriends.length > 1 ? ` and ${activeFriends.length - 1} others` : ''} are active on campus right now` },
+        trigger: { seconds: 8 },
+      });
+    }
+    if (nextEvent) {
+      await Notifications.scheduleNotificationAsync({
+        content: { title: `Coming up: ${nextEvent.name}`, body: `${nextEvent.time} ${nextEvent.ampm} at ${nextEvent.location}` },
+        trigger: { seconds: 16 },
+      });
+    }
+    showToast('Friend & event alerts on — watch for a preview');
   };
 
   const rsvp = (name) => {
@@ -525,11 +576,11 @@ export default function App() {
     const earned = addPoints(25);
     const ev = events.find(e => e.name === name);
     if (ev) scheduleEventReminder(ev);
-    showToast(`RSVP'd to ${name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''} · 🔔 reminder set`);
+    showToast(`RSVP'd to ${name}! +${earned} pts${isPremium ? ' (2x)' : ''} · 🔔 reminder set`);
   };
 
   const createEvent = () => {
-    if (!evName.trim()) { showToast('Give your event a name! ✏️'); return; }
+    if (!evName.trim()) { showToast('Give your event a name!'); return; }
     let t = evTime.trim() || '12:00';
     if (!/^\d{1,2}(:\d{2})?$/.test(t)) { showToast('Time should look like 7:00'); return; }
     if (!t.includes(':')) t += ':00';
@@ -537,7 +588,7 @@ export default function App() {
     setSheet(null);
     setEvName(''); setEvTime(''); setEvLoc('');
     const earned = addPoints(50);
-    showToast(`📅 Event created! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+    showToast(`Event created! +${earned} pts${isPremium ? ' (2x)' : ''}`);
   };
 
   /* ── premium ── */
@@ -545,24 +596,24 @@ export default function App() {
     setIsPremium(true);
     setSheet(null);
     setPayStatus(null);
-    showToast('👑 Welcome to Premium! 2x points active');
+    showToast('Welcome to Premium! 2x points active');
   };
 
   const payApple = () => {
-    setPayStatus('Confirm with Face ID 👤');
-    setTimeout(() => setPayStatus('Processing... ⏳'), 1100);
-    setTimeout(() => setPayStatus('Done ✅'), 2100);
+    setPayStatus('Confirm with Face ID');
+    setTimeout(() => setPayStatus('Processing...'), 1100);
+    setTimeout(() => setPayStatus('Done'), 2100);
     setTimeout(activatePremium, 2800);
   };
 
   const payCard = () => {
     const num = cardNum.replace(/\s/g, '');
-    if (num.length < 15) { showToast('Enter a valid card number 💳'); return; }
+    if (num.length < 15) { showToast('Enter a valid card number'); return; }
     if (!/^\d{2}\/\d{2}$/.test(cardExp)) { showToast('Expiry should be MM/YY'); return; }
     if (cardCvv.length < 3) { showToast('Enter your 3-digit CVV'); return; }
-    if (!cardName.trim()) { showToast('Enter the name on the card ✏️'); return; }
-    setPayStatus('Processing payment... ⏳');
-    setTimeout(() => setPayStatus('Payment approved ✅'), 1500);
+    if (!cardName.trim()) { showToast('Enter the name on the card'); return; }
+    setPayStatus('Processing payment...');
+    setTimeout(() => setPayStatus('Payment approved'), 1500);
     setTimeout(activatePremium, 2200);
   };
 
@@ -570,12 +621,12 @@ export default function App() {
     setIsPremium(false);
     if (campus !== 'purdue') { setCampus('purdue'); setCardIdx(0); }
     setSheet(null);
-    showToast('Subscription canceled — Premium ends July 10 💔');
+    showToast('Subscription canceled — Premium ends July 10');
   };
 
   /* ── shop ── */
   const redeem = (r) => {
-    if (points < r.cost) { showToast(`Need ${(r.cost - points).toLocaleString()} more pts! ⚡`); return; }
+    if (points < r.cost) { showToast(`Need ${(r.cost - points).toLocaleString()} more pts!`); return; }
     if (r.id === 'charity') { setSheet('charity'); return; }
     finishRedeem(r, null);
   };
@@ -583,7 +634,7 @@ export default function App() {
   const finishRedeem = (r, cause) => {
     setPoints(p => p - r.cost);
     const code = 'OC-' + Math.random().toString(36).slice(2, 7).toUpperCase();
-    setRedeemed(list => [{ icon: r.icon, name: cause ? `$1 donated to ${cause}` : r.name, code: cause ? 'THANK YOU 💜' : code }, ...list]);
+    setRedeemed(list => [{ icon: r.icon, name: cause ? `$1 donated to ${cause}` : r.name, code: cause ? 'THANK YOU' : code }, ...list]);
     setRewardResult({ r, cause, code });
     setSheet('reward');
   };
@@ -599,7 +650,7 @@ export default function App() {
     if (joined.includes(name)) { showToast(`Already a member of ${name}`); return; }
     setJoined(j => [...j, name]);
     const earned = addPoints(75);
-    showToast(`✓ Joined ${name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+    showToast(`✓ Joined ${name}! +${earned} pts${isPremium ? ' (2x)' : ''}`);
   };
   const [bizTab, setBizTab] = useState('dashboard');
   const [bizCampaigns, setBizCampaigns] = useState([
@@ -614,12 +665,12 @@ export default function App() {
       ? { ...c, status: c.status === 'live' ? 'paused' : 'live' } : c));
   };
   const bizSubmitAd = () => {
-    if (!bizForm.headline.trim()) { showToast('Add a headline for your ad ✏️'); return; }
+    if (!bizForm.headline.trim()) { showToast('Add a headline for your ad'); return; }
     const days = parseInt(bizForm.days, 10) || 7;
     setBizCampaigns(cs => [{ name: bizForm.headline.trim(), type: 'Sponsored Post', status: 'live', impressions: 0, clicks: 0, days, color: '#10B981' }, ...cs]);
     setBizForm({ headline: '', copy: '', cta: '', days: '7' });
     setBizTab('campaigns');
-    showToast(`📢 Campaign launched! $${days * 10} for ${days} days`);
+    showToast(`Campaign launched! $${days * 10} for ${days} days`);
   };
 
   const renderBusinessPortal = () => {
@@ -639,13 +690,14 @@ export default function App() {
         {/* header */}
         <View style={{ flexDirection: 'row', alignItems: 'center', padding: 14, backgroundColor: '#92400E' }}>
           <TouchableOpacity onPress={() => setShowBusiness(false)}><Text style={{ fontSize: 24, color: 'white', paddingRight: 10 }}>‹</Text></TouchableOpacity>
-          <Text style={{ fontSize: 17, fontWeight: '800', color: 'white', flex: 1 }}>📢 Business Portal</Text>
+          <Text style={{ fontSize: 17, fontWeight: '800', color: 'white', flex: 1 }}><Ionicons name="megaphone" size={16} color="white" /> Business Portal</Text>
           <Text style={{ fontSize: 11, color: 'rgba(255,255,255,0.8)' }}>Advertiser</Text>
         </View>
         {/* tabs */}
         <View style={{ flexDirection: 'row', backgroundColor: '#92400E', paddingHorizontal: 8, paddingBottom: 8, gap: 6 }}>
-          {[['dashboard', '📊 Dashboard'], ['campaigns', '📢 Campaigns'], ['create', '✏️ Create Ad']].map(([k, label]) => (
-            <TouchableOpacity key={k} onPress={() => setBizTab(k)} style={{ flex: 1, paddingVertical: 8, borderRadius: 10, backgroundColor: bizTab === k ? 'rgba(255,255,255,0.22)' : 'transparent' }}>
+          {[['dashboard', 'stats-chart', 'Dashboard'], ['campaigns', 'megaphone', 'Campaigns'], ['create', 'create', 'Create Ad']].map(([k, icon, label]) => (
+            <TouchableOpacity key={k} onPress={() => setBizTab(k)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8, borderRadius: 10, backgroundColor: bizTab === k ? 'rgba(255,255,255,0.22)' : 'transparent' }}>
+              <Ionicons name={icon} size={12} color="white" />
               <Text style={{ color: 'white', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}>{label}</Text>
             </TouchableOpacity>
           ))}
@@ -654,16 +706,16 @@ export default function App() {
         <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
           {bizTab === 'dashboard' && (<>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
-              {[['👁️', totalImp.toLocaleString(), 'Impressions'], ['🖱️', totalClicks.toLocaleString(), 'Clicks'], ['💸', '$' + totalSpend.toLocaleString(), 'Total Spend'], ['📢', String(live.length), 'Active Ads']].map(([ic, val, lbl]) => (
+              {[['eye', totalImp.toLocaleString(), 'Impressions'], ['hand-left', totalClicks.toLocaleString(), 'Clicks'], ['cash', '$' + totalSpend.toLocaleString(), 'Total Spend'], ['megaphone', String(live.length), 'Active Ads']].map(([ic, val, lbl]) => (
                 <View key={lbl} style={{ width: '47.5%', backgroundColor: 'white', borderRadius: 16, padding: 16 }}>
-                  <Text style={{ fontSize: 20 }}>{ic}</Text>
+                  <Ionicons name={ic} size={20} color={BIZ} />
                   <Text style={{ fontSize: 22, fontWeight: '900', color: '#1a1a2e', marginTop: 4 }}>{val}</Text>
                   <Text style={{ fontSize: 12, color: '#6B7280' }}>{lbl}</Text>
                 </View>
               ))}
             </View>
             <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 14, marginTop: 14 }}>
-              <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E', marginBottom: 4 }}>💡 How pricing works</Text>
+              <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E', marginBottom: 4 }}><Ionicons name="bulb" size={13} color="#92400E" /> How pricing works</Text>
               <Text style={{ fontSize: 13, color: '#6B7280', lineHeight: 19 }}>Flat rate of <Text style={{ fontWeight: '800', color: '#1a1a2e' }}>$10/day</Text> per ad to reach students on campus. No per-click fees.</Text>
             </View>
             <TouchableOpacity onPress={() => setBizTab('create')} style={{ backgroundColor: BIZ, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14 }}>
@@ -696,7 +748,7 @@ export default function App() {
 
           {bizTab === 'create' && (<>
             <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E', marginBottom: 6 }}>AD CREATIVE</Text>
-            <TextInput value={bizForm.headline} onChangeText={v => setBizForm(f => ({ ...f, headline: v }))} placeholder="Headline (e.g. 30-min delivery 🍕)" placeholderTextColor="#9CA3AF" style={bizInput} />
+            <TextInput value={bizForm.headline} onChangeText={v => setBizForm(f => ({ ...f, headline: v }))} placeholder="Headline (e.g. 30-min delivery)" placeholderTextColor="#9CA3AF" style={bizInput} />
             <TextInput value={bizForm.copy} onChangeText={v => setBizForm(f => ({ ...f, copy: v }))} placeholder="Ad copy — describe your offer" placeholderTextColor="#9CA3AF" multiline style={[bizInput, { height: 70, textAlignVertical: 'top' }]} />
             <TextInput value={bizForm.cta} onChangeText={v => setBizForm(f => ({ ...f, cta: v }))} placeholder="Button text (e.g. Order Now)" placeholderTextColor="#9CA3AF" style={bizInput} />
             <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E', marginVertical: 6 }}>DAYS TO RUN</Text>
@@ -706,7 +758,7 @@ export default function App() {
             <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E', marginBottom: 6 }}>LIVE PREVIEW</Text>
             <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 14, borderWidth: 1, borderColor: '#F3F4F6' }}>
               <Text style={{ fontSize: 10, color: '#9CA3AF', fontWeight: '700', marginBottom: 6 }}>SPONSORED</Text>
-              <View style={{ height: 90, borderRadius: 12, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}><Text style={{ fontSize: 30 }}>📢</Text></View>
+              <View style={{ height: 90, borderRadius: 12, backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center' }}><Ionicons name="megaphone" size={30} color={BIZ} /></View>
               <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e', marginTop: 8 }}>{bizForm.headline || 'Your headline here'}</Text>
               <Text style={{ fontSize: 12, color: '#6B7280', marginVertical: 4 }}>{bizForm.copy || 'Your ad copy will appear here…'}</Text>
               <View style={{ backgroundColor: BIZ, borderRadius: 10, paddingVertical: 9, alignItems: 'center', marginTop: 4 }}><Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{bizForm.cta || 'Call to Action'}</Text></View>
@@ -724,14 +776,14 @@ export default function App() {
   const requestMyLocation = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== 'granted') { showToast('📍 Location permission denied'); return; }
+      if (status !== 'granted') { showToast('Location permission denied'); return; }
       const pos = await Location.getCurrentPositionAsync({ accuracy: Location.Accuracy.Balanced });
       const loc = { lat: pos.coords.latitude, lng: pos.coords.longitude };
       setMyLoc(loc);
       mapRef.current?.animateToRegion({ latitude: loc.lat, longitude: loc.lng, latitudeDelta: 0.012, longitudeDelta: 0.012 }, 600);
-      showToast('📍 Using your real location');
+      showToast('Using your real location');
     } catch (e) {
-      showToast('Could not get location 📶');
+      showToast('Could not get location');
     }
   };
 
@@ -739,7 +791,7 @@ export default function App() {
   const [directions, setDirections] = useState(null); // { url, label } | null
   const openDirections = (place) => {
     const b = BUILDINGS.find(x => place.includes(x.name) || place.includes(x.full));
-    if (!b) { showToast('📍 Location not on the campus map yet'); return; }
+    if (!b) { showToast('Location not on the campus map yet'); return; }
     const origin = myLoc ? `${myLoc.lat},${myLoc.lng}` : `${YOU.lat},${YOU.lng}`;
     const url = `https://maps.google.com/maps?saddr=${origin}&daddr=${b.lat},${b.lng}&mode=walking&output=embed`;
     setDirections({ url, label: place });
@@ -751,7 +803,7 @@ export default function App() {
     const m = s.maneuver || {};
     const dir = (m.modifier || '').includes('left') ? '←' : (m.modifier || '').includes('right') ? '→' : '↑';
     if (m.type === 'depart') return `↑ Head out${road}${dist}`;
-    if (m.type === 'arrive') return `🏁 You've arrived!`;
+    if (m.type === 'arrive') return `You've arrived!`;
     if (m.type === 'turn' || m.type === 'end of road' || m.type === 'fork') return `${dir} Turn ${m.modifier || ''}${road}${dist}`;
     if (m.type === 'new name' || m.type === 'continue') return `↑ Continue${road}${dist}`;
     return `${dir} ${m.type || 'Continue'}${road}${dist}`;
@@ -793,8 +845,9 @@ export default function App() {
           {Object.entries(CAMPUSES).map(([key, c]) => {
             const locked = !c.free && !isPremium && key !== homeCampus;
             return (
-              <TouchableOpacity key={key} onPress={() => pickCampus(key)} style={[st.pill, { backgroundColor: campus === key ? A : T.card, marginRight: 8 }]}>
-                <Text style={{ color: campus === key ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{locked ? '🔒' : c.emoji} {c.name}</Text>
+              <TouchableOpacity key={key} onPress={() => pickCampus(key)} style={[st.pill, { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: campus === key ? A : T.card, marginRight: 8 }]}>
+                <Ionicons name={locked ? 'lock-closed' : 'school'} size={11} color={campus === key ? 'white' : T.subtext} />
+                <Text style={{ color: campus === key ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{c.name}</Text>
               </TouchableOpacity>
             );
           })}
@@ -810,8 +863,8 @@ export default function App() {
               <Text style={st.clubName}>{club.name}</Text>
               <Text style={st.clubDesc} numberOfLines={2}>{club.desc}</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                <View style={st.metaPill}><Text style={st.metaPillText}>👥 {club.members.toLocaleString()}</Text></View>
-                <View style={st.metaPill}><Text style={st.metaPillText}>📍 {club.location}</Text></View>
+                <View style={st.metaPill}><Text style={st.metaPillText}><Ionicons name="people" size={11} color="white" /> {club.members.toLocaleString()}</Text></View>
+                <View style={st.metaPill}><Text style={st.metaPillText}><Ionicons name="location" size={11} color="white" /> {club.location}</Text></View>
                 {joined.includes(club.name) && <View style={[st.metaPill, { backgroundColor: 'rgba(255,255,255,0.45)' }]}><Text style={st.metaPillText}>✓ Joined</Text></View>}
               </View>
               <Text style={{ color: 'white', fontSize: 12, fontWeight: '800', marginTop: 10 }}>ⓘ Tap to view full details →</Text>
@@ -819,15 +872,15 @@ export default function App() {
           </TouchableOpacity>
         ) : (
           <View style={[st.clubCard, { backgroundColor: T.card, alignItems: 'center', justifyContent: 'center' }]}>
-            <Text style={{ fontSize: 40 }}>🔍</Text>
+            <Ionicons name="search" size={40} color={T.subtext} />
             <Text style={{ fontSize: 16, fontWeight: '800', color: T.text, marginTop: 6 }}>No {interest} clubs yet</Text>
             <Text style={{ fontSize: 12, color: T.subtext, marginTop: 4 }}>Try another interest!</Text>
           </View>
         )}
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginVertical: 14 }}>
-          <TouchableOpacity onPress={() => swipe('skip')} style={[st.actionBtn, { backgroundColor: T.card }]}><Text style={{ fontSize: 20 }}>✕</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => swipe('super')} style={[st.actionBtn, { backgroundColor: '#FF6B35' }]}><Text style={{ fontSize: 20 }}>⭐</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => swipe('join')} style={[st.actionBtn, { backgroundColor: A }]}><Text style={{ fontSize: 20, color: 'white' }}>✓</Text></TouchableOpacity>
+          <TouchableOpacity onPress={() => swipe('skip')} style={[st.actionBtn, { backgroundColor: T.card }]}><Ionicons name="close" size={22} color={T.subtext} /></TouchableOpacity>
+          <TouchableOpacity onPress={() => swipe('super')} style={[st.actionBtn, { backgroundColor: '#FF6B35' }]}><Ionicons name="star" size={20} color="white" /></TouchableOpacity>
+          <TouchableOpacity onPress={() => swipe('join')} style={[st.actionBtn, { backgroundColor: A }]}><Ionicons name="checkmark" size={22} color="white" /></TouchableOpacity>
         </View>
         <Text style={[st.sectionLabel, { color: T.subtext }]}>FILTER BY INTEREST</Text>
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
@@ -870,13 +923,13 @@ export default function App() {
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{e.name}</Text>
                 <Text style={{ fontSize: 12, color: T.subtext }}>
-                  📍 {e.location}{'  '}
+                  <Ionicons name="location" size={12} color={T.subtext} /> {e.location}{'  '}
                   <Text onPress={() => openDirections(e.location)} style={{ color: '#34A853', fontWeight: '800' }}><Ionicons name="navigate" size={12} color="#34A853" /> Directions</Text>
                 </Text>
               </View>
               <View style={[st.badge, { backgroundColor: e.mine ? '#EDE9FE' : going ? '#F0FDF4' : '#FEE2E2' }]}>
                 <Text style={{ fontSize: 11, fontWeight: '700', color: e.mine ? A : going ? '#22c55e' : '#EF4444' }}>
-                  {e.mine ? '⭐ Host' : going ? '✓ Going' : e.badge === 'live' ? '🔴 Live' : e.badge === 'today' ? 'Today' : 'Soon'}
+                  {e.mine ? 'Host' : going ? '✓ Going' : e.badge === 'live' ? 'Live' : e.badge === 'today' ? 'Today' : 'Soon'}
                 </Text>
               </View>
             </TouchableOpacity>
@@ -955,7 +1008,7 @@ export default function App() {
               <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
                 {here.map(f => (
                   <TouchableOpacity key={f.name} onPress={() => setChatWith(f.name)} style={[st.friendChip, { backgroundColor: f.color }]}>
-                    <Text style={{ color: 'white', fontWeight: '700', fontSize: 12 }}>{f.initial} {f.name} 💬</Text>
+                    <Text style={{ color: 'white', fontWeight: '700', fontSize: 12 }}>{f.initial} {f.name} <Ionicons name="chatbubble" size={11} color="white" /></Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -965,9 +1018,9 @@ export default function App() {
                 if (joined.includes(c.name)) { showToast(`Already a member of ${c.name}`); return; }
                 setJoined(j => [...j, c.name]);
                 const earned = addPoints(75);
-                showToast(`✓ Joined ${c.name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+                showToast(`✓ Joined ${c.name}! +${earned} pts${isPremium ? ' (2x)' : ''}`);
               }} style={[st.clubRow, { borderColor: T.border }]}>
-                <Text style={{ fontSize: 12.5, fontWeight: '600', color: T.text, flex: 1 }}>🏛️ {c.name} · {c.members} members</Text>
+                <Text style={{ fontSize: 12.5, fontWeight: '600', color: T.text, flex: 1 }}><Ionicons name="business" size={12} color={T.text} /> {c.name} · {c.members} members</Text>
                 <Text style={{ fontSize: 12, fontWeight: '800', color: joined.includes(c.name) ? '#22c55e' : A }}>{joined.includes(c.name) ? '✓ Joined' : '+ Join'}</Text>
               </TouchableOpacity>
             ))}
@@ -985,13 +1038,23 @@ export default function App() {
           <View>
             <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 13, fontWeight: '700' }}>{profile.name}</Text>
             <Text style={{ color: 'white', fontSize: 32, fontWeight: '900' }}>{points.toLocaleString()}</Text>
-            <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11 }}>Campus Explorer · {profile.major} {isPremium ? '· 👑 PRO' : ''}</Text>
+            <Text style={{ color: 'rgba(255,255,255,0.75)', fontSize: 11 }}>Campus Explorer · {profile.major}{isPremium ? ' · PRO' : ''}</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 6 }}>
+              <Ionicons name="flame" size={14} color={streak > 0 ? '#FDBA74' : 'rgba(255,255,255,0.5)'} />
+              <Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>{streak} day streak</Text>
+              {isPremium && (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: 'rgba(255,255,255,0.2)', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
+                  <Ionicons name="shield-checkmark" size={10} color="#fff" />
+                  <Text style={{ color: 'white', fontSize: 9, fontWeight: '800' }}>Protected</Text>
+                </View>
+              )}
+            </View>
           </View>
         </View>
       </View>
       {isPremium ? (
         <TouchableOpacity onPress={() => setSheet('planner')} style={[st.upgradeBanner, { backgroundColor: dark ? '#2E2942' : '#EDE9FE' }]}>
-          <Text style={{ fontSize: 22 }}>🤖</Text>
+          <Ionicons name="sparkles" size={22} color={A} />
           <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={{ fontWeight: '800', fontSize: 13, color: T.text }}>AI Organizer <Text style={{ color: '#F59E0B' }}>PRO</Text></Text>
             <Text style={{ fontSize: 11, color: T.subtext }}>Your day & night, planned by AI</Text>
@@ -1000,17 +1063,18 @@ export default function App() {
         </TouchableOpacity>
       ) : (
         <TouchableOpacity onPress={() => setSheet('paywall')} style={[st.upgradeBanner, { backgroundColor: dark ? '#3A2E1E' : '#FEF3C7' }]}>
-          <Text style={{ fontSize: 22 }}>⭐</Text>
+          <Ionicons name="star" size={22} color="#F59E0B" />
           <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={{ fontWeight: '800', fontSize: 13, color: dark ? '#FDE68A' : '#92400E' }}>One Campus Premium ✨</Text>
+            <Text style={{ fontWeight: '800', fontSize: 13, color: dark ? '#FDE68A' : '#92400E' }}>One Campus Premium</Text>
             <Text style={{ fontSize: 11, color: dark ? '#D9C58A' : '#B45309' }}>2x points · AI organizer · all campuses</Text>
           </View>
           <View style={st.upgradeBtn}><Text style={{ color: 'white', fontSize: 12, fontWeight: '800' }}>Upgrade</Text></View>
         </TouchableOpacity>
       )}
       <View style={{ flexDirection: 'row', gap: 8, marginVertical: 12 }}>
-        {[['badges', '🏅 Badges'], ['weekly', '⚡ Weekly'], ['shop', '🎁 Shop']].map(([k, label]) => (
-          <TouchableOpacity key={k} onPress={() => setPtsTab(k)} style={[st.tabBtn, { backgroundColor: ptsTab === k ? A : T.card }]}>
+        {[['badges', 'ribbon', 'Badges'], ['weekly', 'flash', 'Weekly'], ['shop', 'gift', 'Shop']].map(([k, icon, label]) => (
+          <TouchableOpacity key={k} onPress={() => setPtsTab(k)} style={[st.tabBtn, { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, backgroundColor: ptsTab === k ? A : T.card }]}>
+            <Ionicons name={icon} size={13} color={ptsTab === k ? 'white' : T.subtext} />
             <Text style={{ color: ptsTab === k ? 'white' : T.subtext, fontSize: 12, fontWeight: '700' }}>{label}</Text>
           </TouchableOpacity>
         ))}
@@ -1019,7 +1083,7 @@ export default function App() {
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
           {BADGES.map(b => (
             <View key={b.name} style={[st.badgeCard, { backgroundColor: T.card }]}>
-              <Text style={{ fontSize: 26 }}>{b.icon}</Text>
+              <Ionicons name={b.icon} size={26} color={A} />
               <Text style={{ fontSize: 13, fontWeight: '700', color: T.text }}>{b.name}</Text>
               <Text style={{ fontSize: 11, color: T.subtext }}>{b.desc}</Text>
               <Text style={{ fontSize: 11, color: A, fontWeight: '700', marginTop: 3 }}>{b.pts} pts</Text>
@@ -1031,26 +1095,26 @@ export default function App() {
         { name: profile.name, pts: points, you: true }, { name: 'Maya L.', pts: 2210 }, { name: 'Jordan R.', pts: 1980 }, { name: 'Priya M.', pts: 1750 }, { name: 'Tyler B.', pts: 1600 },
       ].map((u, i) => (
         <View key={u.name} style={[st.leaderRow, { backgroundColor: u.you ? (dark ? '#2E2942' : '#EDE9FE') : T.card }]}>
-          <Text style={{ fontSize: 16, minWidth: 30 }}>{['🥇', '🥈', '🥉', '#4', '#5'][i]}</Text>
+          <Text style={{ fontSize: 14, fontWeight: '800', minWidth: 30, color: i < 3 ? A : T.subtext }}>{`#${i + 1}`}</Text>
           <Text style={{ flex: 1, fontSize: 14, fontWeight: '700', color: T.text }}>{u.name}{u.you ? ' (You)' : ''}</Text>
-          <Text style={{ fontSize: 13, fontWeight: '700', color: A }}>⚡ {u.pts.toLocaleString()}</Text>
+          <Text style={{ fontSize: 13, fontWeight: '700', color: A }}><Ionicons name="flash" size={12} color={A} /> {u.pts.toLocaleString()}</Text>
         </View>
       ))}
       {ptsTab === 'shop' && (
         <View>
-          <Text style={{ textAlign: 'center', fontSize: 12, color: T.subtext, marginBottom: 10 }}>You have <Text style={{ color: A, fontWeight: '800' }}>⚡ {points.toLocaleString()} pts</Text> to spend</Text>
+          <Text style={{ textAlign: 'center', fontSize: 12, color: T.subtext, marginBottom: 10 }}>You have <Text style={{ color: A, fontWeight: '800' }}><Ionicons name="flash" size={12} color={A} /> {points.toLocaleString()} pts</Text> to spend</Text>
           {REWARDS.map(r => {
             const afford = points >= r.cost;
             return (
               <View key={r.id} style={[st.rewardRow, { backgroundColor: T.card, opacity: afford ? 1 : 0.55 }]}>
-                <Text style={{ fontSize: 24 }}>{r.icon}</Text>
+                <Ionicons name={r.icon} size={24} color={A} />
                 <View style={{ flex: 1, marginHorizontal: 10 }}>
                   <Text style={{ fontSize: 13, fontWeight: '700', color: T.text }}>{r.name}</Text>
                   <Text style={{ fontSize: 11, color: T.subtext }}>{r.desc}</Text>
                   <Text style={{ fontSize: 10, color: T.subtext, opacity: 0.7 }}>{r.sponsor}</Text>
                 </View>
                 <TouchableOpacity onPress={() => redeem(r)} style={[st.redeemBtn, { backgroundColor: afford ? A : T.border }]}>
-                  <Text style={{ color: afford ? 'white' : T.subtext, fontSize: 11, fontWeight: '800' }}>⚡ {r.cost.toLocaleString()}</Text>
+                  <Text style={{ color: afford ? 'white' : T.subtext, fontSize: 11, fontWeight: '800' }}><Ionicons name="flash" size={11} color={afford ? 'white' : T.subtext} /> {r.cost.toLocaleString()}</Text>
                 </TouchableOpacity>
               </View>
             );
@@ -1058,7 +1122,7 @@ export default function App() {
           {redeemed.length > 0 && <Text style={[st.sectionLabel, { color: T.subtext, marginTop: 10 }]}>MY REDEMPTIONS</Text>}
           {redeemed.map((r, i) => (
             <View key={i} style={[st.rewardRow, { backgroundColor: dark ? '#1E3328' : '#F0FDF4' }]}>
-              <Text style={{ fontSize: 18 }}>{r.icon}</Text>
+              <Ionicons name={r.icon} size={18} color={A} />
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={{ fontSize: 12.5, fontWeight: '700', color: '#16A34A' }}>{r.name}</Text>
                 <Text style={{ fontSize: 11, color: '#22c55e', fontWeight: '700', letterSpacing: 1 }}>{r.code}</Text>
@@ -1086,10 +1150,10 @@ export default function App() {
         <TouchableOpacity key={f.name} onPress={() => setChatWith(f.name)} style={[st.friendRow, { backgroundColor: T.card }]}>
           <View style={[st.avatar, { backgroundColor: f.color }]}><Text style={{ color: 'white', fontWeight: '700' }}>{f.initial}</Text></View>
           <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{f.name} {f.online ? '🟢' : ''}</Text>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{f.name} {f.online ? <Ionicons name="ellipse" size={9} color="#22c55e" /> : null}</Text>
             <Text style={{ fontSize: 12, color: T.subtext }}>{f.major}</Text>
           </View>
-          <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>Message 💬</Text>
+          <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>Message <Ionicons name="chatbubble" size={11} color={A} /></Text>
         </TouchableOpacity>
       )) : (<>
         {/* composer */}
@@ -1119,39 +1183,47 @@ export default function App() {
           const cColor = postColor(p.author || '?');
           return (
             <View key={p.id}>
-              <View style={[st.postCard, { backgroundColor: T.card }]}>
+              <View style={[st.postCard, { backgroundColor: T.card }, p.premium && { borderWidth: 1.5, borderColor: '#F59E0B' }]}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                   <View style={[st.avatar, { backgroundColor: cColor }]}><Text style={{ color: 'white', fontWeight: '700' }}>{(p.author || '?')[0].toUpperCase()}</Text></View>
                   <View style={{ flex: 1 }}>
-                    <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.author}{p.major ? ` · ${p.major}` : ''}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.author}{p.major ? ` · ${p.major}` : ''}</Text>
+                      {p.premium && (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#FEF3C7', borderRadius: 7, paddingHorizontal: 5, paddingVertical: 1 }}>
+                          <Ionicons name="star" size={9} color="#B45309" />
+                          <Text style={{ fontSize: 8.5, fontWeight: '800', color: '#B45309' }}>SPOTLIGHT</Text>
+                        </View>
+                      )}
+                    </View>
                     <Text style={{ fontSize: 11, color: T.subtext }}>{timeAgo(p.createdAt)}</Text>
                   </View>
                   {p.uid === user.uid && (
-                    <TouchableOpacity onPress={() => deletePost(p)}><Text style={{ fontSize: 16, color: T.subtext }}>🗑️</Text></TouchableOpacity>
+                    <TouchableOpacity onPress={() => deletePost(p)}><Ionicons name="trash-outline" size={17} color={T.subtext} /></TouchableOpacity>
                   )}
                 </View>
                 <Text style={{ fontSize: 14, color: T.text, marginVertical: 8, lineHeight: 20 }}>{p.text}</Text>
                 <View style={{ flexDirection: 'row', gap: 20, borderTopWidth: 1, borderColor: T.border, paddingTop: 8 }}>
                   <TouchableOpacity onPress={() => toggleLikePost(p)}>
-                    <Text style={{ fontSize: 13, color: iLiked ? '#EF4444' : T.subtext, fontWeight: '700' }}>{iLiked ? '❤️' : '🤍'} {likeCount}</Text>
+                    <Text style={{ fontSize: 13, color: iLiked ? '#EF4444' : T.subtext, fontWeight: '700' }}><Ionicons name={iLiked ? 'heart' : 'heart-outline'} size={14} color={iLiked ? '#EF4444' : T.subtext} /> {likeCount}</Text>
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => setCommentOn(p)}>
-                    <Text style={{ fontSize: 13, color: T.subtext, fontWeight: '700' }}>💬 {(p.comments || []).length}</Text>
+                    <Text style={{ fontSize: 13, color: T.subtext, fontWeight: '700' }}><Ionicons name="chatbubble-outline" size={13} color={T.subtext} /> {(p.comments || []).length}</Text>
                   </TouchableOpacity>
                 </View>
               </View>
-              {(i + 1) % 3 === 0 && ADS[Math.floor(i / 3) % ADS.length] && (() => {
+              {!isPremium && (i + 1) % 3 === 0 && ADS[Math.floor(i / 3) % ADS.length] && (() => {
                 const ad = ADS[Math.floor(i / 3) % ADS.length];
                 return (
                   <View style={[st.postCard, { backgroundColor: T.card, borderWidth: 1, borderColor: T.border }]}>
                     <Text style={{ fontSize: 10, color: T.subtext, fontWeight: '700', letterSpacing: 0.5, marginBottom: 6 }}>SPONSORED</Text>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      <View style={[st.avatar, { backgroundColor: ad.color, borderRadius: 12 }]}><Text style={{ fontSize: 18 }}>{ad.logo}</Text></View>
+                      <View style={[st.avatar, { backgroundColor: ad.color, borderRadius: 12 }]}><Ionicons name={ad.logo} size={18} color="white" /></View>
                       <View><Text style={{ fontSize: 14, fontWeight: '800', color: T.text }}>{ad.brand}</Text><Text style={{ fontSize: 11, color: T.subtext }}>{ad.cat}</Text></View>
                     </View>
                     <Text style={{ fontSize: 14, fontWeight: '800', color: T.text, marginTop: 8 }}>{ad.headline}</Text>
                     <Text style={{ fontSize: 12, color: T.subtext, marginVertical: 4 }}>{ad.copy}</Text>
-                    <TouchableOpacity onPress={() => showToast(`Opening ${ad.brand}... 🔗`)} style={[st.ctaBtn, { backgroundColor: ad.color }]}>
+                    <TouchableOpacity onPress={() => showToast(`Opening ${ad.brand}...`)} style={[st.ctaBtn, { backgroundColor: ad.color }]}>
                       <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{ad.cta}</Text>
                     </TouchableOpacity>
                   </View>
@@ -1177,12 +1249,20 @@ export default function App() {
               <View style={[st.handle, { backgroundColor: T.border }]} />
 
               {sheet === 'paywall' && (<>
-                <Text style={st.sheetEmoji}>👑</Text>
+                <View style={{ alignItems: 'center', marginBottom: 4 }}><Ionicons name="star" size={42} color="#F59E0B" /></View>
                 <Text style={[st.sheetTitle, { color: '#F59E0B' }]}>One Campus Premium</Text>
                 <Text style={[st.sheetSub, { color: T.subtext }]}>$7.99 / month · cancel anytime</Text>
-                {[['⚡', 'Double Points', 'Earn 2x on every join, RSVP, and friend.'], ['🤖', 'AI Day / Night Organizer', 'AI plans your campus day & social night.'], ['🌎', 'All Local Campuses', 'IU, Notre Dame, Butler, Ball State, Rose-Hulman & IUPUI.']].map(([icon, name, desc]) => (
-                  <View key={name} style={{ flexDirection: 'row', gap: 12, paddingVertical: 9 }}>
-                    <Text style={{ fontSize: 22 }}>{icon}</Text>
+                {[
+                  ['flash', 'Double Points', 'Earn 2x on every join, RSVP, and friend.'],
+                  ['shield-checkmark', 'Streak Insurance', 'Miss a day? Your streak is automatically protected.'],
+                  ['eye-off', 'Ad-Free Feed', 'No sponsored posts in your campus feed.'],
+                  ['star', 'Profile Spotlight', 'Your posts get a highlighted spotlight in the feed.'],
+                  ['notifications', 'Friend & Event Alerts', 'Get notified when friends are active & events are near.'],
+                  ['sparkles', 'AI Day / Night Organizer', 'AI plans your campus day & social night.'],
+                  ['earth', 'All Local Campuses', 'IU, Notre Dame, Butler, Ball State, Rose-Hulman & IUPUI.'],
+                ].map(([icon, name, desc]) => (
+                  <View key={name} style={{ flexDirection: 'row', gap: 12, paddingVertical: 9, alignItems: 'center' }}>
+                    <View style={{ width: 26, alignItems: 'center' }}><Ionicons name={icon} size={20} color="#F59E0B" /></View>
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{name}</Text>
                       <Text style={{ fontSize: 12, color: T.subtext }}>{desc}</Text>
@@ -1197,12 +1277,12 @@ export default function App() {
               {sheet === 'payment' && (<>
                 {payStatus ? (
                   <View style={{ alignItems: 'center', paddingVertical: 30 }}>
-                    <Text style={{ fontSize: 48 }}>{payStatus.includes('✅') ? '✅' : payStatus.includes('⏳') ? '⏳' : '👤'}</Text>
+                    <Ionicons name={/done|approved/i.test(payStatus) ? 'checkmark-circle' : /processing/i.test(payStatus) ? 'hourglass-outline' : 'person-circle-outline'} size={48} color={A} />
                     <Text style={{ fontSize: 16, fontWeight: '800', color: T.text, marginTop: 10 }}>{payStatus}</Text>
                     <Text style={{ fontSize: 12, color: T.subtext, marginTop: 4 }}>One Campus Premium · $7.99/mo</Text>
                   </View>
                 ) : (<>
-                  <Text style={st.sheetEmoji}>💳</Text>
+                  <View style={{ alignItems: 'center', marginBottom: 4 }}><Ionicons name="card" size={42} color={A} /></View>
                   <Text style={[st.sheetTitle, { color: A }]}>Checkout</Text>
                   <Text style={[st.sheetSub, { color: T.subtext }]}>One Campus Premium · $7.99/month</Text>
                   <TouchableOpacity onPress={payApple} style={[st.bigBtn, { backgroundColor: '#000' }]}><Text style={st.bigBtnText}> Pay with Apple Pay</Text></TouchableOpacity>
@@ -1215,30 +1295,30 @@ export default function App() {
                   <TextInput value={cardName} onChangeText={setCardName} placeholder="Name on card" placeholderTextColor={T.subtext} style={[st.input, { backgroundColor: T.bg, color: T.text, borderColor: T.border }]} />
                   <TouchableOpacity onPress={payCard} style={st.bigBtn}><Text style={st.bigBtnText}>Pay $7.99 →</Text></TouchableOpacity>
                   <TouchableOpacity onPress={() => setSheet('paywall')}><Text style={[st.skipText, { color: T.subtext }]}>‹ Back</Text></TouchableOpacity>
-                  <Text style={[st.fine, { color: T.subtext }]}>🔒 Demo checkout — nothing is charged or stored.</Text>
+                  <Text style={[st.fine, { color: T.subtext }]}>Demo checkout — nothing is charged or stored.</Text>
                 </>)}
               </>)}
 
               {sheet === 'planner' && (<>
-                <Text style={st.sheetEmoji}>🤖</Text>
+                <View style={{ alignItems: 'center', marginBottom: 4 }}><Ionicons name="sparkles" size={42} color={A} /></View>
                 <Text style={[st.sheetTitle, { color: A }]}>Your AI-Planned Day</Text>
                 <View style={[st.plannerBlock, { backgroundColor: dark ? '#3A2E1E' : '#FEF3C7' }]}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: dark ? '#FDE68A' : '#92400E', marginBottom: 8 }}>☀️ DAYTIME</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: dark ? '#FDE68A' : '#92400E', marginBottom: 8 }}><Ionicons name="sunny" size={12} color={dark ? '#FDE68A' : '#92400E'} /> DAYTIME</Text>
                   {[['8:30 AM', 'Breakfast at PMU — beats the rush'], ['10:00 AM', 'Career Fair @ PMU Ballrooms — 3 friends going'], ['12:30 PM', 'Lunch with Maya — 4 min from you'], ['2:00 PM', 'Study: WALC 2nd floor is 40% empty'], ['4:30 PM', 'CoRec workout with Tyler']].map(([t, w]) => (
                     <Text key={t} style={{ fontSize: 12.5, color: dark ? '#E8D9B0' : '#78350F', marginBottom: 5 }}><Text style={{ fontWeight: '800' }}>{t}</Text>  {w}</Text>
                   ))}
                 </View>
                 <View style={[st.plannerBlock, { backgroundColor: '#1a1a2e' }]}>
-                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#C7D2FE', marginBottom: 8 }}>🌙 TONIGHT</Text>
+                  <Text style={{ fontSize: 12, fontWeight: '800', color: '#C7D2FE', marginBottom: 8 }}><Ionicons name="moon" size={12} color="#C7D2FE" /> TONIGHT</Text>
                   {[['6:00 PM', 'NSBE Meeting @ ARMS — ~100 pts (2x)'], ['7:30 PM', 'Hack Purdue — Maya needs a frontend dev'], ['9:30 PM', 'Astronomy Night rooftop hangout'], ['11:00 PM', 'Wind down — quiz at 10:30 tomorrow']].map(([t, w]) => (
                     <Text key={t} style={{ fontSize: 12.5, color: '#E0E7FF', marginBottom: 5 }}><Text style={{ fontWeight: '800', color: '#A5B4FC' }}>{t}</Text>  {w}</Text>
                   ))}
                 </View>
-                <TouchableOpacity onPress={() => { close(); const earned = addPoints(25); showToast(`Day added to calendar! 📅 +${earned} pts`); }} style={st.bigBtn}><Text style={st.bigBtnText}>Add All to My Calendar</Text></TouchableOpacity>
+                <TouchableOpacity onPress={() => { close(); const earned = addPoints(25); showToast(`Day added to calendar! +${earned} pts`); }} style={st.bigBtn}><Text style={st.bigBtnText}>Add All to My Calendar</Text></TouchableOpacity>
               </>)}
 
               {sheet === 'addEvent' && (<>
-                <Text style={st.sheetEmoji}>📅</Text>
+                <View style={{ alignItems: 'center', marginBottom: 4 }}><Ionicons name="calendar" size={42} color={A} /></View>
                 <Text style={[st.sheetTitle, { color: A }]}>Create Event</Text>
                 <Text style={[st.label, { color: T.subtext }]}>EVENT NAME</Text>
                 <TextInput value={evName} onChangeText={setEvName} placeholder="e.g. CS Study Jam" placeholderTextColor={T.subtext} style={[st.input, { backgroundColor: T.bg, color: T.text, borderColor: T.border }]} />
@@ -1270,17 +1350,17 @@ export default function App() {
                     <TouchableOpacity key={c} onPress={() => setEvColor(c)} style={[st.colorDot, { backgroundColor: c, borderWidth: evColor === c ? 3 : 0, borderColor: T.text }]} />
                   ))}
                 </View>
-                <TouchableOpacity onPress={createEvent} style={st.bigBtn}><Text style={st.bigBtnText}>Create Event ⚡</Text></TouchableOpacity>
+                <TouchableOpacity onPress={createEvent} style={st.bigBtn}><Text style={st.bigBtnText}>Create Event</Text></TouchableOpacity>
                 <TouchableOpacity onPress={close}><Text style={[st.skipText, { color: T.subtext }]}>Cancel</Text></TouchableOpacity>
               </>)}
 
               {sheet === 'charity' && (<>
-                <Text style={st.sheetEmoji}>❤️</Text>
+                <View style={{ alignItems: 'center', marginBottom: 4 }}><Ionicons name="heart" size={42} color="#EF4444" /></View>
                 <Text style={[st.sheetTitle, { color: A }]}>Pick Your Cause</Text>
                 <Text style={[st.sheetSub, { color: T.subtext }]}>1,000 pts → One Campus donates $1 where you vote</Text>
                 {CAUSES.map(c => (
                   <TouchableOpacity key={c.name} onPress={() => finishRedeem(REWARDS.find(r => r.id === 'charity'), c.name)} style={[st.causeRow, { borderColor: T.border }]}>
-                    <Text style={{ fontSize: 20 }}>{c.emoji}</Text>
+                    <Ionicons name={c.emoji} size={20} color={A} />
                     <Text style={{ fontSize: 14, fontWeight: '700', color: T.text, marginLeft: 10 }}>{c.name}</Text>
                   </TouchableOpacity>
                 ))}
@@ -1288,23 +1368,23 @@ export default function App() {
               </>)}
 
               {sheet === 'reward' && rewardResult && (<>
-                <Text style={st.sheetEmoji}>{rewardResult.cause ? '❤️' : '🎉'}</Text>
+                <View style={{ alignItems: 'center', marginBottom: 4 }}><Ionicons name={rewardResult.cause ? 'heart' : 'gift'} size={42} color={rewardResult.cause ? '#EF4444' : A} /></View>
                 <Text style={[st.sheetTitle, { color: A }]}>{rewardResult.cause ? 'Donation Made!' : 'Reward Unlocked!'}</Text>
                 {rewardResult.cause ? (
-                  <Text style={[st.sheetSub, { color: T.subtext }]}>One Campus is donating $1 to {rewardResult.cause} on behalf of students like you. 💜</Text>
+                  <Text style={[st.sheetSub, { color: T.subtext }]}>One Campus is donating $1 to {rewardResult.cause} on behalf of students like you.</Text>
                 ) : (<>
                   <Text style={[st.sheetSub, { color: T.subtext }]}>Show this code at the register:</Text>
                   <View style={[st.codeBox, { borderColor: A }]}><Text style={{ fontSize: 22, fontWeight: '900', color: A, letterSpacing: 3 }}>{rewardResult.code}</Text></View>
                 </>)}
-                <Text style={{ textAlign: 'center', fontSize: 12, color: T.subtext, marginTop: 8 }}>New balance: ⚡ {points.toLocaleString()}</Text>
+                <Text style={{ textAlign: 'center', fontSize: 12, color: T.subtext, marginTop: 8 }}>New balance: <Ionicons name="flash" size={12} color={T.subtext} /> {points.toLocaleString()}</Text>
                 <TouchableOpacity onPress={close} style={st.bigBtn}><Text style={st.bigBtnText}>Done</Text></TouchableOpacity>
               </>)}
 
               {sheet === 'cancelSub' && (<>
-                <Text style={st.sheetEmoji}>😢</Text>
+                <View style={{ alignItems: 'center', marginBottom: 4 }}><Ionicons name="sad-outline" size={42} color="#F59E0B" /></View>
                 <Text style={[st.sheetTitle, { color: '#F59E0B' }]}>Cancel Premium?</Text>
                 <Text style={[st.sheetSub, { color: T.subtext }]}>You'll lose 2x points, the AI organizer, and all-campus access.</Text>
-                <TouchableOpacity onPress={close} style={st.bigBtn}><Text style={st.bigBtnText}>Keep Premium 👑</Text></TouchableOpacity>
+                <TouchableOpacity onPress={close} style={st.bigBtn}><Text style={st.bigBtnText}>Keep Premium</Text></TouchableOpacity>
                 <TouchableOpacity onPress={cancelSub}><Text style={[st.skipText, { color: '#EF4444', fontWeight: '700' }]}>Cancel anyway</Text></TouchableOpacity>
               </>)}
             </ScrollView>
@@ -1373,7 +1453,7 @@ export default function App() {
           <View style={[st.setCard, { backgroundColor: T.card }]}>
             {isPremium ? (<>
               <View style={st.setRow}>
-                <Text style={{ fontSize: 18 }}>👑</Text>
+                <Ionicons name="star" size={18} color="#F59E0B" />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>One Campus Premium</Text>
                   <Text style={{ fontSize: 11, color: T.subtext }}>$7.99/mo · renews July 10, 2026</Text>
@@ -1387,7 +1467,7 @@ export default function App() {
               </TouchableOpacity>
             </>) : (
               <TouchableOpacity onPress={() => { setShowSettings(false); setSheet('paywall'); }} style={st.setRow}>
-                <Text style={{ fontSize: 18 }}>👑</Text>
+                <Ionicons name="star" size={18} color="#F59E0B" />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Upgrade to Premium</Text>
                   <Text style={{ fontSize: 11, color: T.subtext }}>2x points · AI organizer · all campuses</Text>
@@ -1408,24 +1488,24 @@ export default function App() {
                   placeholder="Your major / school" placeholderTextColor={T.subtext}
                   style={{ fontSize: 11, color: T.subtext, padding: 0 }} />
               </View>
-              <Text style={{ fontSize: 11, color: T.subtext }}>✏️ tap to edit</Text>
+              <Text style={{ fontSize: 11, color: T.subtext }}><Ionicons name="create-outline" size={11} color={T.subtext} /> tap to edit</Text>
             </View>
           </View>
 
           <Text style={[st.sectionLabel, { color: T.subtext }]}>APPEARANCE</Text>
           <View style={[st.setCard, { backgroundColor: T.card }]}>
             <View style={st.setRow}>
-              <Text style={{ fontSize: 18 }}>{dark ? '🌙' : '☀️'}</Text>
+              <Ionicons name={dark ? 'moon' : 'sunny'} size={18} color={T.text} />
               <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '700', color: T.text }}>Dark Mode</Text>
-              <Switch value={dark} onValueChange={v => { setDark(v); showToast(v ? '🌙 Dark mode on' : '☀️ Light mode on'); }} trackColor={{ true: A }} />
+              <Switch value={dark} onValueChange={v => { setDark(v); showToast(v ? 'Dark mode on' : 'Light mode on'); }} trackColor={{ true: A }} />
             </View>
             <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
-              <Text style={{ fontSize: 18 }}>🎨</Text>
+              <Ionicons name="color-palette" size={18} color={T.text} />
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Accent Color</Text>
                 <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
                   {[['#7C3AED', 'Purple'], ['#0EA5E9', 'Blue'], ['#10B981', 'Green'], ['#FF6B35', 'Orange'], ['#EC4899', 'Pink']].map(([c, label]) => (
-                    <TouchableOpacity key={c} onPress={() => { setAccent(c); showToast(`🎨 ${label} theme on!`); }}
+                    <TouchableOpacity key={c} onPress={() => { setAccent(c); showToast(`${label} theme on!`); }}
                       style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: c, borderWidth: accent === c ? 3 : 0, borderColor: T.text, alignItems: 'center', justifyContent: 'center' }}>
                       {accent === c && <Text style={{ color: 'white', fontSize: 12, fontWeight: '900' }}>✓</Text>}
                     </TouchableOpacity>
@@ -1437,15 +1517,15 @@ export default function App() {
           <Text style={[st.sectionLabel, { color: T.subtext }]}>PRIVACY</Text>
           <View style={[st.setCard, { backgroundColor: T.card }]}>
             <View style={st.setRow}>
-              <Text style={{ fontSize: 18 }}>📍</Text>
+              <Ionicons name="location-outline" size={18} color={T.text} />
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Share My Location</Text>
-                <Text style={{ fontSize: 11, color: T.subtext }}>{settings.location ? 'Friends can see you on campus' : "You're invisible 👻"}</Text>
+                <Text style={{ fontSize: 11, color: T.subtext }}>{settings.location ? 'Friends can see you on campus' : "You're invisible"}</Text>
               </View>
-              <Switch value={settings.location} onValueChange={v => { setSettings(s => ({ ...s, location: v })); showToast(v ? '📍 Location sharing on' : '👻 You\'re now invisible'); }} trackColor={{ true: A }} />
+              <Switch value={settings.location} onValueChange={v => { setSettings(s => ({ ...s, location: v })); showToast(v ? 'Location sharing on' : "You're now invisible"); }} trackColor={{ true: A }} />
             </View>
             <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
-              <Text style={{ fontSize: 18 }}>🏆</Text>
+              <Ionicons name="trophy-outline" size={18} color={T.text} />
               <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '700', color: T.text }}>Show on Leaderboard</Text>
               <Switch value={settings.leaderboard} onValueChange={v => setSettings(s => ({ ...s, leaderboard: v }))} trackColor={{ true: A }} />
             </View>
@@ -1453,38 +1533,49 @@ export default function App() {
           <Text style={[st.sectionLabel, { color: T.subtext }]}>NOTIFICATIONS</Text>
           <View style={[st.setCard, { backgroundColor: T.card }]}>
             <View style={st.setRow}>
-              <Text style={{ fontSize: 18 }}>🔔</Text>
+              <Ionicons name="notifications-outline" size={18} color={T.text} />
               <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '700', color: T.text }}>Push Notifications</Text>
-              <Switch value={settings.notifications} onValueChange={async v => { setSettings(s => ({ ...s, notifications: v })); if (v) { const ok = await ensureNotifPermission(); showToast(ok ? '🔔 Notifications on' : '🔕 Allow notifications in phone settings'); } else showToast('🔕 All notifications muted'); }} trackColor={{ true: A }} />
+              <Switch value={settings.notifications} onValueChange={async v => { setSettings(s => ({ ...s, notifications: v })); if (v) { const ok = await ensureNotifPermission(); showToast(ok ? 'Notifications on' : 'Allow notifications in phone settings'); } else showToast('All notifications muted'); }} trackColor={{ true: A }} />
             </View>
             {settings.notifications && (<>
               <TouchableOpacity onPress={sendTestNotification} style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
-                <Text style={{ fontSize: 16 }}>🧪</Text>
+                <Ionicons name="flask-outline" size={16} color={A} />
                 <Text style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: A }}>Send a test notification</Text>
                 <Text style={{ color: T.subtext }}>›</Text>
               </TouchableOpacity>
               <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
-                <Text style={{ fontSize: 16 }}>📅</Text>
+                <Ionicons name="calendar-outline" size={16} color={T.text} />
                 <Text style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: T.text }}>Event reminders</Text>
                 <Switch value={settings.notifEvents} onValueChange={v => setSettings(s => ({ ...s, notifEvents: v }))} trackColor={{ true: A }} />
               </View>
               <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
-                <Text style={{ fontSize: 16 }}>💬</Text>
+                <Ionicons name="people-outline" size={16} color={isPremium ? T.text : T.subtext} />
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Text style={{ fontSize: 13, fontWeight: '600', color: T.text }}>Friend & event alerts</Text>
+                    <View style={{ backgroundColor: '#FEF3C7', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}><Text style={{ fontSize: 8.5, fontWeight: '800', color: '#B45309' }}>PREMIUM</Text></View>
+                  </View>
+                  <Text style={{ fontSize: 11, color: T.subtext }}>Alerts when friends are active & events are near</Text>
+                </View>
+                <Switch value={settings.friendAlerts} onValueChange={toggleFriendAlerts} trackColor={{ true: A }} />
+              </View>
+              <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+                <Ionicons name="chatbubble-outline" size={16} color={T.text} />
                 <Text style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: T.text }}>Direct messages</Text>
                 <Switch value={settings.notifDMs} onValueChange={v => setSettings(s => ({ ...s, notifDMs: v }))} trackColor={{ true: A }} />
               </View>
               <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
-                <Text style={{ fontSize: 16 }}>🤝</Text>
+                <Ionicons name="person-add-outline" size={16} color={T.text} />
                 <Text style={{ flex: 1, marginLeft: 10, fontSize: 13, fontWeight: '600', color: T.text }}>Friend requests</Text>
                 <Switch value={settings.notifRequests} onValueChange={v => setSettings(s => ({ ...s, notifRequests: v }))} trackColor={{ true: A }} />
               </View>
               <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
-                <Text style={{ fontSize: 16 }}>😴</Text>
+                <Ionicons name="moon-outline" size={16} color={T.text} />
                 <View style={{ flex: 1, marginLeft: 10 }}>
                   <Text style={{ fontSize: 13, fontWeight: '600', color: T.text }}>Quiet Hours</Text>
                   <Text style={{ fontSize: 11, color: T.subtext }}>{settings.quietHours ? 'Silenced 11 PM – 8 AM' : 'Off — notifications anytime'}</Text>
                 </View>
-                <Switch value={settings.quietHours} onValueChange={v => { setSettings(s => ({ ...s, quietHours: v })); showToast(v ? '😴 Quiet hours: 11 PM – 8 AM' : 'Quiet hours off'); }} trackColor={{ true: A }} />
+                <Switch value={settings.quietHours} onValueChange={v => { setSettings(s => ({ ...s, quietHours: v })); showToast(v ? 'Quiet hours: 11 PM – 8 AM' : 'Quiet hours off'); }} trackColor={{ true: A }} />
               </View>
             </>)}
           </View>
@@ -1492,7 +1583,7 @@ export default function App() {
           <Text style={[st.sectionLabel, { color: T.subtext }]}>SWITCH MODE</Text>
           <View style={[st.setCard, { backgroundColor: T.card }]}>
             <TouchableOpacity onPress={() => { setShowSettings(false); setShowBusiness(true); }} style={st.setRow}>
-              <Text style={{ fontSize: 18 }}>📢</Text>
+              <Ionicons name="megaphone-outline" size={18} color={T.text} />
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Switch to Business Portal</Text>
                 <Text style={{ fontSize: 11, color: T.subtext }}>Advertise to students & manage campaigns</Text>
@@ -1505,9 +1596,9 @@ export default function App() {
           <View style={[st.setCard, { backgroundColor: T.card }]}>
             <TouchableOpacity onPress={() => {
               setPoints(0); setJoined([]); setRsvpd([]); setLiked([]); setRedeemed([]); setEvents(INITIAL_EVENTS); setChats(STARTER_CHATS);
-              showToast('🗑️ Demo data reset — fresh start!');
+              showToast('Demo data reset — fresh start!');
             }} style={st.setRow}>
-              <Text style={{ fontSize: 18 }}>🗑️</Text>
+              <Ionicons name="trash-outline" size={18} color={T.text} />
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Reset Demo Data</Text>
                 <Text style={{ fontSize: 11, color: T.subtext }}>Points, clubs, RSVPs & chats back to start</Text>
@@ -1515,7 +1606,7 @@ export default function App() {
               <Text style={{ color: T.subtext }}>›</Text>
             </TouchableOpacity>
             <TouchableOpacity onPress={doSignOut} style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
-              <Text style={{ fontSize: 18 }}>🚪</Text>
+              <Ionicons name="log-out-outline" size={18} color="#EF4444" />
               <View style={{ flex: 1, marginLeft: 10 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: '#EF4444' }}>Sign Out</Text>
                 <Text style={{ fontSize: 11, color: T.subtext }}>{user?.email || ''}</Text>
@@ -1523,7 +1614,7 @@ export default function App() {
               <Text style={{ color: T.subtext }}>›</Text>
             </TouchableOpacity>
           </View>
-          <Text style={{ textAlign: 'center', fontSize: 11, color: T.subtext, marginTop: 20 }}>One Campus v1.0 · Made with 💜 at Purdue</Text>
+          <Text style={{ textAlign: 'center', fontSize: 11, color: T.subtext, marginTop: 20 }}>One Campus v1.0 · Made at Purdue</Text>
         </ScrollView>
       </SafeAreaView>
     </Modal>
@@ -1571,7 +1662,7 @@ export default function App() {
               style={[st.input, { backgroundColor: T.card, color: T.text, borderColor: T.border }]} />
 
             <TouchableOpacity onPress={doAuth} disabled={authBusy} style={[st.bigBtn, authBusy && { opacity: 0.6 }]}>
-              <Text style={st.bigBtnText}>{authBusy ? 'One sec...' : authMode === 'signup' ? 'Create My Account 🚀' : 'Sign In →'}</Text>
+              <Text style={st.bigBtnText}>{authBusy ? 'One sec...' : authMode === 'signup' ? 'Create My Account' : 'Sign In →'}</Text>
             </TouchableOpacity>
 
             <Text style={{ textAlign: 'center', fontSize: 11, color: T.subtext, marginTop: 18, lineHeight: 17 }}>
@@ -1612,12 +1703,12 @@ export default function App() {
 
           <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 20 }}>
             {onbStep === 0 && (<>
-              <Text style={{ fontSize: 26, fontWeight: '900', color: T.text }}>Pick your campus 🎓</Text>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: T.text }}>Pick your campus</Text>
               <Text style={{ fontSize: 14, color: T.subtext, marginTop: 4, marginBottom: 18 }}>This is your home campus — it's always free.</Text>
               {Object.entries(CAMPUSES).map(([key, c]) => (
                 <TouchableOpacity key={key} onPress={() => setObCampus(key)}
                   style={{ flexDirection: 'row', alignItems: 'center', padding: 16, borderRadius: 16, marginBottom: 10, borderWidth: 2, borderColor: obCampus === key ? A : T.border, backgroundColor: obCampus === key ? (dark ? '#2E2942' : '#F5F3FF') : T.card }}>
-                  <Text style={{ fontSize: 24 }}>{c.emoji}</Text>
+                  <Ionicons name="school" size={22} color={obCampus === key ? A : T.subtext} />
                   <Text style={{ flex: 1, fontSize: 16, fontWeight: '700', color: T.text, marginLeft: 12 }}>{c.name}</Text>
                   {obCampus === key && <Text style={{ color: A, fontSize: 18, fontWeight: '900' }}>✓</Text>}
                 </TouchableOpacity>
@@ -1625,7 +1716,7 @@ export default function App() {
             </>)}
 
             {onbStep === 1 && (<>
-              <Text style={{ fontSize: 26, fontWeight: '900', color: T.text }}>What's your major? 📚</Text>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: T.text }}>What's your major?</Text>
               <Text style={{ fontSize: 14, color: T.subtext, marginTop: 4, marginBottom: 18 }}>We'll use it to suggest clubs and people.</Text>
               <TextInput value={obMajor} onChangeText={setObMajor} placeholder="e.g. Computer Science" placeholderTextColor={T.subtext}
                 style={{ borderWidth: 1.5, borderColor: T.border, backgroundColor: T.card, borderRadius: 14, padding: 14, fontSize: 16, color: T.text }} />
@@ -1639,7 +1730,7 @@ export default function App() {
             </>)}
 
             {onbStep === 2 && (<>
-              <Text style={{ fontSize: 26, fontWeight: '900', color: T.text }}>What are you into? ✨</Text>
+              <Text style={{ fontSize: 26, fontWeight: '900', color: T.text }}>What are you into?</Text>
               <Text style={{ fontSize: 14, color: T.subtext, marginTop: 4, marginBottom: 18 }}>Pick a few — tap to select.</Text>
               <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 10 }}>
                 {ONB_INTERESTS.map(i => {
@@ -1656,7 +1747,7 @@ export default function App() {
 
           <TouchableOpacity disabled={!canContinue} onPress={() => onbStep < 2 ? setOnbStep(onbStep + 1) : finishOnboarding()}
             style={[st.bigBtn, !canContinue && { opacity: 0.4 }]}>
-            <Text style={st.bigBtnText}>{onbStep < 2 ? 'Continue →' : "Let's go! 🎉"}</Text>
+            <Text style={st.bigBtnText}>{onbStep < 2 ? 'Continue →' : "Let's go!"}</Text>
           </TouchableOpacity>
           {onbStep > 0 && (
             <TouchableOpacity onPress={() => setOnbStep(onbStep - 1)}><Text style={{ textAlign: 'center', color: T.subtext, paddingVertical: 10 }}>‹ Back</Text></TouchableOpacity>
@@ -1681,8 +1772,9 @@ export default function App() {
           <Text style={{ fontSize: 17, fontWeight: '800', color: A }}>One Campus</Text>
         </View>
         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-          <View style={[st.ptsBadge, isPremium && { backgroundColor: '#F59E0B' }]}>
-            <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{isPremium ? '👑' : '⚡'} {points.toLocaleString()} pts</Text>
+          <View style={[st.ptsBadge, { flexDirection: 'row', alignItems: 'center', gap: 4 }, isPremium && { backgroundColor: '#F59E0B' }]}>
+            <Ionicons name={isPremium ? 'star' : 'flash'} size={12} color="white" />
+            <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{points.toLocaleString()} pts</Text>
           </View>
           <TouchableOpacity onPress={() => setShowSettings(true)} style={[st.gearBtn, { backgroundColor: T.card }]}><Ionicons name="settings-outline" size={17} color={T.text} /></TouchableOpacity>
         </View>
@@ -1726,9 +1818,9 @@ export default function App() {
                   <View style={[st.clubTag, { marginTop: 8 }]}><Text style={{ color: 'white', fontSize: 11, fontWeight: '700' }}>{clubDetail.tag}</Text></View>
                   <Text style={{ fontSize: 28, fontWeight: '900', color: 'white', marginTop: 6 }}>{clubDetail.name}</Text>
                   <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
-                    <View style={st.metaPill}><Text style={st.metaPillText}>👥 {clubDetail.members.toLocaleString()} members</Text></View>
-                    <View style={st.metaPill}><Text style={st.metaPillText}>📍 {clubDetail.location}</Text></View>
-                    <View style={st.metaPill}><Text style={st.metaPillText}>🗓️ {info.meets}</Text></View>
+                    <View style={st.metaPill}><Text style={st.metaPillText}><Ionicons name="people" size={11} color="white" /> {clubDetail.members.toLocaleString()} members</Text></View>
+                    <View style={st.metaPill}><Text style={st.metaPillText}><Ionicons name="location" size={11} color="white" /> {clubDetail.location}</Text></View>
+                    <View style={st.metaPill}><Text style={st.metaPillText}><Ionicons name="calendar" size={11} color="white" /> {info.meets}</Text></View>
                   </View>
                 </View>
                 <View style={{ padding: 20 }}>
@@ -1744,7 +1836,7 @@ export default function App() {
                   ))}
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 20, backgroundColor: T.card, borderRadius: 14, padding: 14 }}>
-                    <Text style={{ fontSize: 22 }}>📍</Text>
+                    <Ionicons name="location" size={22} color={A} />
                     <View style={{ flex: 1 }}>
                       <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Where they meet</Text>
                       <Text style={{ fontSize: 13, color: T.subtext }}>{clubDetail.location} · {info.meets}</Text>
