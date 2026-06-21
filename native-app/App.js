@@ -1,12 +1,13 @@
 import React, { useState, useRef } from 'react';
 import {
-  View, Text, ScrollView, TouchableOpacity, TextInput, Modal, Image,
+  View, Text, ScrollView, TouchableOpacity, TouchableWithoutFeedback, TextInput, Modal, Image,
   StyleSheet, FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView, Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 
@@ -36,6 +37,10 @@ const auth = initializeAuth(firebaseApp, {
   persistence: getReactNativePersistence(AsyncStorage),
 });
 const db = initializeFirestore(firebaseApp, { experimentalForceLongPolling: true });
+
+/* ─────────── CLOUDINARY (free image hosting for feed photos, unsigned upload) ─────────── */
+const CLOUDINARY_CLOUD_NAME = 'dclt0qybu';        // from the Cloudinary dashboard
+const CLOUDINARY_UPLOAD_PRESET = 'one campus';    // unsigned upload preset
 
 /* ─────────── DATA ─────────── */
 const PURDUE_CLUBS = [
@@ -217,6 +222,9 @@ export default function App() {
   // ── shared feed (real, everyone sees it) ──
   const [feedPosts, setFeedPosts] = useState([]);
   const [postText, setPostText] = useState('');
+  const [postImage, setPostImage] = useState(null);   // local uri of photo being attached
+  const [uploadingPost, setUploadingPost] = useState(false);
+  const lastImgTap = useRef({});                       // for double-tap-to-like
   const [commentOn, setCommentOn] = useState(null); // post being commented on
   const [commentText, setCommentText] = useState('');
 
@@ -376,25 +384,51 @@ export default function App() {
     return unsub;
   }, [user, chatWith]);
 
+  // pick a photo from the phone's library to attach to a post
+  const pickPostImage = async () => {
+    const perm = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!perm.granted) { showToast('Allow photo access to add a picture'); return; }
+    const res = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ImagePicker.MediaTypeOptions.Images, quality: 0.7, allowsEditing: true, aspect: [1, 1] });
+    if (!res.canceled && res.assets?.[0]) setPostImage(res.assets[0].uri);
+  };
+
+  // upload a local image to Cloudinary (unsigned) → returns a hosted https URL
+  const uploadToCloudinary = async (uri) => {
+    const data = new FormData();
+    data.append('file', { uri, type: 'image/jpeg', name: 'post.jpg' });
+    data.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: 'POST', body: data });
+    const json = await res.json();
+    if (!json.secure_url) throw new Error('upload failed');
+    return json.secure_url;
+  };
+
   const createPost = async () => {
     const text = postText.trim();
-    if (!text) return;
-    setPostText('');
+    if (!text && !postImage) return;
+    setUploadingPost(true);
     try {
+      let imageUrl = null;
+      if (postImage) imageUrl = await uploadToCloudinary(postImage);
       await addDoc(collection(db, 'posts'), {
         uid: user.uid,
         author: profile.name || 'Student',
         major: profile.major || '',
         text,
+        imageUrl,                 // null for text-only posts
         likedBy: [],
         comments: [],
-        premium: isPremium, // Premium posts get a spotlight in the feed
+        premium: isPremium,       // Premium posts get a spotlight in the feed
         createdAt: serverTimestamp(),
       });
+      setPostText('');
+      setPostImage(null);
       const earned = addPoints(20);
       showToast(`Posted to the feed! +${earned} pts${isPremium ? ' (2x)' : ''}`);
     } catch (e) {
-      showToast('Could not post — is the "posts" rule set in Firestore?');
+      showToast(postImage ? 'Could not upload photo — check Cloudinary setup' : 'Could not post — is the "posts" rule set in Firestore?');
+    } finally {
+      setUploadingPost(false);
     }
   };
 
@@ -1239,10 +1273,24 @@ export default function App() {
             <TextInput value={postText} onChangeText={setPostText} placeholder="Share something with campus…" placeholderTextColor={T.subtext}
               multiline style={{ flex: 1, fontSize: 14, color: T.text, minHeight: 40, paddingTop: 8 }} />
           </View>
-          <TouchableOpacity onPress={createPost} disabled={!postText.trim()}
-            style={{ alignSelf: 'flex-end', backgroundColor: A, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 8, marginTop: 8, opacity: postText.trim() ? 1 : 0.4 }}>
-            <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>Post</Text>
-          </TouchableOpacity>
+          {postImage && (
+            <View style={{ marginTop: 10 }}>
+              <Image source={{ uri: postImage }} style={{ width: '100%', aspectRatio: 1, borderRadius: 12, backgroundColor: T.border }} resizeMode="cover" />
+              <TouchableOpacity onPress={() => setPostImage(null)} style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: 14, padding: 4 }}>
+                <Ionicons name="close" size={16} color="white" />
+              </TouchableOpacity>
+            </View>
+          )}
+          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 10 }}>
+            <TouchableOpacity onPress={pickPostImage} style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="image-outline" size={20} color={A} />
+              <Text style={{ color: A, fontWeight: '700', fontSize: 13 }}>Photo</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={createPost} disabled={(!postText.trim() && !postImage) || uploadingPost}
+              style={{ backgroundColor: A, borderRadius: 12, paddingHorizontal: 18, paddingVertical: 8, opacity: ((postText.trim() || postImage) && !uploadingPost) ? 1 : 0.4 }}>
+              <Text style={{ color: 'white', fontWeight: '800', fontSize: 13 }}>{uploadingPost ? 'Posting…' : 'Post'}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
 
         {feedPosts.length === 0 && (
@@ -1259,12 +1307,13 @@ export default function App() {
           const cColor = postColor(p.author || '?');
           return (
             <View key={p.id}>
-              <View style={[st.postCard, { backgroundColor: T.card }, p.premium && { borderWidth: 1.5, borderColor: '#F59E0B' }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
+              <View style={[st.postCard, { backgroundColor: T.card, padding: 0, overflow: 'hidden' }, p.premium && { borderWidth: 1.5, borderColor: '#F59E0B' }]}>
+                {/* header */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, padding: 12 }}>
                   <View style={[st.avatar, { backgroundColor: cColor }]}><Text style={{ color: 'white', fontWeight: '700' }}>{(p.author || '?')[0].toUpperCase()}</Text></View>
                   <View style={{ flex: 1 }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                      <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.author}{p.major ? ` · ${p.major}` : ''}</Text>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.author}</Text>
                       {p.premium && (
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 2, backgroundColor: '#FEF3C7', borderRadius: 7, paddingHorizontal: 5, paddingVertical: 1 }}>
                           <Ionicons name="star" size={9} color="#B45309" />
@@ -1272,26 +1321,58 @@ export default function App() {
                         </View>
                       )}
                     </View>
-                    <Text style={{ fontSize: 11, color: T.subtext }}>{timeAgo(p.createdAt)}</Text>
+                    <Text style={{ fontSize: 11, color: T.subtext }}>{p.major ? `${p.major} · ` : ''}{timeAgo(p.createdAt)}</Text>
                   </View>
                   {p.uid === user.uid && (
                     <TouchableOpacity onPress={() => deletePost(p)}><Ionicons name="trash-outline" size={17} color={T.subtext} /></TouchableOpacity>
                   )}
                 </View>
-                <Text style={{ fontSize: 14, color: T.text, marginVertical: 8, lineHeight: 20 }}>{p.text}</Text>
-                <View style={{ flexDirection: 'row', gap: 20, borderTopWidth: 1, borderColor: T.border, paddingTop: 8 }}>
+
+                {/* photo — double-tap to like */}
+                {p.imageUrl && (
+                  <TouchableWithoutFeedback onPress={() => { const now = Date.now(); if (now - (lastImgTap.current[p.id] || 0) < 300 && !iLiked) toggleLikePost(p); lastImgTap.current[p.id] = now; }}>
+                    <Image source={{ uri: p.imageUrl }} style={{ width: '100%', aspectRatio: 1, backgroundColor: T.border }} resizeMode="cover" />
+                  </TouchableWithoutFeedback>
+                )}
+
+                {/* action bar */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 18, paddingHorizontal: 12, paddingTop: 10 }}>
                   <TouchableOpacity onPress={() => toggleLikePost(p)}>
-                    <Text style={{ fontSize: 13, color: iLiked ? '#EF4444' : T.subtext, fontWeight: '700' }}><Ionicons name={iLiked ? 'heart' : 'heart-outline'} size={14} color={iLiked ? '#EF4444' : T.subtext} /> {likeCount}</Text>
+                    <Ionicons name={iLiked ? 'heart' : 'heart-outline'} size={24} color={iLiked ? '#EF4444' : T.text} />
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => setCommentOn(p)}>
-                    <Text style={{ fontSize: 13, color: T.subtext, fontWeight: '700' }}><Ionicons name="chatbubble-outline" size={13} color={T.subtext} /> {(p.comments || []).length}</Text>
+                    <Ionicons name="chatbubble-outline" size={22} color={T.text} />
                   </TouchableOpacity>
                   {p.uid && p.uid !== user.uid && (
                     <TouchableOpacity onPress={() => openDM({ uid: p.uid, name: p.author, color: postColor(p.author) })}>
-                      <Text style={{ fontSize: 13, color: T.subtext, fontWeight: '700' }}><Ionicons name="paper-plane-outline" size={13} color={T.subtext} /> Message</Text>
+                      <Ionicons name="paper-plane-outline" size={22} color={T.text} />
                     </TouchableOpacity>
                   )}
                 </View>
+
+                {/* likes count */}
+                {likeCount > 0 && (
+                  <Text style={{ fontSize: 13, fontWeight: '800', color: T.text, paddingHorizontal: 12, paddingTop: 6 }}>{likeCount} {likeCount === 1 ? 'like' : 'likes'}</Text>
+                )}
+
+                {/* caption */}
+                {!!p.text && (
+                  <Text style={{ fontSize: 14, color: T.text, paddingHorizontal: 12, paddingTop: 4, lineHeight: 20 }}>
+                    <Text style={{ fontWeight: '700' }}>{p.author} </Text>{p.text}
+                  </Text>
+                )}
+
+                {/* comments preview */}
+                {(p.comments || []).length > 0 && (
+                  <TouchableOpacity onPress={() => setCommentOn(p)} style={{ paddingHorizontal: 12, paddingTop: 6 }}>
+                    <Text style={{ fontSize: 12.5, color: T.subtext }}>View all {(p.comments || []).length} comment{(p.comments || []).length !== 1 ? 's' : ''}</Text>
+                  </TouchableOpacity>
+                )}
+                {(p.comments || []).slice(-1).map((c, ci) => (
+                  <Text key={ci} style={{ fontSize: 13, color: T.text, paddingHorizontal: 12, paddingTop: 4 }}><Text style={{ fontWeight: '700' }}>{c.author} </Text>{c.text}</Text>
+                ))}
+
+                <View style={{ height: 12 }} />
               </View>
               {!isPremium && (i + 1) % 3 === 0 && ADS[Math.floor(i / 3) % ADS.length] && (() => {
                 const ad = ADS[Math.floor(i / 3) % ADS.length];
