@@ -36,8 +36,8 @@ window.handleOAuth = async function (provider) {
   try {
     const result = await signInWithPopup(auth, googleProvider);
     closeModal();
-    showToast(`🎉 Welcome, ${result.user.displayName}! Opening One Campus…`);
-    setTimeout(() => { window.location.href = 'demo.html'; }, 800);
+    showToast(`🎉 Welcome, ${result.user.displayName}! Let's get you the app…`);
+    setTimeout(() => { window.location.href = 'app-qr.html'; }, 800);
   } catch (err) {
     if (err.code === 'auth/cancelled-popup-request') {
       /* harmless — another popup request took over */
@@ -72,7 +72,7 @@ onAuthStateChanged(auth, (user) => {
       </span>`;
     signInBtn.onclick = (ev) => {
       ev.stopImmediatePropagation();
-      window.location.href = 'demo.html';
+      window.location.href = 'app-qr.html';
     };
   } else {
     signInBtn.textContent = 'Sign In';
