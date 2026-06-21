@@ -21,7 +21,7 @@ import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   onAuthStateChanged, signOut as fbSignOut, updateProfile,
 } from 'firebase/auth';
-import { initializeFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, orderBy, limit, updateDoc, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
+import { initializeFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, where, orderBy, limit, updateDoc, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 
 /* ─────────── FIREBASE ─────────── */
 const firebaseApp = initializeApp({
@@ -223,8 +223,11 @@ export default function App() {
   const [sheet, setSheet] = useState(null); // 'paywall' | 'payment' | 'planner' | 'addEvent' | 'charity' | 'reward' | 'cancelSub'
   const [rewardResult, setRewardResult] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [chatWith, setChatWith] = useState(null);
+  const [chatWith, setChatWith] = useState(null); // string = demo friend; { uid, name, color, initial } = real DM
   const [chatTyping, setChatTyping] = useState(false);
+  // ── real DMs (Firestore) ──
+  const [dmMessages, setDmMessages] = useState([]); // messages in the open real conversation
+  const [dmThreads, setDmThreads] = useState([]);   // inbox: my real conversations
   const [settings, setSettings] = useState({ location: true, notifications: true, leaderboard: true, notifEvents: true, notifDMs: true, notifRequests: true, quietHours: false, friendAlerts: false });
   const [accent, setAccent] = useState('#7C3AED');
   const [profile, setProfile] = useState({ name: 'Leighton B.', major: 'Purdue University' });
@@ -348,6 +351,30 @@ export default function App() {
     }, () => { /* permission/offline — ignore */ });
     return unsub;
   }, [user]);
+
+  // ── DM INBOX: live-listen to my real conversations ──
+  React.useEffect(() => {
+    if (!user) return;
+    // no orderBy here on purpose — array-contains + orderBy needs a composite index; sort client-side instead
+    const q = query(collection(db, 'dms'), where('participants', 'array-contains', user.uid));
+    const unsub = onSnapshot(q, (snap) => {
+      const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      rows.sort((a, b) => (b.updatedAt?.toMillis?.() || 0) - (a.updatedAt?.toMillis?.() || 0));
+      setDmThreads(rows);
+    }, () => { /* permission/offline — ignore */ });
+    return unsub;
+  }, [user]);
+
+  // ── OPEN DM: live-listen to the conversation that's currently open ──
+  React.useEffect(() => {
+    if (!user || typeof chatWith !== 'object' || !chatWith?.uid) { setDmMessages([]); return; }
+    const cid = convoId(user.uid, chatWith.uid);
+    const q = query(collection(db, 'dms', cid, 'messages'), orderBy('createdAt', 'asc'), limit(200));
+    const unsub = onSnapshot(q, (snap) => {
+      setDmMessages(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => { /* permission/offline — ignore */ });
+    return unsub;
+  }, [user, chatWith]);
 
   const createPost = async () => {
     const text = postText.trim();
@@ -813,9 +840,37 @@ export default function App() {
   const clearRoute = () => { setRouteCoords(null); setRouteInfo(null); setShowSteps(false); };
 
   /* ── chat ── */
-  const sendChat = () => {
+  // stable conversation id for a pair of user ids
+  const convoId = (a, b) => [a, b].sort().join('_');
+  // open a REAL direct message with another signed-in user (from the feed, etc.)
+  const openDM = (peer) => {
+    if (!peer?.uid || peer.uid === user?.uid) return;
+    setChatWith({ uid: peer.uid, name: peer.name || 'Student', color: peer.color || A, initial: (peer.name || '?')[0].toUpperCase() });
+  };
+
+  const sendChat = async () => {
     const text = chatInput.trim();
     if (!text || !chatWith) return;
+    // REAL DM (peer has a uid) → write to Firestore, no bot replies
+    if (typeof chatWith === 'object' && chatWith.uid) {
+      const cid = convoId(user.uid, chatWith.uid);
+      setChatInput('');
+      try {
+        await setDoc(doc(db, 'dms', cid), {
+          participants: [user.uid, chatWith.uid],
+          names: { [user.uid]: profile.name || 'Student', [chatWith.uid]: chatWith.name || 'Student' },
+          lastMessage: text,
+          updatedAt: serverTimestamp(),
+        }, { merge: true });
+        await addDoc(collection(db, 'dms', cid, 'messages'), {
+          senderId: user.uid, text, createdAt: serverTimestamp(),
+        });
+      } catch (e) {
+        showToast('Could not send — is the "dms" rule set in Firestore?');
+      }
+      return;
+    }
+    // DEMO contact (hardcoded friend, no real account) → local canned reply
     const name = chatWith;
     setChats(c => ({ ...c, [name]: [...(c[name] || []), { who: 'me', text }] }));
     setChatInput('');
@@ -1140,13 +1195,34 @@ export default function App() {
       <Text style={[st.title, { color: A }]}>Connections</Text>
       <Text style={[st.sub, { color: T.subtext }]}>{FRIENDS.length} friends on campus</Text>
       <View style={{ flexDirection: 'row', gap: 8, marginVertical: 10 }}>
-        {[['feed', 'Feed'], ['friends', 'Friends']].map(([k, label]) => (
+        {[['feed', 'Feed'], ['messages', 'Messages'], ['friends', 'Friends']].map(([k, label]) => (
           <TouchableOpacity key={k} onPress={() => setConnectTab(k)} style={[st.tabBtn, { backgroundColor: connectTab === k ? A : T.card }]}>
             <Text style={{ color: connectTab === k ? 'white' : T.subtext, fontSize: 12, fontWeight: '700' }}>{label}</Text>
           </TouchableOpacity>
         ))}
       </View>
-      {connectTab === 'friends' ? FRIENDS.map(f => (
+      {connectTab === 'messages' ? (
+        dmThreads.length === 0 ? (
+          <View style={{ alignItems: 'center', paddingVertical: 30 }}>
+            <Ionicons name="paper-plane-outline" size={40} color={T.subtext} />
+            <Text style={{ fontSize: 15, fontWeight: '800', color: T.text, marginTop: 6 }}>No messages yet</Text>
+            <Text style={{ fontSize: 13, color: T.subtext, marginTop: 2 }}>Tap "Message" on a post to start a real conversation.</Text>
+          </View>
+        ) : dmThreads.map(t => {
+          const peerUid = (t.participants || []).find(u => u !== user.uid);
+          const peerName = (t.names && t.names[peerUid]) || 'Student';
+          return (
+            <TouchableOpacity key={t.id} onPress={() => openDM({ uid: peerUid, name: peerName, color: postColor(peerName) })} style={[st.friendRow, { backgroundColor: T.card }]}>
+              <View style={[st.avatar, { backgroundColor: postColor(peerName) }]}><Text style={{ color: 'white', fontWeight: '700' }}>{(peerName || '?')[0].toUpperCase()}</Text></View>
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{peerName}</Text>
+                <Text style={{ fontSize: 12, color: T.subtext }} numberOfLines={1}>{t.lastMessage || 'Say hi'}</Text>
+              </View>
+              <Ionicons name="chevron-forward" size={16} color={T.subtext} />
+            </TouchableOpacity>
+          );
+        })
+      ) : connectTab === 'friends' ? FRIENDS.map(f => (
         <TouchableOpacity key={f.name} onPress={() => setChatWith(f.name)} style={[st.friendRow, { backgroundColor: T.card }]}>
           <View style={[st.avatar, { backgroundColor: f.color }]}><Text style={{ color: 'white', fontWeight: '700' }}>{f.initial}</Text></View>
           <View style={{ flex: 1, marginLeft: 10 }}>
@@ -1210,6 +1286,11 @@ export default function App() {
                   <TouchableOpacity onPress={() => setCommentOn(p)}>
                     <Text style={{ fontSize: 13, color: T.subtext, fontWeight: '700' }}><Ionicons name="chatbubble-outline" size={13} color={T.subtext} /> {(p.comments || []).length}</Text>
                   </TouchableOpacity>
+                  {p.uid && p.uid !== user.uid && (
+                    <TouchableOpacity onPress={() => openDM({ uid: p.uid, name: p.author, color: postColor(p.author) })}>
+                      <Text style={{ fontSize: 13, color: T.subtext, fontWeight: '700' }}><Ionicons name="paper-plane-outline" size={13} color={T.subtext} /> Message</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               </View>
               {!isPremium && (i + 1) % 3 === 0 && ADS[Math.floor(i / 3) % ADS.length] && (() => {
@@ -1397,8 +1478,13 @@ export default function App() {
   /* ─────────── CHAT SCREEN ─────────── */
   const renderChat = () => {
     if (!chatWith) return null;
-    const f = FRIENDS.find(x => x.name === chatWith) || { name: chatWith, initial: chatWith[0], color: A, online: true };
-    const msgs = chats[chatWith] || [];
+    const isReal = typeof chatWith === 'object' && !!chatWith.uid;
+    const f = isReal
+      ? { name: chatWith.name, initial: chatWith.initial, color: chatWith.color, online: true, real: true }
+      : (FRIENDS.find(x => x.name === chatWith) || { name: chatWith, initial: chatWith[0], color: A, online: true });
+    const msgs = isReal
+      ? dmMessages.map(m => ({ who: m.senderId === user.uid ? 'me' : 'them', text: m.text }))
+      : (chats[chatWith] || []);
     return (
       <Modal visible animationType="slide" onRequestClose={() => setChatWith(null)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
@@ -1408,14 +1494,20 @@ export default function App() {
               <View style={[st.avatar, { backgroundColor: f.color }]}><Text style={{ color: 'white', fontWeight: '700' }}>{f.initial}</Text></View>
               <View style={{ marginLeft: 10 }}>
                 <Text style={{ fontSize: 15, fontWeight: '800', color: T.text }}>{f.name}</Text>
-                <Text style={{ fontSize: 11, color: f.online ? '#22c55e' : T.subtext, fontWeight: '600' }}>{f.online ? '● Active now' : 'Offline'}</Text>
+                <Text style={{ fontSize: 11, color: f.online ? '#22c55e' : T.subtext, fontWeight: '600' }}>{f.real ? 'Direct message' : f.online ? '● Active now' : 'Offline'}</Text>
               </View>
             </View>
             <FlatList
               ref={chatScroll}
               data={chatTyping ? [...msgs, { who: 'typing' }] : msgs}
               keyExtractor={(_, i) => String(i)}
-              contentContainerStyle={{ padding: 14, gap: 8 }}
+              contentContainerStyle={{ padding: 14, gap: 8, flexGrow: 1 }}
+              ListEmptyComponent={isReal ? (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 }}>
+                  <Ionicons name="chatbubbles-outline" size={36} color={T.subtext} />
+                  <Text style={{ color: T.subtext, fontSize: 13, marginTop: 8 }}>Send the first message to {f.name}</Text>
+                </View>
+              ) : null}
               onContentSizeChange={() => chatScroll.current?.scrollToEnd({ animated: true })}
               renderItem={({ item }) => item.who === 'typing' ? (
                 <View style={[st.msgThem, { backgroundColor: T.card }]}><Text style={{ color: T.subtext }}>● ● ●</Text></View>
