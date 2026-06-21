@@ -111,11 +111,11 @@ const BUILDINGS = [
 const YOU = { lat: 40.4286, lng: -86.9138 }; // demo: Engineering Fountain
 
 const POSTS = [
-  { id: 'p1', person: 'Maya L.', initial: 'M', color: '#7C3AED', time: '5m ago', club: 'Purdue Hackers', text: 'Just finished building my first full-stack app at tonight\'s Hack Purdue session 🚀 Anyone want to collab this weekend?', emoji: '💻', likes: 24, comments: 7 },
-  { id: 'p2', person: 'Jordan R.', initial: 'J', color: '#EF4444', time: '18m ago', club: 'NSBE Purdue', text: 'Engineering Career Fair tomorrow at PMU Ballrooms — 30 copies of my resume ready. See you there! 💼', emoji: '🏛️', likes: 41, comments: 12 },
-  { id: 'p3', person: 'Priya M.', initial: 'P', color: '#EC4899', time: '45m ago', club: 'Pre-Med Society', text: 'Study group forming for BIOL 201 midterm. WALC 2nd floor, 6pm Friday. Comment to join 📚', emoji: '🔬', likes: 18, comments: 22 },
-  { id: 'p4', person: 'Tyler B.', initial: 'T', color: '#0EA5E9', time: '1h ago', club: null, text: 'CoRec just got new rowing machines 🏋️ New PR today. Anyone training for the Boilermaker 5K?', emoji: '💪', likes: 33, comments: 5 },
-  { id: 'p5', person: 'Sam K.', initial: 'S', color: '#10B981', time: '2h ago', club: 'Boilermaker Invest Club', text: 'BIG closed our Q2 portfolio review — up 12% this semester. Recruitment opens Monday 📈', emoji: '📊', likes: 57, comments: 19 },
+  { id: 'p1', person: 'Maya L.', initial: 'M', color: '#7C3AED', time: '5m ago', club: 'Purdue Hackers', text: 'Just finished building my first full-stack app at tonight\'s Hack Purdue session. Anyone want to collab this weekend?', emoji: '', likes: 24, comments: 7 },
+  { id: 'p2', person: 'Jordan R.', initial: 'J', color: '#EF4444', time: '18m ago', club: 'NSBE Purdue', text: 'Engineering Career Fair tomorrow at PMU Ballrooms — 30 copies of my resume ready. See you there!', emoji: '', likes: 41, comments: 12 },
+  { id: 'p3', person: 'Priya M.', initial: 'P', color: '#EC4899', time: '45m ago', club: 'Pre-Med Society', text: 'Study group forming for BIOL 201 midterm. WALC 2nd floor, 6pm Friday. Comment to join.', emoji: '', likes: 18, comments: 22 },
+  { id: 'p4', person: 'Tyler B.', initial: 'T', color: '#0EA5E9', time: '1h ago', club: null, text: 'CoRec just got new rowing machines. New PR today. Anyone training for the Boilermaker 5K?', emoji: '', likes: 33, comments: 5 },
+  { id: 'p5', person: 'Sam K.', initial: 'S', color: '#10B981', time: '2h ago', club: 'Boilermaker Invest Club', text: 'BIG closed our Q2 portfolio review — up 12% this semester. Recruitment opens Monday.', emoji: '', likes: 57, comments: 19 },
 ];
 
 const ADS = [
@@ -148,15 +148,15 @@ const CAUSES = [
 ];
 
 const STARTER_CHATS = {
-  Maya: [{ who: 'them', text: 'Hey! Are you coming to Hack Purdue tonight? 💻' }, { who: 'me', text: 'Yeah planning on it! What time?' }, { who: 'them', text: '7pm at WALC 1055. We need a frontend dev btw 👀' }],
+  Maya: [{ who: 'them', text: 'Hey! Are you coming to Hack Purdue tonight?' }, { who: 'me', text: 'Yeah planning on it! What time?' }, { who: 'them', text: '7pm at WALC 1055. We need a frontend dev btw' }],
   Jordan: [{ who: 'them', text: 'You ready for the career fair tomorrow?' }],
-  Sam: [{ who: 'them', text: 'Invest club recruitment opens Monday 📈' }],
+  Sam: [{ who: 'them', text: 'Invest club recruitment opens Monday' }],
   Priya: [{ who: 'them', text: 'BIOL 201 study group — WALC 2nd floor, 6pm Friday!' }],
-  Tyler: [{ who: 'them', text: 'New rowing machines at CoRec are insane 🏋️ Run the 5K with me Saturday?' }],
-  Zoe: [{ who: 'them', text: 'Astronomy night Thursday!! Jupiter is visible rn 🪐' }],
+  Tyler: [{ who: 'them', text: 'New rowing machines at CoRec are insane. Run the 5K with me Saturday?' }],
+  Zoe: [{ who: 'them', text: 'Astronomy night Thursday!! Jupiter is visible rn' }],
 };
 
-const AUTO_REPLIES = ['Sounds good! 🙌', 'Haha for sure', 'Okay see you there!', 'Perfect 👍', 'Yesss let\'s do it', 'Bet. See you on campus!'];
+const AUTO_REPLIES = ['Sounds good!', 'Haha for sure', 'Okay see you there!', 'Perfect', 'Yesss let\'s do it', 'Bet. See you on campus!'];
 const INTERESTS = ['All', 'Tech', 'Engineering', 'Business', 'Science', 'Arts', 'Sports'];
 // pick a representative Ionicons name for any club from its name/category
 const clubIcon = (club) => {
@@ -576,7 +576,7 @@ export default function App() {
     const earned = addPoints(25);
     const ev = events.find(e => e.name === name);
     if (ev) scheduleEventReminder(ev);
-    showToast(`RSVP'd to ${name}! +${earned} pts${isPremium ? ' (2x)' : ''} · 🔔 reminder set`);
+    showToast(`RSVP'd to ${name}! +${earned} pts${isPremium ? ' (2x)' : ''} · reminder set`);
   };
 
   const createEvent = () => {
