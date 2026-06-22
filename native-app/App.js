@@ -640,6 +640,17 @@ export default function App() {
     showToast(`RSVP'd to ${name}! +${earned} pts${isPremium ? ' (2x)' : ''} · reminder set`);
   };
 
+  // undo going to an event — removes the RSVP and takes back the points it gave
+  const unRsvp = (name) => {
+    if (!rsvpd.includes(name)) return;
+    setRsvpd(r => r.filter(n => n !== name));
+    setPoints(p => Math.max(0, p - (isPremium ? 50 : 25)));
+    showToast(`Canceled — you're no longer going to ${name}`);
+  };
+
+  // tap an event card: RSVP if not going, cancel if already going
+  const toggleRsvp = (name) => (rsvpd.includes(name) ? unRsvp(name) : rsvp(name));
+
   const createEvent = () => {
     if (!evName.trim()) { showToast('Give your event a name!'); return; }
     let t = evTime.trim() || '12:00';
@@ -1003,7 +1014,7 @@ export default function App() {
         {filtered.map((e, idx) => {
           const going = rsvpd.includes(e.name);
           return (
-            <TouchableOpacity key={idx} onPress={() => rsvp(e.name)} style={[st.eventCard, { backgroundColor: T.card }]}>
+            <TouchableOpacity key={idx} onPress={() => e.mine ? null : toggleRsvp(e.name)} style={[st.eventCard, { backgroundColor: T.card }]}>
               <View style={{ width: 4, height: 44, borderRadius: 4, backgroundColor: e.color }} />
               <View style={{ minWidth: 50 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: A }}>{e.time}</Text>
@@ -1018,7 +1029,7 @@ export default function App() {
               </View>
               <View style={[st.badge, { backgroundColor: e.mine ? '#EDE9FE' : going ? '#F0FDF4' : '#FEE2E2' }]}>
                 <Text style={{ fontSize: 11, fontWeight: '700', color: e.mine ? A : going ? '#22c55e' : '#EF4444' }}>
-                  {e.mine ? 'Host' : going ? '✓ Going' : e.badge === 'live' ? 'Live' : e.badge === 'today' ? 'Today' : 'Soon'}
+                  {e.mine ? 'Host' : going ? '✓ Going · tap to cancel' : e.badge === 'live' ? 'Live' : e.badge === 'today' ? 'Today' : 'Soon'}
                 </Text>
               </View>
             </TouchableOpacity>
