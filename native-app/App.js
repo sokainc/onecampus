@@ -1132,7 +1132,6 @@ export default function App() {
         )}
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 18, marginVertical: 14 }}>
           <TouchableOpacity onPress={() => swipe('skip')} style={[st.actionBtn, { backgroundColor: T.card }]}><Ionicons name="close" size={22} color={T.subtext} /></TouchableOpacity>
-          <TouchableOpacity onPress={() => swipe('super')} style={[st.actionBtn, { backgroundColor: '#FF6B35' }]}><Ionicons name="star" size={20} color="white" /></TouchableOpacity>
           <TouchableOpacity onPress={() => swipe('join')} style={[st.actionBtn, { backgroundColor: A }]}><Ionicons name="checkmark" size={22} color="white" /></TouchableOpacity>
         </View>
         <Text style={[st.sectionLabel, { color: T.subtext }]}>FILTER BY INTEREST</Text>
