@@ -1855,7 +1855,9 @@ export default function App() {
   if (!authReady) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <Image source={require('./assets/logo.png')} style={{ width: 96, height: 96, resizeMode: 'contain' }} />
+        <View style={{ width: 96, height: 96, borderRadius: 24, overflow: 'hidden' }}>
+          <Image source={require('./assets/logo-icon.png')} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+        </View>
         <Text style={{ fontSize: 18, fontWeight: '800', color: A, marginTop: 8 }}>One Campus</Text>
       </SafeAreaView>
     );
@@ -1868,7 +1870,9 @@ export default function App() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 26 }}>
             <View style={{ alignItems: 'center', marginBottom: 26 }}>
-              <Image source={require('./assets/logo.png')} style={{ width: 120, height: 120, resizeMode: 'contain' }} />
+              <View style={{ width: 120, height: 120, borderRadius: 28, overflow: 'hidden' }}>
+                <Image source={require('./assets/logo-icon.png')} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+              </View>
               <Text style={{ fontSize: 26, fontWeight: '900', color: A, marginTop: 12 }}>One Campus</Text>
               <Text style={{ fontSize: 13, color: T.subtext, marginTop: 4 }}>Your campus. Your people. One app.</Text>
             </View>
@@ -1910,7 +1914,9 @@ export default function App() {
   if (!dataReady) {
     return (
       <SafeAreaView style={{ flex: 1, backgroundColor: T.bg, alignItems: 'center', justifyContent: 'center' }}>
-        <Image source={require('./assets/logo.png')} style={{ width: 90, height: 90, resizeMode: 'contain' }} />
+        <View style={{ width: 90, height: 90, borderRadius: 22, overflow: 'hidden' }}>
+          <Image source={require('./assets/logo-icon.png')} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
+        </View>
         <Text style={{ color: T.subtext, marginTop: 12 }}>Loading your campus…</Text>
       </SafeAreaView>
     );
