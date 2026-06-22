@@ -1421,10 +1421,10 @@ export default function App() {
         })
       ) : connectTab === 'friends' ? (<>
         {/* Quick Add entry */}
-        <TouchableOpacity onPress={() => isPremium ? setShowQuickAdd(true) : setSheet('paywall')} style={[st.friendRow, { backgroundColor: T.card, borderWidth: 1, borderColor: T.border }]}>
+        <TouchableOpacity onPress={() => setShowQuickAdd(true)} style={[st.friendRow, { backgroundColor: T.card, borderWidth: 1, borderColor: T.border }]}>
           <View style={[st.avatar, { backgroundColor: A }]}><Ionicons name="person-add" size={18} color="white" /></View>
           <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Add friends{isPremium ? '' : ' · Premium'}</Text>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Add friends</Text>
             <Text style={{ fontSize: 12, color: T.subtext }}>Browse everyone on campus</Text>
           </View>
           <Ionicons name="chevron-forward" size={16} color={T.subtext} />
@@ -1606,7 +1606,6 @@ export default function App() {
                   ['shield-checkmark', 'Streak Insurance', 'Miss a day? Your streak is automatically protected.'],
                   ['eye-off', 'Ad-Free Feed', 'No sponsored posts in your campus feed.'],
                   ['star', 'Profile Spotlight', 'Your posts get a highlighted spotlight in the feed.'],
-                  ['person-add', 'Quick Add Friends', 'Browse everyone on campus and add friends in one tap.'],
                   ['sparkles', 'AI Day / Night Organizer', 'AI plans your campus day & social night.'],
                   ['earth', 'All Local Campuses', 'IU, Notre Dame, Butler, Ball State, Rose-Hulman & IUPUI.'],
                 ].map(([icon, name, desc]) => (
@@ -2139,8 +2138,8 @@ export default function App() {
             <Ionicons name={isPremium ? 'star' : 'flash'} size={12} color="white" />
             <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{points.toLocaleString()} pts</Text>
           </View>
-          <TouchableOpacity onPress={() => isPremium ? setShowQuickAdd(true) : setSheet('paywall')} style={[st.gearBtn, { backgroundColor: T.card }]}>
-            <Ionicons name="person-add" size={16} color={isPremium ? A : T.subtext} />
+          <TouchableOpacity onPress={() => setShowQuickAdd(true)} style={[st.gearBtn, { backgroundColor: T.card }]}>
+            <Ionicons name="person-add" size={16} color={A} />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowSettings(true)} style={[st.gearBtn, { backgroundColor: T.card }]}><Ionicons name="settings-outline" size={17} color={T.text} /></TouchableOpacity>
         </View>
