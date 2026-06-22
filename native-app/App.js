@@ -42,6 +42,13 @@ const db = initializeFirestore(firebaseApp, { experimentalForceLongPolling: true
 const CLOUDINARY_CLOUD_NAME = 'dclt0qybu';        // from the Cloudinary dashboard
 const CLOUDINARY_UPLOAD_PRESET = 'one campus';    // unsigned upload preset
 
+/* ─────────── PUSH NOTIFICATIONS (client-side, no server needed) ───────────
+   The sender's phone reads the recipient's Expo push token and asks Expo to
+   deliver the notification — so it works even when the recipient's app is closed.
+   Upgrade path: move this to a Firebase Cloud Function once on the Blaze plan. */
+const EAS_PROJECT_ID = '9c104cf3-538a-4a62-993d-018c35693c9a';
+const EXPO_PUSH_ENDPOINT = 'https://exp.host/--/api/v2/push/send';
+
 /* ─────────── DATA ─────────── */
 const PURDUE_CLUBS = [
   { name: 'Purdue Hackers', tag: 'TECH', desc: 'Build, ship, repeat. Weekly hackathons & workshops at WALC.', members: 847, location: 'WALC 1055', colors: ['#FF1744', '#FF4081'] },
@@ -369,6 +376,12 @@ export default function App() {
     return unsub;
   }, [user]);
 
+  // ── PUSH: register this device & save its token once the user is signed in ──
+  React.useEffect(() => {
+    if (!user) return;
+    registerForPush();
+  }, [user]);
+
   // ── PEOPLE: live-listen to public profiles (for Quick Add) ──
   React.useEffect(() => {
     if (!user) return;
@@ -602,6 +615,39 @@ export default function App() {
     if (status === 'granted') return true;
     const req = await Notifications.requestPermissionsAsync();
     return req.status === 'granted';
+  };
+
+  // Register this device for real push & save the Expo token to my public profile
+  // so other users' phones can deliver notifications to me (client-side push).
+  const registerForPush = async () => {
+    try {
+      if (Platform.OS === 'android') {
+        await Notifications.setNotificationChannelAsync('default', {
+          name: 'Default', importance: Notifications.AndroidImportance.DEFAULT,
+        });
+      }
+      const ok = await ensureNotifPermission();
+      if (!ok) return;
+      const { data: token } = await Notifications.getExpoPushTokenAsync({ projectId: EAS_PROJECT_ID });
+      if (token && user) {
+        await setDoc(doc(db, 'profiles', user.uid), { pushToken: token }, { merge: true });
+      }
+    } catch (e) { /* token unavailable (e.g. simulator) — silently skip */ }
+  };
+
+  // Send a push to another user by looking up their saved token and calling Expo directly.
+  const sendPushTo = async (uid, title, body, data = {}) => {
+    try {
+      if (!uid || uid === user?.uid) return;
+      const snap = await getDoc(doc(db, 'profiles', uid));
+      const token = snap.exists() ? snap.data().pushToken : null;
+      if (!token) return; // recipient hasn't enabled push yet
+      await fetch(EXPO_PUSH_ENDPOINT, {
+        method: 'POST',
+        headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({ to: token, title, body, sound: 'default', data }),
+      });
+    } catch (e) { /* delivery is best-effort — never block the action that triggered it */ }
   };
 
   const scheduleEventReminder = async (ev) => {
@@ -936,6 +982,8 @@ export default function App() {
         await addDoc(collection(db, 'dms', cid, 'messages'), {
           senderId: user.uid, text, createdAt: serverTimestamp(),
         });
+        // notify the recipient on their phone, even if their app is closed
+        sendPushTo(chatWith.uid, profile.name || 'New message', text, { type: 'dm', uid: user.uid });
       } catch (e) {
         showToast('Could not send — is the "dms" rule set in Firestore?');
       }
