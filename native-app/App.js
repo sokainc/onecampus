@@ -212,6 +212,10 @@ export default function App() {
   // ── daily streak (Premium gets streak insurance) ──
   const [streak, setStreak] = useState(0);
   const [lastActive, setLastActive] = useState(null); // 'YYYY-MM-DD' of last day opened
+  // ── friends / Quick Add (Premium) ──
+  const [friends, setFriends] = useState([]);        // uids of people I've added
+  const [people, setPeople] = useState([]);          // public profiles of everyone on campus
+  const [showQuickAdd, setShowQuickAdd] = useState(false);
 
   const [campus, setCampus] = useState('purdue');
   const [interest, setInterest] = useState('All');
@@ -303,6 +307,7 @@ export default function App() {
           if (Array.isArray(d.interests)) setObInterests(d.interests);
           if (typeof d.streak === 'number') setStreak(d.streak);
           if (d.lastActive) setLastActive(d.lastActive);
+          if (Array.isArray(d.friends)) setFriends(d.friends);
           showToast('Your data is synced');
         }
         dataLoaded.current = true;
@@ -322,12 +327,16 @@ export default function App() {
     saveTimer.current = setTimeout(() => {
       setDoc(doc(db, 'users', user.uid), {
         points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings,
-        onboarded, homeCampus, interests: obInterests, streak, lastActive,
+        onboarded, homeCampus, interests: obInterests, streak, lastActive, friends,
         email: user.email, updatedAt: Date.now(),
+      }, { merge: true }).catch(() => {});
+      // public profile so others can find & add you in Quick Add
+      setDoc(doc(db, 'profiles', user.uid), {
+        uid: user.uid, name: profile.name || 'Student', major: profile.major || '', campus: homeCampus || 'purdue', updatedAt: Date.now(),
       }, { merge: true }).catch(() => {});
     }, 1200);
     return () => clearTimeout(saveTimer.current);
-  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, streak, lastActive, user]);
+  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, streak, lastActive, friends, user]);
 
   // ── DAILY STREAK: runs once data is loaded; Premium "streak insurance" forgives one missed day ──
   React.useEffect(() => {
@@ -356,6 +365,15 @@ export default function App() {
     const q = query(collection(db, 'posts'), orderBy('createdAt', 'desc'), limit(50));
     const unsub = onSnapshot(q, (snap) => {
       setFeedPosts(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => { /* permission/offline — ignore */ });
+    return unsub;
+  }, [user]);
+
+  // ── PEOPLE: live-listen to public profiles (for Quick Add) ──
+  React.useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(collection(db, 'profiles'), (snap) => {
+      setPeople(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(p => p.uid && p.uid !== user.uid));
     }, () => { /* permission/offline — ignore */ });
     return unsub;
   }, [user]);
@@ -609,7 +627,6 @@ export default function App() {
 
   // Premium: friend & event alerts via local notifications (real cross-user push needs a server — that's a separate paid step)
   const toggleFriendAlerts = async (v) => {
-    if (!isPremium) { setShowSettings(false); setSheet('paywall'); return; }
     setSettings(s => ({ ...s, friendAlerts: v }));
     if (!v) { showToast('Friend & event alerts off'); return; }
     const ok = await ensureNotifPermission();
@@ -892,6 +909,15 @@ export default function App() {
     if (!peer?.uid || peer.uid === user?.uid) return;
     setChatWith({ uid: peer.uid, name: peer.name || 'Student', color: peer.color || A, initial: (peer.name || '?')[0].toUpperCase() });
   };
+
+  // add / remove a real person as a friend (Quick Add)
+  const addFriend = (uid) => {
+    if (!uid || friends.includes(uid)) return;
+    setFriends(f => [...f, uid]);
+    const person = people.find(p => p.uid === uid);
+    showToast(`Added ${person?.name || 'friend'}`);
+  };
+  const removeFriend = (uid) => setFriends(f => f.filter(u => u !== uid));
 
   const sendChat = async () => {
     const text = chatInput.trim();
@@ -1267,16 +1293,40 @@ export default function App() {
             </TouchableOpacity>
           );
         })
-      ) : connectTab === 'friends' ? FRIENDS.map(f => (
-        <TouchableOpacity key={f.name} onPress={() => setChatWith(f.name)} style={[st.friendRow, { backgroundColor: T.card }]}>
-          <View style={[st.avatar, { backgroundColor: f.color }]}><Text style={{ color: 'white', fontWeight: '700' }}>{f.initial}</Text></View>
+      ) : connectTab === 'friends' ? (<>
+        {/* Quick Add entry */}
+        <TouchableOpacity onPress={() => isPremium ? setShowQuickAdd(true) : setSheet('paywall')} style={[st.friendRow, { backgroundColor: T.card, borderWidth: 1, borderColor: T.border }]}>
+          <View style={[st.avatar, { backgroundColor: A }]}><Ionicons name="person-add" size={18} color="white" /></View>
           <View style={{ flex: 1, marginLeft: 10 }}>
-            <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{f.name} {f.online ? <Ionicons name="ellipse" size={9} color="#22c55e" /> : null}</Text>
-            <Text style={{ fontSize: 12, color: T.subtext }}>{f.major}</Text>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Add friends{isPremium ? '' : ' · Premium'}</Text>
+            <Text style={{ fontSize: 12, color: T.subtext }}>Browse everyone on campus</Text>
           </View>
-          <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>Message <Ionicons name="chatbubble" size={11} color={A} /></Text>
+          <Ionicons name="chevron-forward" size={16} color={T.subtext} />
         </TouchableOpacity>
-      )) : (<>
+        {/* your real added friends */}
+        {people.filter(p => friends.includes(p.uid)).map(p => (
+          <TouchableOpacity key={p.uid} onPress={() => openDM({ uid: p.uid, name: p.name, color: postColor(p.name || '?') })} style={[st.friendRow, { backgroundColor: T.card }]}>
+            <View style={[st.avatar, { backgroundColor: postColor(p.name || '?') }]}><Text style={{ color: 'white', fontWeight: '700' }}>{(p.name || '?')[0].toUpperCase()}</Text></View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.name || 'Student'}</Text>
+              {!!p.major && <Text style={{ fontSize: 12, color: T.subtext }}>{p.major}</Text>}
+            </View>
+            <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>Message <Ionicons name="chatbubble" size={11} color={A} /></Text>
+          </TouchableOpacity>
+        ))}
+        {/* suggested (demo) people */}
+        <Text style={[st.sectionLabel, { color: T.subtext, marginTop: 6 }]}>SUGGESTED</Text>
+        {FRIENDS.map(f => (
+          <TouchableOpacity key={f.name} onPress={() => setChatWith(f.name)} style={[st.friendRow, { backgroundColor: T.card }]}>
+            <View style={[st.avatar, { backgroundColor: f.color }]}><Text style={{ color: 'white', fontWeight: '700' }}>{f.initial}</Text></View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{f.name} {f.online ? <Ionicons name="ellipse" size={9} color="#22c55e" /> : null}</Text>
+              <Text style={{ fontSize: 12, color: T.subtext }}>{f.major}</Text>
+            </View>
+            <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>Message <Ionicons name="chatbubble" size={11} color={A} /></Text>
+          </TouchableOpacity>
+        ))}
+      </>) : (<>
         {/* composer */}
         <View style={[st.postCard, { backgroundColor: T.card }]}>
           <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 10 }}>
@@ -1430,7 +1480,7 @@ export default function App() {
                   ['shield-checkmark', 'Streak Insurance', 'Miss a day? Your streak is automatically protected.'],
                   ['eye-off', 'Ad-Free Feed', 'No sponsored posts in your campus feed.'],
                   ['star', 'Profile Spotlight', 'Your posts get a highlighted spotlight in the feed.'],
-                  ['notifications', 'Friend & Event Alerts', 'Get notified when friends are active & events are near.'],
+                  ['person-add', 'Quick Add Friends', 'Browse everyone on campus and add friends in one tap.'],
                   ['sparkles', 'AI Day / Night Organizer', 'AI plans your campus day & social night.'],
                   ['earth', 'All Local Campuses', 'IU, Notre Dame, Butler, Ball State, Rose-Hulman & IUPUI.'],
                 ].map(([icon, name, desc]) => (
@@ -1733,12 +1783,9 @@ export default function App() {
                 <Switch value={settings.notifEvents} onValueChange={v => setSettings(s => ({ ...s, notifEvents: v }))} trackColor={{ true: A }} />
               </View>
               <View style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
-                <Ionicons name="people-outline" size={16} color={isPremium ? T.text : T.subtext} />
+                <Ionicons name="people-outline" size={16} color={T.text} />
                 <View style={{ flex: 1, marginLeft: 10 }}>
-                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                    <Text style={{ fontSize: 13, fontWeight: '600', color: T.text }}>Friend & event alerts</Text>
-                    <View style={{ backgroundColor: '#FEF3C7', borderRadius: 6, paddingHorizontal: 5, paddingVertical: 1 }}><Text style={{ fontSize: 8.5, fontWeight: '800', color: '#B45309' }}>PREMIUM</Text></View>
-                  </View>
+                  <Text style={{ fontSize: 13, fontWeight: '600', color: T.text }}>Friend & event alerts</Text>
                   <Text style={{ fontSize: 11, color: T.subtext }}>Alerts when friends are active & events are near</Text>
                 </View>
                 <Switch value={settings.friendAlerts} onValueChange={toggleFriendAlerts} trackColor={{ true: A }} />
@@ -1960,6 +2007,9 @@ export default function App() {
             <Ionicons name={isPremium ? 'star' : 'flash'} size={12} color="white" />
             <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{points.toLocaleString()} pts</Text>
           </View>
+          <TouchableOpacity onPress={() => isPremium ? setShowQuickAdd(true) : setSheet('paywall')} style={[st.gearBtn, { backgroundColor: T.card }]}>
+            <Ionicons name="person-add" size={16} color={isPremium ? A : T.subtext} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowSettings(true)} style={[st.gearBtn, { backgroundColor: T.card }]}><Ionicons name="settings-outline" size={17} color={T.text} /></TouchableOpacity>
         </View>
       </View>
@@ -1986,6 +2036,51 @@ export default function App() {
       {renderSheet()}
       {renderChat()}
       {renderSettingsModal()}
+
+      {/* Quick Add — browse & add people as friends (Premium) */}
+      <Modal visible={showQuickAdd} animationType="slide" onRequestClose={() => setShowQuickAdd(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+          <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+            <TouchableOpacity onPress={() => setShowQuickAdd(false)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>Quick Add</Text>
+              <Text style={{ fontSize: 11, color: T.subtext }}>{people.length} {people.length === 1 ? 'person' : 'people'} on campus</Text>
+            </View>
+          </View>
+          <FlatList
+            data={people}
+            keyExtractor={(p) => p.uid}
+            contentContainerStyle={{ padding: 16, gap: 10, flexGrow: 1 }}
+            ListEmptyComponent={(
+              <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 }}>
+                <Ionicons name="people-outline" size={40} color={T.subtext} />
+                <Text style={{ fontSize: 15, fontWeight: '800', color: T.text, marginTop: 8 }}>No one here yet</Text>
+                <Text style={{ fontSize: 13, color: T.subtext, marginTop: 2, textAlign: 'center', paddingHorizontal: 30 }}>As more students join One Campus, they'll show up here for you to add.</Text>
+              </View>
+            )}
+            renderItem={({ item: p }) => {
+              const added = friends.includes(p.uid);
+              return (
+                <View style={[st.friendRow, { backgroundColor: T.card }]}>
+                  <View style={[st.avatar, { backgroundColor: postColor(p.name || '?') }]}><Text style={{ color: 'white', fontWeight: '700' }}>{(p.name || '?')[0].toUpperCase()}</Text></View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.name || 'Student'}</Text>
+                    {!!p.major && <Text style={{ fontSize: 12, color: T.subtext }}>{p.major}</Text>}
+                  </View>
+                  <TouchableOpacity onPress={() => { setShowQuickAdd(false); openDM({ uid: p.uid, name: p.name, color: postColor(p.name || '?') }); }} style={{ padding: 6, marginRight: 4 }}>
+                    <Ionicons name="chatbubble-outline" size={18} color={T.subtext} />
+                  </TouchableOpacity>
+                  <TouchableOpacity onPress={() => added ? removeFriend(p.uid) : addFriend(p.uid)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: added ? T.bg : A, borderWidth: added ? 1 : 0, borderColor: T.border, borderRadius: 20, paddingHorizontal: 12, paddingVertical: 7 }}>
+                    <Ionicons name={added ? 'checkmark' : 'person-add'} size={13} color={added ? T.subtext : 'white'} />
+                    <Text style={{ color: added ? T.subtext : 'white', fontWeight: '800', fontSize: 12 }}>{added ? 'Added' : 'Add'}</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            }}
+          />
+        </SafeAreaView>
+      </Modal>
 
       {/* Club detail page */}
       <Modal visible={!!clubDetail} animationType="slide" onRequestClose={() => setClubDetail(null)}>
