@@ -169,7 +169,39 @@ const STARTER_CHATS = {
 };
 
 const AUTO_REPLIES = ['Sounds good!', 'Haha for sure', 'Okay see you there!', 'Perfect', 'Yesss let\'s do it', 'Bet. See you on campus!'];
-const INTERESTS = ['All', 'Tech', 'Engineering', 'Business', 'Science', 'Arts', 'Sports'];
+// Master category list — single source of truth for the Discover filter, onboarding,
+// the club-signup picker, club icons & the club-detail page. Add a row here to add a category everywhere.
+const CATEGORIES = [
+  { label: 'Tech', tag: 'TECH', icon: 'laptop' },
+  { label: 'Engineering', tag: 'ENGINEERING', icon: 'construct' },
+  { label: 'Business', tag: 'BUSINESS', icon: 'trending-up' },
+  { label: 'Science', tag: 'SCIENCE', icon: 'flask' },
+  { label: 'Arts', tag: 'ARTS', icon: 'color-palette' },
+  { label: 'Sports', tag: 'SPORTS', icon: 'trophy' },
+  { label: 'Music', tag: 'MUSIC', icon: 'musical-notes' },
+  { label: 'Dance', tag: 'DANCE', icon: 'body' },
+  { label: 'Gaming', tag: 'GAMING', icon: 'game-controller' },
+  { label: 'Greek Life', tag: 'GREEK', icon: 'people-circle' },
+  { label: 'Service', tag: 'SERVICE', icon: 'heart' },
+  { label: 'Cultural', tag: 'CULTURAL', icon: 'globe' },
+  { label: 'Faith', tag: 'FAITH', icon: 'sparkles' },
+  { label: 'Academic', tag: 'ACADEMIC', icon: 'school' },
+  { label: 'Media', tag: 'MEDIA', icon: 'videocam' },
+  { label: 'Health', tag: 'HEALTH', icon: 'fitness' },
+  { label: 'Outdoors', tag: 'OUTDOORS', icon: 'trail-sign' },
+  { label: 'Politics', tag: 'POLITICS', icon: 'megaphone' },
+  { label: 'Environment', tag: 'ENVIRONMENT', icon: 'leaf' },
+  { label: 'Food', tag: 'FOOD', icon: 'restaurant' },
+  { label: 'Pre-Law', tag: 'PRELAW', icon: 'briefcase' },
+  { label: 'Pre-Med', tag: 'PREMED', icon: 'medkit' },
+  { label: 'Entrepreneur', tag: 'STARTUP', icon: 'rocket' },
+  { label: 'Languages', tag: 'LANGUAGES', icon: 'language' },
+  { label: 'LGBTQ+', tag: 'LGBTQ', icon: 'heart-circle' },
+];
+const INTERESTS = ['All', ...CATEGORIES.map(c => c.label)];
+const CAT_ICON = Object.fromEntries(CATEGORIES.map(c => [c.tag, c.icon]));
+// the Discover filter stores a label ('Greek Life'); clubs store a tag ('GREEK') — bridge them
+const tagForLabel = (label) => (CATEGORIES.find(c => c.label === label) || {}).tag || label.toUpperCase();
 // pick a representative Ionicons name for any club from its name/category
 const clubIcon = (club) => {
   const n = (club.name || '').toLowerCase();
@@ -182,7 +214,7 @@ const clubIcon = (club) => {
     [['nsbe', 'swe', 'engineer'], 'construct'], [['rocket', 'aero', 'space', 'astro'], 'rocket'],
   ];
   for (const [keys, icon] of pairs) if (keys.some(k => n.includes(k))) return icon;
-  return { TECH: 'laptop', ENGINEERING: 'construct', BUSINESS: 'trending-up', SCIENCE: 'flask', SPORTS: 'trophy', ARTS: 'color-palette' }[club.tag] || 'school';
+  return CAT_ICON[club.tag] || 'school';
 };
 
 // Ionicons name for a campus building
@@ -227,6 +259,10 @@ export default function App() {
   const [campus, setCampus] = useState('purdue');
   const [interest, setInterest] = useState('All');
   const [cardIdx, setCardIdx] = useState(0);
+  // ── student-listed clubs (real, Firestore) ──
+  const [userClubs, setUserClubs] = useState([]);   // clubs registered by students, for the current campus
+  const [showAddClub, setShowAddClub] = useState(false);
+  const [clubForm, setClubForm] = useState({ name: '', tag: 'TECH', desc: '', location: '' });
   const [dayFilter, setDayFilter] = useState(null);
   const [ptsTab, setPtsTab] = useState('badges');
   const [connectTab, setConnectTab] = useState('feed');
@@ -381,6 +417,18 @@ export default function App() {
     if (!user) return;
     registerForPush();
   }, [user]);
+
+  // ── CLUBS: live-listen to student-registered clubs for the campus being viewed ──
+  React.useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'clubs'), where('campus', '==', campus));
+    const unsub = onSnapshot(q, (snap) => {
+      const rows = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      rows.sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0)); // newest first, no index needed
+      setUserClubs(rows);
+    }, () => { /* permission/offline — ignore */ });
+    return unsub;
+  }, [user, campus]);
 
   // ── PEOPLE: live-listen to public profiles (for Quick Add) ──
   React.useEffect(() => {
@@ -579,8 +627,8 @@ export default function App() {
 
   /* ── discover ── */
   const clubList = () => {
-    const list = CAMPUSES[campus].clubs;
-    return interest === 'All' ? list : list.filter(c => c.tag === interest.toUpperCase());
+    const list = [...userClubs, ...CAMPUSES[campus].clubs]; // student-listed clubs first, then built-in
+    return interest === 'All' ? list : list.filter(c => c.tag === tagForLabel(interest));
   };
 
   const swipe = (action) => {
@@ -786,6 +834,29 @@ export default function App() {
     setJoined(j => [...j, name]);
     const earned = addPoints(75);
     showToast(`✓ Joined ${name}! +${earned} pts${isPremium ? ' (2x)' : ''}`);
+  };
+
+  // List a brand-new club so every student on this campus can find & join it (writes to Firestore `clubs`)
+  const submitClub = async () => {
+    const name = clubForm.name.trim();
+    if (!name) { showToast('Give your club a name'); return; }
+    if (!clubForm.desc.trim()) { showToast('Add a short description'); return; }
+    const palette = [['#FF1744', '#FF4081'], ['#7C3AED', '#A855F7'], ['#0EA5E9', '#38BDF8'], ['#10B981', '#34D399'], ['#F59E0B', '#FCD34D'], ['#EF4444', '#F87171']];
+    const colors = palette[Math.floor(Math.random() * palette.length)];
+    try {
+      await addDoc(collection(db, 'clubs'), {
+        name, tag: clubForm.tag, desc: clubForm.desc.trim(),
+        location: clubForm.location.trim() || 'On campus',
+        campus, members: 1, colors, createdBy: user.uid, createdAt: serverTimestamp(),
+      });
+      setJoined(j => j.includes(name) ? j : [...j, name]); // the founder is automatically a member
+      setShowAddClub(false);
+      setClubForm({ name: '', tag: 'TECH', desc: '', location: '' });
+      const earned = addPoints(100);
+      showToast(`${name} is now listed! +${earned} pts${isPremium ? ' (2x)' : ''}`);
+    } catch (e) {
+      showToast('Could not list club — is the "clubs" rule set in Firestore?');
+    }
   };
   const [bizTab, setBizTab] = useState('dashboard');
   const [bizCampaigns, setBizCampaigns] = useState([
@@ -1013,8 +1084,16 @@ export default function App() {
     const club = list.length ? list[cardIdx % list.length] : null;
     return (
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
-        <Text style={[st.title, { color: A }]}>Discover</Text>
-        <Text style={[st.sub, { color: T.subtext }]}>Find your people & passions</Text>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+          <View style={{ flex: 1 }}>
+            <Text style={[st.title, { color: A }]}>Discover</Text>
+            <Text style={[st.sub, { color: T.subtext }]}>Find your people & passions</Text>
+          </View>
+          <TouchableOpacity onPress={() => setShowAddClub(true)} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: A, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 9, marginTop: 4 }}>
+            <Ionicons name="add" size={16} color="white" />
+            <Text style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>List club</Text>
+          </TouchableOpacity>
+        </View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginVertical: 10 }}>
           {Object.entries(CAMPUSES).map(([key, c]) => {
             const locked = !c.free && !isPremium && key !== homeCampus;
@@ -1972,7 +2051,7 @@ export default function App() {
 
   /* ─────────── ONBOARDING ─────────── */
   if (!onboarded) {
-    const ONB_INTERESTS = ['Tech', 'Engineering', 'Business', 'Science', 'Arts', 'Sports', 'Music', 'Greek Life', 'Gaming', 'Volunteering'];
+    const ONB_INTERESTS = CATEGORIES.map(c => c.label);
     const toggleInterest = (i) => setObInterests(arr => arr.includes(i) ? arr.filter(x => x !== i) : [...arr, i]);
     const canContinue = onbStep === 0 ? !!obCampus : onbStep === 1 ? obMajor.trim().length > 0 : obInterests.length > 0;
     return (
@@ -2091,6 +2170,40 @@ export default function App() {
       {renderChat()}
       {renderSettingsModal()}
 
+      {/* List Your Club — any student can register a club so others can find & join it */}
+      <Modal visible={showAddClub} animationType="slide" onRequestClose={() => setShowAddClub(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+          <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+            <TouchableOpacity onPress={() => setShowAddClub(false)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>List Your Club</Text>
+              <Text style={{ fontSize: 11, color: T.subtext }}>Add it to {CAMPUSES[campus].name} so students can find & join</Text>
+            </View>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+            <Text style={[st.label, { color: T.subtext }]}>CLUB NAME</Text>
+            <TextInput value={clubForm.name} onChangeText={v => setClubForm(f => ({ ...f, name: v }))} placeholder="e.g. Purdue Esports" placeholderTextColor={T.subtext} style={[st.input, { backgroundColor: T.card, color: T.text, borderColor: T.border }]} />
+            <Text style={[st.label, { color: T.subtext }]}>CATEGORY</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+              {CATEGORIES.map(c => {
+                const on = clubForm.tag === c.tag;
+                return (
+                  <TouchableOpacity key={c.tag} onPress={() => setClubForm(f => ({ ...f, tag: c.tag }))} style={[st.pill, { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: on ? A : T.card, borderWidth: 1, borderColor: on ? A : T.border }]}>
+                    <Ionicons name={c.icon} size={12} color={on ? 'white' : T.subtext} />
+                    <Text style={{ color: on ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{c.label}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+            <Text style={[st.label, { color: T.subtext, marginTop: 14 }]}>DESCRIPTION</Text>
+            <TextInput value={clubForm.desc} onChangeText={v => setClubForm(f => ({ ...f, desc: v }))} placeholder="What's your club about? When do you meet?" placeholderTextColor={T.subtext} multiline style={[st.input, { backgroundColor: T.card, color: T.text, borderColor: T.border, height: 80, textAlignVertical: 'top' }]} />
+            <Text style={[st.label, { color: T.subtext }]}>LOCATION (optional)</Text>
+            <TextInput value={clubForm.location} onChangeText={v => setClubForm(f => ({ ...f, location: v }))} placeholder="e.g. WALC 1055" placeholderTextColor={T.subtext} style={[st.input, { backgroundColor: T.card, color: T.text, borderColor: T.border }]} />
+            <TouchableOpacity onPress={submitClub} style={[st.bigBtn, { marginTop: 18 }]}><Text style={st.bigBtnText}>List My Club</Text></TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
       {/* Quick Add — browse & add people as friends (Premium) */}
       <Modal visible={showQuickAdd} animationType="slide" onRequestClose={() => setShowQuickAdd(false)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
@@ -2139,7 +2252,7 @@ export default function App() {
       {/* Club detail page */}
       <Modal visible={!!clubDetail} animationType="slide" onRequestClose={() => setClubDetail(null)}>
         {clubDetail && (() => {
-          const info = TAG_INFO[clubDetail.tag] || { meets: 'Check the club page', perks: [] };
+          const info = TAG_INFO[clubDetail.tag] || { meets: 'See the club for details', perks: ['Open to all students', 'Regular meetups & events', 'Meet people who share your interests'] };
           const isMember = joined.includes(clubDetail.name);
           return (
             <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>

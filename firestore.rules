@@ -46,5 +46,19 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && resource.data.uid == request.auth.uid;
     }
+
+    // Student-listed clubs — everyone signed in can browse them; you create as yourself.
+    match /clubs/{clubId} {
+      // Anyone signed in can see the clubs on any campus.
+      allow read: if request.auth != null;
+
+      // You can only list a club as yourself (createdBy must match your account).
+      allow create: if request.auth != null
+                    && request.resource.data.createdBy == request.auth.uid;
+
+      // Only the student who listed the club can edit or remove it.
+      allow update, delete: if request.auth != null
+                            && resource.data.createdBy == request.auth.uid;
+    }
   }
 }
