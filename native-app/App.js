@@ -232,6 +232,33 @@ const TAG_INFO = {
   ARTS: { meets: 'Weekly · evenings', perks: ['Performances & showcases', 'Creative workshops', 'Open to all majors'] },
 };
 const DAY_NAMES = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+
+// ── "Who's free right now" helpers ──
+const todayIdx = () => (new Date().getDay() + 6) % 7;       // JS 0=Sun → 0=Mon … 6=Sun
+const nowMins = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+const parseMins = (str, ampm) => {                          // "9:30","AM" → minutes since midnight
+  const m = (str || '').trim().match(/^(\d{1,2})(?::(\d{2}))?$/);
+  if (!m) return null;
+  let h = parseInt(m[1], 10); const min = m[2] ? parseInt(m[2], 10) : 0;
+  if (h < 1 || h > 12 || min > 59) return null;
+  if (ampm === 'PM' && h !== 12) h += 12;
+  if (ampm === 'AM' && h === 12) h = 0;
+  return h * 60 + min;
+};
+const fmtMins = (mins) => {                                 // 870 → "2:30 PM"
+  let h = Math.floor(mins / 60); const m = mins % 60; const ap = h >= 12 ? 'PM' : 'AM';
+  h = h % 12; if (h === 0) h = 12;
+  return `${h}:${String(m).padStart(2, '0')} ${ap}`;
+};
+// from a person's weekly classes, are they free right NOW? (uses local device time)
+const freeStatus = (classes) => {
+  const day = todayIdx(), mins = nowMins();
+  const todays = (classes || []).filter(c => c.day === day).sort((a, b) => a.start - b.start);
+  const inClass = todays.find(c => mins >= c.start && mins < c.end);
+  if (inClass) return { free: false, busyUntil: inClass.end };
+  const next = todays.find(c => c.start > mins);
+  return { free: true, until: next ? next.start : null };    // until=null → free rest of day
+};
 const EV_COLORS = ['#7C3AED', '#FF1744', '#0EA5E9', '#10B981', '#F59E0B', '#EF4444'];
 
 /* ─────────── APP ─────────── */
@@ -255,6 +282,12 @@ export default function App() {
   const [friends, setFriends] = useState([]);        // uids of people I've added
   const [people, setPeople] = useState([]);          // public profiles of everyone on campus
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  // ── Who's free right now (Premium) ──
+  const [myClasses, setMyClasses] = useState([]);    // my weekly schedule: [{ day, start, end }] (mins from midnight)
+  const [showFreeNow, setShowFreeNow] = useState(false);
+  const [showSchedule, setShowSchedule] = useState(false);
+  const [clsForm, setClsForm] = useState({ day: todayIdx(), start: '9:00', startAmpm: 'AM', end: '10:00', endAmpm: 'AM' });
+  const [, setFreeTick] = useState(0);               // bumps every 30s so "free now" stays current while open
 
   const [campus, setCampus] = useState('purdue');
   const [interest, setInterest] = useState('All');
@@ -351,6 +384,7 @@ export default function App() {
           if (typeof d.streak === 'number') setStreak(d.streak);
           if (d.lastActive) setLastActive(d.lastActive);
           if (Array.isArray(d.friends)) setFriends(d.friends);
+          if (Array.isArray(d.classes)) setMyClasses(d.classes);
           showToast('Your data is synced');
         }
         dataLoaded.current = true;
@@ -370,16 +404,16 @@ export default function App() {
     saveTimer.current = setTimeout(() => {
       setDoc(doc(db, 'users', user.uid), {
         points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings,
-        onboarded, homeCampus, interests: obInterests, streak, lastActive, friends,
+        onboarded, homeCampus, interests: obInterests, streak, lastActive, friends, classes: myClasses,
         email: user.email, updatedAt: Date.now(),
       }, { merge: true }).catch(() => {});
-      // public profile so others can find & add you in Quick Add
+      // public profile so others can find & add you in Quick Add + see when you're free
       setDoc(doc(db, 'profiles', user.uid), {
-        uid: user.uid, name: profile.name || 'Student', major: profile.major || '', campus: homeCampus || 'purdue', updatedAt: Date.now(),
+        uid: user.uid, name: profile.name || 'Student', major: profile.major || '', campus: homeCampus || 'purdue', classes: myClasses, updatedAt: Date.now(),
       }, { merge: true }).catch(() => {});
     }, 1200);
     return () => clearTimeout(saveTimer.current);
-  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, streak, lastActive, friends, user]);
+  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, streak, lastActive, friends, myClasses, user]);
 
   // ── DAILY STREAK: runs once data is loaded; Premium "streak insurance" forgives one missed day ──
   React.useEffect(() => {
@@ -429,6 +463,13 @@ export default function App() {
     }, () => { /* permission/offline — ignore */ });
     return unsub;
   }, [user, campus]);
+
+  // ── keep "who's free now" current: recompute every 30s while the screen is open ──
+  React.useEffect(() => {
+    if (!showFreeNow) return;
+    const t = setInterval(() => setFreeTick(x => x + 1), 30000);
+    return () => clearInterval(t);
+  }, [showFreeNow]);
 
   // ── PEOPLE: live-listen to public profiles (for Quick Add) ──
   React.useEffect(() => {
@@ -835,6 +876,17 @@ export default function App() {
     const earned = addPoints(75);
     showToast(`✓ Joined ${name}! +${earned} pts${isPremium ? ' (2x)' : ''}`);
   };
+
+  // ── schedule: add / remove a class from my weekly schedule ──
+  const addClass = () => {
+    const s = parseMins(clsForm.start, clsForm.startAmpm);
+    const e = parseMins(clsForm.end, clsForm.endAmpm);
+    if (s == null || e == null) { showToast('Enter times like 9:30'); return; }
+    if (e <= s) { showToast('End time must be after the start time'); return; }
+    setMyClasses(cs => [...cs, { day: clsForm.day, start: s, end: e }].sort((a, b) => a.day - b.day || a.start - b.start));
+    showToast(`Class added · ${DAY_NAMES[clsForm.day]} ${fmtMins(s)}`);
+  };
+  const removeClass = (idx) => setMyClasses(cs => cs.filter((_, i) => i !== idx));
 
   // List a brand-new club so every student on this campus can find & join it (writes to Firestore `clubs`)
   const submitClub = async () => {
@@ -1429,6 +1481,15 @@ export default function App() {
           </View>
           <Ionicons name="chevron-forward" size={16} color={T.subtext} />
         </TouchableOpacity>
+        {/* Who's free right now (Premium) */}
+        <TouchableOpacity onPress={() => isPremium ? setShowFreeNow(true) : setSheet('paywall')} style={[st.friendRow, { backgroundColor: T.card, borderWidth: 1, borderColor: T.border }]}>
+          <View style={[st.avatar, { backgroundColor: '#10B981' }]}><Ionicons name="time" size={18} color="white" /></View>
+          <View style={{ flex: 1, marginLeft: 10 }}>
+            <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Who's free right now{isPremium ? '' : ' · Premium'}</Text>
+            <Text style={{ fontSize: 12, color: T.subtext }}>See which friends are free between classes</Text>
+          </View>
+          <Ionicons name="chevron-forward" size={16} color={T.subtext} />
+        </TouchableOpacity>
         {/* your real added friends */}
         {people.filter(p => friends.includes(p.uid)).map(p => (
           <TouchableOpacity key={p.uid} onPress={() => openDM({ uid: p.uid, name: p.name, color: postColor(p.name || '?') })} style={[st.friendRow, { backgroundColor: T.card }]}>
@@ -1606,6 +1667,7 @@ export default function App() {
                   ['shield-checkmark', 'Streak Insurance', 'Miss a day? Your streak is automatically protected.'],
                   ['eye-off', 'Ad-Free Feed', 'No sponsored posts in your campus feed.'],
                   ['star', 'Profile Spotlight', 'Your posts get a highlighted spotlight in the feed.'],
+                  ['time', "Who's Free Right Now", 'See which friends are free between classes in real time.'],
                   ['sparkles', 'AI Day / Night Organizer', 'AI plans your campus day & social night.'],
                   ['earth', 'All Local Campuses', 'IU, Notre Dame, Butler, Ball State, Rose-Hulman & IUPUI.'],
                 ].map(([icon, name, desc]) => (
@@ -2167,6 +2229,129 @@ export default function App() {
       {renderSheet()}
       {renderChat()}
       {renderSettingsModal()}
+
+      {/* Who's Free Right Now (Premium) — friends free between classes, computed live */}
+      <Modal visible={showFreeNow} animationType="slide" onRequestClose={() => setShowFreeNow(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+          <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+            <TouchableOpacity onPress={() => setShowFreeNow(false)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>Who's Free Now</Text>
+              <Text style={{ fontSize: 11, color: T.subtext }}>{DAY_NAMES[todayIdx()]} · {fmtMins(nowMins())}</Text>
+            </View>
+            <TouchableOpacity onPress={() => { setShowFreeNow(false); setShowSchedule(true); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: T.bg, borderWidth: 1, borderColor: T.border, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 7 }}>
+              <Ionicons name="calendar-outline" size={13} color={A} />
+              <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>My schedule</Text>
+            </TouchableOpacity>
+          </View>
+          {(() => {
+            const myFriends = people.filter(p => friends.includes(p.uid)).map(p => ({ ...p, status: freeStatus(p.classes) }));
+            const free = myFriends.filter(p => p.status.free);
+            const busy = myFriends.filter(p => !p.status.free);
+            if (!myFriends.length) {
+              return (
+                <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 }}>
+                  <Ionicons name="people-outline" size={42} color={T.subtext} />
+                  <Text style={{ fontSize: 15, fontWeight: '800', color: T.text, marginTop: 8 }}>Add some friends first</Text>
+                  <Text style={{ fontSize: 13, color: T.subtext, marginTop: 4, textAlign: 'center' }}>Once you add friends (Quick Add), you'll see who's free between classes right here.</Text>
+                </View>
+              );
+            }
+            return (
+              <ScrollView contentContainerStyle={{ padding: 16 }}>
+                <Text style={[st.sectionLabel, { color: '#10B981' }]}>FREE RIGHT NOW · {free.length}</Text>
+                {free.length === 0 && <Text style={{ color: T.subtext, fontSize: 13, marginBottom: 10 }}>None of your friends are free this minute — check back soon.</Text>}
+                {free.map(p => (
+                  <View key={p.uid} style={[st.friendRow, { backgroundColor: T.card }]}>
+                    <View style={[st.avatar, { backgroundColor: postColor(p.name || '?') }]}><Text style={{ color: 'white', fontWeight: '700' }}>{(p.name || '?')[0].toUpperCase()}</Text></View>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.name || 'Student'}</Text>
+                      <Text style={{ fontSize: 12, color: '#10B981', fontWeight: '700' }}>{(p.classes && p.classes.length) ? (p.status.until ? `Free until ${fmtMins(p.status.until)}` : 'Free rest of day') : 'Free now'}</Text>
+                    </View>
+                    <TouchableOpacity onPress={() => { setShowFreeNow(false); openDM({ uid: p.uid, name: p.name, color: postColor(p.name || '?') }); }} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: A, borderRadius: 18, paddingHorizontal: 12, paddingVertical: 7 }}>
+                      <Ionicons name="chatbubble" size={13} color="white" />
+                      <Text style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>Hang</Text>
+                    </TouchableOpacity>
+                  </View>
+                ))}
+                {busy.length > 0 && <Text style={[st.sectionLabel, { color: T.subtext, marginTop: 16 }]}>IN CLASS · {busy.length}</Text>}
+                {busy.map(p => (
+                  <View key={p.uid} style={[st.friendRow, { backgroundColor: T.card, opacity: 0.6 }]}>
+                    <View style={[st.avatar, { backgroundColor: postColor(p.name || '?') }]}><Text style={{ color: 'white', fontWeight: '700' }}>{(p.name || '?')[0].toUpperCase()}</Text></View>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{p.name || 'Student'}</Text>
+                      <Text style={{ fontSize: 12, color: T.subtext }}>In class until {fmtMins(p.status.busyUntil)}</Text>
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            );
+          })()}
+        </SafeAreaView>
+      </Modal>
+
+      {/* My class schedule — drives "Who's free now" */}
+      <Modal visible={showSchedule} animationType="slide" onRequestClose={() => setShowSchedule(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+          <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+            <TouchableOpacity onPress={() => setShowSchedule(false)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>My Schedule</Text>
+              <Text style={{ fontSize: 11, color: T.subtext }}>Add your classes so friends know when you're busy</Text>
+            </View>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16 }} keyboardShouldPersistTaps="handled">
+            {myClasses.length === 0
+              ? <Text style={{ color: T.subtext, fontSize: 13, marginBottom: 8 }}>No classes yet. Add your weekly classes below — then friends can see when you're free.</Text>
+              : DAY_NAMES.map((dn, di) => {
+                  const dayCls = myClasses.map((c, i) => ({ ...c, i })).filter(c => c.day === di);
+                  if (!dayCls.length) return null;
+                  return (
+                    <View key={dn} style={{ marginBottom: 8 }}>
+                      <Text style={[st.sectionLabel, { color: T.subtext }]}>{dn.toUpperCase()}</Text>
+                      {dayCls.map(c => (
+                        <View key={c.i} style={[st.friendRow, { backgroundColor: T.card }]}>
+                          <Ionicons name="book" size={16} color={A} />
+                          <Text style={{ flex: 1, marginLeft: 10, fontSize: 14, fontWeight: '700', color: T.text }}>{fmtMins(c.start)} – {fmtMins(c.end)}</Text>
+                          <TouchableOpacity onPress={() => removeClass(c.i)} style={{ padding: 6 }}><Ionicons name="trash-outline" size={18} color="#EF4444" /></TouchableOpacity>
+                        </View>
+                      ))}
+                    </View>
+                  );
+                })}
+            <View style={{ height: 1, backgroundColor: T.border, marginVertical: 14 }} />
+            <Text style={[st.label, { color: T.subtext }]}>ADD A CLASS — DAY</Text>
+            <View style={{ flexDirection: 'row', gap: 5 }}>
+              {DAY_NAMES.map((d, i) => (
+                <TouchableOpacity key={d} onPress={() => setClsForm(f => ({ ...f, day: i }))} style={[st.dayPick, { backgroundColor: clsForm.day === i ? A : T.card, borderColor: T.border }]}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: clsForm.day === i ? 'white' : T.subtext }}>{d}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <View style={{ flexDirection: 'row', gap: 10 }}>
+              <View style={{ flex: 1 }}>
+                <Text style={[st.label, { color: T.subtext }]}>START</Text>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  <TextInput value={clsForm.start} onChangeText={v => setClsForm(f => ({ ...f, start: v }))} placeholder="9:00" placeholderTextColor={T.subtext} style={[st.input, { flex: 1, backgroundColor: T.card, color: T.text, borderColor: T.border }]} />
+                  <TouchableOpacity onPress={() => setClsForm(f => ({ ...f, startAmpm: f.startAmpm === 'AM' ? 'PM' : 'AM' }))} style={[st.input, { width: 60, backgroundColor: T.card, borderColor: T.border, justifyContent: 'center', alignItems: 'center' }]}>
+                    <Text style={{ color: T.text, fontWeight: '700' }}>{clsForm.startAmpm}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[st.label, { color: T.subtext }]}>END</Text>
+                <View style={{ flexDirection: 'row', gap: 6 }}>
+                  <TextInput value={clsForm.end} onChangeText={v => setClsForm(f => ({ ...f, end: v }))} placeholder="10:00" placeholderTextColor={T.subtext} style={[st.input, { flex: 1, backgroundColor: T.card, color: T.text, borderColor: T.border }]} />
+                  <TouchableOpacity onPress={() => setClsForm(f => ({ ...f, endAmpm: f.endAmpm === 'AM' ? 'PM' : 'AM' }))} style={[st.input, { width: 60, backgroundColor: T.card, borderColor: T.border, justifyContent: 'center', alignItems: 'center' }]}>
+                    <Text style={{ color: T.text, fontWeight: '700' }}>{clsForm.endAmpm}</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </View>
+            <TouchableOpacity onPress={addClass} style={[st.bigBtn, { marginTop: 16 }]}><Text style={st.bigBtnText}>Add Class</Text></TouchableOpacity>
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
 
       {/* List Your Club — any student can register a club so others can find & join it */}
       <Modal visible={showAddClub} animationType="slide" onRequestClose={() => setShowAddClub(false)}>
