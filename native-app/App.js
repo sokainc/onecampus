@@ -1205,19 +1205,19 @@ export default function App() {
           <TouchableOpacity onPress={() => swipe('join')} style={[st.actionBtn, { backgroundColor: A }]}><Ionicons name="checkmark" size={22} color="white" /></TouchableOpacity>
         </View>
         <Text style={[st.sectionLabel, { color: T.subtext }]}>FILTER BY INTEREST</Text>
-        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 8 }}>
+        <ScrollView nestedScrollEnabled showsVerticalScrollIndicator={true} style={{ maxHeight: 240 }} contentContainerStyle={{ gap: 8, paddingBottom: 8 }}>
           {INTERESTS.map(i => {
             const on = interest === i;
             const icon = i === 'All' ? 'apps' : CAT_ICON[tagForLabel(i)];
             return (
               <TouchableOpacity key={i} onPress={() => { setInterest(i); setCardIdx(0); }}
-                style={[st.pill, { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: on ? A : T.card, borderWidth: 1, borderColor: on ? A : T.border }]}>
-                <Ionicons name={icon} size={12} color={on ? 'white' : T.subtext} />
-                <Text style={{ color: on ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{i}</Text>
+                style={[st.pill, { flexDirection: 'row', alignItems: 'center', gap: 8, alignSelf: 'stretch', backgroundColor: on ? A : T.card, borderWidth: 1, borderColor: on ? A : T.border }]}>
+                <Ionicons name={icon} size={14} color={on ? 'white' : T.subtext} />
+                <Text style={{ color: on ? 'white' : T.subtext, fontWeight: '700', fontSize: 13 }}>{i}</Text>
               </TouchableOpacity>
             );
           })}
-        </View>
+        </ScrollView>
       </ScrollView>
     );
   };
