@@ -835,9 +835,12 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup,
   signInWithEmailAndPassword, onAuthStateChanged, signOut,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
-// 🔑 ONLY these emails can access the admin dashboard. Add more here as needed.
-const ADMIN_EMAILS = [
+// 🔑 Bootstrap admin(s) — these emails always have access so you can never lock
+// yourself out. Everyone else becomes an admin by adding an admins/{uid} doc in
+// the Firebase Console (no code change needed).
+const BOOTSTRAP_ADMIN_EMAILS = [
   'leightonbailey4523@gmail.com',
 ];
 
@@ -850,11 +853,20 @@ const fbApp = initializeApp({
   appId: '1:673557735993:web:5084d747e39ee688febbe8',
 });
 const auth = getAuth(fbApp);
+const db = getFirestore(fbApp);
 const provider = new GoogleAuthProvider();
 provider.setCustomParameters({ prompt: 'select_account' });
 const $ = (id) => document.getElementById(id);
 const setMsg = (m, err) => { const el = $('admin-msg'); el.textContent = m; el.classList.toggle('error', !!err); };
-const isAdmin = (email) => ADMIN_EMAILS.map(e => e.toLowerCase()).includes((email || '').toLowerCase());
+
+// Admin if their email is a bootstrap owner OR they have an admins/{uid} doc.
+const isBootstrapAdmin = (email) => BOOTSTRAP_ADMIN_EMAILS.map(e => e.toLowerCase()).includes((email || '').toLowerCase());
+async function checkAdmin(user) {
+  if (!user) return false;
+  if (isBootstrapAdmin(user.email)) return true;
+  try { return (await getDoc(doc(db, 'admins', user.uid))).exists(); }
+  catch (e) { return false; }
+}
 
 window.adminDoAuth = async function () {
   const email = $('admin-email').value.trim();
@@ -875,14 +887,16 @@ window.adminGoogle = async function () {
 
 window.adminSignOut = async function () { await signOut(auth); };
 
-onAuthStateChanged(auth, (user) => {
-  if (user && isAdmin(user.email)) {
+onAuthStateChanged(auth, async (user) => {
+  if (user && await checkAdmin(user)) {
     // ✅ authorized admin
     $('admin-login').style.display = 'none';
     const name = user.displayName || user.email.split('@')[0];
     $('admin-chip-name').textContent = name;
     $('admin-chip-email').textContent = user.email;
     $('admin-av').textContent = (name[0] || 'A').toUpperCase();
+    // Handy when adding more admins: this uid is what you create an admins/{uid} doc for.
+    console.log('[One Campus admin] signed in uid:', user.uid);
   } else if (user) {
     // signed in but NOT an admin — block and sign out
     setMsg('⛔ This account is not an admin.', true);

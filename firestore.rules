@@ -3,6 +3,23 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // Is the caller an admin? True if their email is the bootstrap owner, OR
+    // they have a doc in the admins collection (added manually via the Console).
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'leightonbailey4523@gmail.com'
+        || exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Admin allowlist. A doc here (id = the admin's uid) grants admin powers.
+    // Only the owner of that uid (or an existing admin) can read it; nobody can
+    // write from a client — add/remove admins in the Firebase Console only.
+    match /admins/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow write: if false;
+    }
+
     // Each user can only read/write their OWN profile/save document.
     match /users/{userId} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
@@ -42,9 +59,9 @@ service cloud.firestore {
       // Anyone signed in can update a post (needed for likes + comments).
       allow update: if request.auth != null;
 
-      // Only the original author can delete their own post.
+      // The original author can delete their own post; admins can remove any post.
       allow delete: if request.auth != null
-                    && resource.data.uid == request.auth.uid;
+                    && (resource.data.uid == request.auth.uid || isAdmin());
     }
 
     // Student-listed clubs — everyone signed in can browse them; you create as yourself.
@@ -56,9 +73,9 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.createdBy == request.auth.uid;
 
-      // Only the student who listed the club can edit or remove it.
+      // The student who listed the club can edit/remove it; admins can moderate any club.
       allow update, delete: if request.auth != null
-                            && resource.data.createdBy == request.auth.uid;
+                            && (resource.data.createdBy == request.auth.uid || isAdmin());
     }
   }
 }
