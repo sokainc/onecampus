@@ -73,6 +73,13 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin();
     }
 
+    // Suspensions — a bans/{uid} doc blocks that account. Only admins can write;
+    // a user (or admin) can read their own ban so the app can enforce it at login.
+    match /bans/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow write: if isAdmin();
+    }
+
     // Student-listed clubs — everyone signed in can browse them; you create as yourself.
     match /clubs/{clubId} {
       // Anyone signed in can see the clubs on any campus.

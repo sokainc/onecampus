@@ -286,6 +286,7 @@ export default function App() {
   const [friends, setFriends] = useState([]);        // uids of people I've added
   const [people, setPeople] = useState([]);          // public profiles of everyone on campus
   const [showQuickAdd, setShowQuickAdd] = useState(false);
+  const [banned, setBanned] = useState(false);       // set true if an admin has a bans/{uid} doc on this account
   // ── Who's free right now (Premium) ──
   const [myClasses, setMyClasses] = useState([]);    // my weekly schedule: [{ day, start, end }] (mins from midnight)
   const [showFreeNow, setShowFreeNow] = useState(false);
@@ -360,7 +361,7 @@ export default function App() {
       setUser(u);
       setAuthReady(true);
       if (u && u.displayName) setProfile(p => ({ ...p, name: u.displayName }));
-      if (!u) { dataLoaded.current = false; setDataReady(false); setOnboarded(false); setOnbStep(0); }
+      if (!u) { dataLoaded.current = false; setDataReady(false); setOnboarded(false); setOnbStep(0); setBanned(false); }
     });
     return unsub;
   }, []);
@@ -370,6 +371,10 @@ export default function App() {
     if (!user) return;
     (async () => {
       try {
+        // Blocked? An admin can suspend an account by creating a bans/{uid} doc.
+        const banSnap = await getDoc(doc(db, 'bans', user.uid));
+        if (banSnap.exists()) { setBanned(true); dataLoaded.current = true; setDataReady(true); return; }
+        setBanned(false);
         const snap = await getDoc(doc(db, 'users', user.uid));
         if (snap.exists()) {
           const d = snap.data();
@@ -2100,6 +2105,24 @@ export default function App() {
           <Image source={require('./assets/logo-icon.png')} style={{ width: '100%', height: '100%', resizeMode: 'cover' }} />
         </View>
         <Text style={{ fontSize: 18, fontWeight: '800', color: A, marginTop: 8 }}>One Campus</Text>
+      </SafeAreaView>
+    );
+  }
+
+  if (user && banned) {
+    return (
+      <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+        <StatusBar style={dark ? 'light' : 'dark'} />
+        <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', padding: 30 }}>
+          <Ionicons name="ban" size={64} color="#EF4444" />
+          <Text style={{ fontSize: 22, fontWeight: '900', color: T.text, marginTop: 16 }}>Account suspended</Text>
+          <Text style={{ fontSize: 14, color: T.subtext, textAlign: 'center', marginTop: 8, lineHeight: 20 }}>
+            Your account has been suspended for violating One Campus community guidelines. If you think this is a mistake, contact support.
+          </Text>
+          <TouchableOpacity onPress={() => fbSignOut(auth)} style={{ marginTop: 24, backgroundColor: T.card, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 28 }}>
+            <Text style={{ fontSize: 15, fontWeight: '800', color: T.text }}>Sign out</Text>
+          </TouchableOpacity>
+        </View>
       </SafeAreaView>
     );
   }

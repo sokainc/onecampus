@@ -237,15 +237,15 @@
     <div class="stats-row">
       <div class="stat-card">
         <div class="stat-icon" style="background:#EDE9FE">👥</div>
-        <div class="stat-value">1,247</div>
+        <div class="stat-value" id="stat-users">0</div>
         <div class="stat-label">Total Users</div>
-        <div class="stat-change up">↑ 12% this week</div>
+        <div class="stat-change up">Signed-up profiles</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon" style="background:#D1FAE5">🟢</div>
-        <div class="stat-value">89</div>
+        <div class="stat-value" id="stat-active">0</div>
         <div class="stat-label">Active Today</div>
-        <div class="stat-change up">↑ 8% vs yesterday</div>
+        <div class="stat-change up">Opened in last 24h</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon" style="background:#FEF3C7">💰</div>
@@ -320,20 +320,14 @@
     </div>
     <div class="card">
       <div class="search-bar">
-        <input class="search-input" placeholder="🔍  Search users by name or email..." />
+        <input class="search-input" id="user-search" oninput="filterUsers(this.value)" placeholder="🔍  Search users by name or major..." />
         <select class="filter-select"><option>All Campuses</option><option>Purdue</option><option>IU</option><option>Butler</option></select>
         <select class="filter-select"><option>All Status</option><option>Active</option><option>Pending</option><option>Flagged</option><option>Banned</option></select>
       </div>
       <table>
-        <thead><tr><th>User</th><th>Campus</th><th>Major</th><th>Points</th><th>Clubs</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#7C3AED">LB</div><div><div class="user-name">Leighton Bailey</div><div class="user-email">lbailey@purdue.edu</div></div></div></td><td>Purdue</td><td>Business</td><td>2,456</td><td>3</td><td>May 1</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Leighton Bailey','lbailey@purdue.edu','Purdue','Business','Active','2,456','3','#7C3AED')">View</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#7C3AED">ML</div><div><div class="user-name">Maya Liu</div><div class="user-email">liu247@purdue.edu</div></div></div></td><td>Purdue</td><td>CS</td><td>2,210</td><td>4</td><td>May 3</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Maya Liu','liu247@purdue.edu','Purdue','CS','Active','2,210','4','#7C3AED')">View</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EF4444">JR</div><div><div class="user-name">Jordan Reed</div><div class="user-email">jreed@purdue.edu</div></div></div></td><td>Purdue</td><td>ME</td><td>1,980</td><td>2</td><td>May 5</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Jordan Reed','jreed@purdue.edu','Purdue','Mechanical Eng.','Active','1,980','2','#EF4444')">View</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EC4899">PM</div><div><div class="user-name">Priya Mehta</div><div class="user-email">pmehta@purdue.edu</div></div></div></td><td>Purdue</td><td>Pre-Med</td><td>1,750</td><td>1</td><td>Jun 1</td><td><span class="status-pill status-pending">Pending</span></td><td><div class="action-btns"><button class="action-btn approve" onclick="verifyUser(this,'Priya Mehta')">Verify</button><button class="action-btn ban" onclick="openBanUser('Priya Mehta')">Ban</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EF4444">AK</div><div><div class="user-name">Alex Kim</div><div class="user-email">akim99@purdue.edu</div></div></div></td><td>Purdue</td><td>Data Science</td><td>890</td><td>1</td><td>Jun 7</td><td><span class="status-pill status-flagged">Flagged</span></td><td><div class="action-btns"><button class="action-btn warn" onclick="openWarnUser('Alex Kim')">Warn</button><button class="action-btn ban" onclick="openBanUser('Alex Kim')">Ban</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#0EA5E9">TB</div><div><div class="user-name">Tyler Brooks</div><div class="user-email">tbrooks@purdue.edu</div></div></div></td><td>Purdue</td><td>EE</td><td>1,600</td><td>2</td><td>Jun 6</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Tyler Brooks','tbrooks@purdue.edu','Purdue','Electrical Eng.','Active','1,600','2','#0EA5E9')">View</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#F59E0B">ZT</div><div><div class="user-name">Zoe Torres</div><div class="user-email">ztorres@purdue.edu</div></div></div></td><td>Purdue</td><td>Psychology</td><td>1,340</td><td>2</td><td>Jun 4</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Zoe Torres','ztorres@purdue.edu','Purdue','Psychology','Active','1,340','2','#F59E0B')">View</button></div></td></tr>
+        <thead><tr><th>User</th><th>Campus</th><th>Major</th><th>Last active</th><th>Status</th><th>Actions</th></tr></thead>
+        <tbody id="users-tbody">
+          <tr><td colspan="6" style="text-align:center;color:#9CA3AF;padding:30px">Loading users…</td></tr>
         </tbody>
       </table>
     </div>
@@ -806,7 +800,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
   signInWithEmailAndPassword, onAuthStateChanged, signOut,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, doc, getDoc, deleteDoc, collection, query, where, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // 🔑 Bootstrap admin(s) — these emails always have access so you can never lock
 // yourself out. Everyone else becomes an admin by adding an admins/{uid} doc in
@@ -917,6 +911,61 @@ async function modDismiss(reportId) {
   try { await deleteDoc(doc(db, 'reports', reportId)); toast('Report dismissed'); }
   catch (e) { toast('Failed: ' + (e.code || e.message)); }
 }
+
+// ── DASHBOARD COUNTS + USER MANAGEMENT (live from `profiles` and `bans`) ──
+let adminStarted = false;
+let allProfiles = [];      // latest profiles snapshot
+let bannedSet = new Set(); // uids with a bans/{uid} doc
+function startAdminData() {
+  if (adminStarted) return; adminStarted = true;
+  onSnapshot(collection(db, 'profiles'), (snap) => {
+    allProfiles = snap.docs.map((d) => ({ uid: d.id, ...d.data() }));
+    const total = allProfiles.length;
+    const dayAgo = Date.now() - 24 * 60 * 60 * 1000;
+    const active = allProfiles.filter((p) => (p.updatedAt || 0) > dayAgo).length;
+    const su = $('stat-users'); if (su) su.textContent = total.toLocaleString();
+    const sa = $('stat-active'); if (sa) sa.textContent = active.toLocaleString();
+    const usub = document.querySelector('#page-users .topbar-sub'); if (usub) usub.textContent = total.toLocaleString() + ' total user' + (total === 1 ? '' : 's');
+    renderUsers();
+  }, (err) => { const t = $('users-tbody'); if (t) t.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#DC2626;padding:24px">Could not load: ' + (err.code || err.message) + '</td></tr>'; });
+  onSnapshot(collection(db, 'bans'), (snap) => { bannedSet = new Set(snap.docs.map((d) => d.id)); renderUsers(); });
+}
+
+const escA = (s) => (s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const AV_COLORS = ['#7C3AED', '#EF4444', '#EC4899', '#0EA5E9', '#10B981', '#F59E0B'];
+function renderUsers() {
+  const tb = $('users-tbody'); if (!tb) return;
+  const term = ($('user-search') && $('user-search').value || '').toLowerCase().trim();
+  let rows = allProfiles.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  if (term) rows = rows.filter((p) => ((p.name || '') + ' ' + (p.major || '')).toLowerCase().includes(term));
+  if (rows.length === 0) { tb.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#9CA3AF;padding:30px">' + (allProfiles.length ? 'No matches' : 'No users yet') + '</td></tr>'; return; }
+  const ago = (ms) => { if (!ms) return '—'; const m = Math.floor((Date.now() - ms) / 60000); if (m < 1) return 'just now'; if (m < 60) return m + 'm ago'; const h = Math.floor(m / 60); if (h < 24) return h + 'h ago'; return Math.floor(h / 24) + 'd ago'; };
+  tb.innerHTML = rows.map((p) => {
+    const name = escA(p.name || 'Student'); const initials = (p.name || 'S').trim().slice(0, 2).toUpperCase();
+    const color = AV_COLORS[(p.uid || '').charCodeAt(0) % AV_COLORS.length] || '#7C3AED';
+    const banned = bannedSet.has(p.uid);
+    const status = banned ? '<span class="status-pill status-flagged">Banned</span>' : '<span class="status-pill status-active">Active</span>';
+    const action = banned
+      ? '<button class="action-btn approve" data-unban="' + p.uid + '">Unban</button>'
+      : '<button class="action-btn ban" data-ban="' + p.uid + '" data-name="' + name + '">Ban</button>';
+    return '<tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:' + color + '">' + escA(initials) + '</div><div><div class="user-name">' + name + '</div><div class="user-email">' + escA(p.major || '—') + '</div></div></div></td>'
+      + '<td>' + escA(p.campus || '—') + '</td><td>' + escA(p.major || '—') + '</td><td>' + ago(p.updatedAt) + '</td><td>' + status + '</td>'
+      + '<td><div class="action-btns">' + action + '</div></td></tr>';
+  }).join('');
+  tb.querySelectorAll('[data-ban]').forEach((b) => { b.onclick = () => banUser(b.getAttribute('data-ban'), b.getAttribute('data-name')); });
+  tb.querySelectorAll('[data-unban]').forEach((b) => { b.onclick = () => unbanUser(b.getAttribute('data-unban')); });
+}
+window.filterUsers = renderUsers;
+
+async function banUser(uid, name) {
+  if (!confirm('Ban ' + (name || 'this user') + "? They'll be blocked from the app until you unban them.")) return;
+  try { await setDoc(doc(db, 'bans', uid), { by: auth.currentUser.email, name: name || '', at: Date.now() }); toast('User banned'); }
+  catch (e) { toast('Failed: ' + (e.code || e.message)); }
+}
+async function unbanUser(uid) {
+  try { await deleteDoc(doc(db, 'bans', uid)); toast('User unbanned'); }
+  catch (e) { toast('Failed: ' + (e.code || e.message)); }
+}
 async function modRemove(reportId, postId) {
   try {
     if (postId) { try { await deleteDoc(doc(db, 'posts', postId)); } catch (e) {} }
@@ -938,6 +987,7 @@ onAuthStateChanged(auth, async (user) => {
     // Handy when adding more admins: this uid is what you create an admins/{uid} doc for.
     console.log('[One Campus admin] signed in uid:', user.uid);
     startModeration();
+    startAdminData();
   } else if (user) {
     // signed in but NOT an admin — block and sign out
     setMsg('⛔ This account is not an admin.', true);
