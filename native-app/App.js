@@ -1205,7 +1205,7 @@ export default function App() {
           <TouchableOpacity onPress={() => swipe('join')} style={[st.actionBtn, { backgroundColor: A }]}><Ionicons name="checkmark" size={22} color="white" /></TouchableOpacity>
         </View>
         <Text style={[st.sectionLabel, { color: T.subtext }]}>FILTER BY INTEREST</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 8, paddingRight: 8 }}>
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, paddingBottom: 8 }}>
           {INTERESTS.map(i => {
             const on = interest === i;
             const icon = i === 'All' ? 'apps' : CAT_ICON[tagForLabel(i)];
@@ -1217,7 +1217,7 @@ export default function App() {
               </TouchableOpacity>
             );
           })}
-        </ScrollView>
+        </View>
       </ScrollView>
     );
   };
