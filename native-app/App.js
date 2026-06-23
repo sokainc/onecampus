@@ -259,6 +259,8 @@ const freeStatus = (classes) => {
   const next = todays.find(c => c.start > mins);
   return { free: true, until: next ? next.start : null };    // until=null → free rest of day
 };
+// quiet hours = 11 PM–8 AM (local device time)
+const inQuietHours = () => { const h = new Date().getHours(); return h >= 23 || h < 8; };
 const EV_COLORS = ['#7C3AED', '#FF1744', '#0EA5E9', '#10B981', '#F59E0B', '#EF4444'];
 
 /* ─────────── APP ─────────── */
@@ -409,7 +411,10 @@ export default function App() {
       }, { merge: true }).catch(() => {});
       // public profile so others can find & add you in Quick Add + see when you're free
       setDoc(doc(db, 'profiles', user.uid), {
-        uid: user.uid, name: profile.name || 'Student', major: profile.major || '', campus: homeCampus || 'purdue', classes: myClasses, updatedAt: Date.now(),
+        uid: user.uid, name: profile.name || 'Student', major: profile.major || '', campus: homeCampus || 'purdue', classes: myClasses,
+        // notification prefs so other users' phones can honor them before pushing to me
+        notifications: settings.notifications, notifDMs: settings.notifDMs, notifRequests: settings.notifRequests, quietHours: settings.quietHours,
+        updatedAt: Date.now(),
       }, { merge: true }).catch(() => {});
     }, 1200);
     return () => clearTimeout(saveTimer.current);
@@ -729,8 +734,15 @@ export default function App() {
     try {
       if (!uid || uid === user?.uid) return;
       const snap = await getDoc(doc(db, 'profiles', uid));
-      const token = snap.exists() ? snap.data().pushToken : null;
+      if (!snap.exists()) return;
+      const d = snap.data();
+      const token = d.pushToken;
       if (!token) return; // recipient hasn't enabled push yet
+      // honor the RECIPIENT's notification settings (stored on their public profile)
+      if (d.notifications === false) return;                          // they muted everything
+      if (data.type === 'dm' && d.notifDMs === false) return;          // they turned off message alerts
+      if (data.type === 'friend' && d.notifRequests === false) return; // they turned off friend-request alerts
+      if (d.quietHours === true && inQuietHours()) return;             // they're in quiet hours
       await fetch(EXPO_PUSH_ENDPOINT, {
         method: 'POST',
         headers: { Accept: 'application/json', 'Content-Type': 'application/json' },
@@ -740,7 +752,8 @@ export default function App() {
   };
 
   const scheduleEventReminder = async (ev) => {
-    if (!settings.notifications) return;
+    if (!settings.notifications || !settings.notifEvents) return;
+    if (settings.quietHours && inQuietHours()) return;
     const ok = await ensureNotifPermission();
     if (!ok) return;
     // demo: fire shortly after RSVP so you can see it works (real app would fire 1hr before)
@@ -766,6 +779,7 @@ export default function App() {
     if (!v) { showToast('Friend & event alerts off'); return; }
     const ok = await ensureNotifPermission();
     if (!ok) { showToast('Allow notifications in phone settings'); setSettings(s => ({ ...s, friendAlerts: false })); return; }
+    if (settings.quietHours && inQuietHours()) { showToast('Alerts on — quiet hours active, so none right now'); return; }
     const activeFriends = FRIENDS.filter(f => f.online);
     const nextEvent = events.find(e => rsvpd.includes(e.name)) || events[0];
     if (activeFriends.length) {
@@ -1085,6 +1099,8 @@ export default function App() {
     setFriends(f => [...f, uid]);
     const person = people.find(p => p.uid === uid);
     showToast(`Added ${person?.name || 'friend'}`);
+    // let them know — respects their "friend requests" notification toggle (checked in sendPushTo)
+    sendPushTo(uid, 'New friend on One Campus', `${profile.name || 'Someone'} added you as a friend`, { type: 'friend', uid: user?.uid });
   };
   const removeFriend = (uid) => setFriends(f => f.filter(u => u !== uid));
 
