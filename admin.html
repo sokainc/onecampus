@@ -208,7 +208,7 @@
   <nav class="sidebar-nav">
     <a class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">📊</span>Dashboard</a>
     <a class="nav-item" onclick="showPage('users',this)"><span class="icon">👥</span>Users<span class="nav-badge">3</span></a>
-    <a class="nav-item" onclick="showPage('content',this)"><span class="icon">🚩</span>Content Mod<span class="nav-badge">4</span></a>
+    <a class="nav-item" onclick="showPage('content',this)"><span class="icon">🚩</span>Content Mod<span class="nav-badge" id="badge-content" style="display:none">0</span></a>
     <a class="nav-item" onclick="showPage('ads',this)"><span class="icon">📢</span>Ads & Revenue</a>
     <a class="nav-item" onclick="showPage('campuses',this)"><span class="icon">🏛️</span>Campuses</a>
     <a class="nav-item" onclick="showPage('settings',this)"><span class="icon">⚙️</span>Settings</a>
@@ -255,7 +255,7 @@
       </div>
       <div class="stat-card">
         <div class="stat-icon" style="background:#FEE2E2">🚩</div>
-        <div class="stat-value">4</div>
+        <div class="stat-value" id="stat-flagged">0</div>
         <div class="stat-label">Flagged Posts</div>
         <div class="stat-change down">Needs review</div>
       </div>
@@ -339,42 +339,13 @@
     </div>
   </div>
 
-  <!-- CONTENT MODERATION -->
+  <!-- CONTENT MODERATION (live from the `reports` collection) -->
   <div class="page" id="page-content">
     <div class="topbar">
-      <div><div class="topbar-title">Content Moderation</div><div class="topbar-sub">4 posts need review</div></div>
-      <button class="btn btn-outline" onclick="clearAllFlagged()">Clear All</button>
+      <div><div class="topbar-title">Content Moderation</div><div class="topbar-sub" id="content-sub">Loading reports…</div></div>
     </div>
-    <div class="two-col">
-      <div>
-        <div class="flagged-item">
-          <div class="flagged-header"><span class="flagged-user">Alex Kim · @akim99</span><span class="flagged-reason">Spam</span></div>
-          <div class="flagged-text">"Join my Discord server for free Robux and V-bucks!! Limited time only click link in bio 🔥🔥"</div>
-          <div class="flagged-meta">Reported by 3 users · Posted Jun 8, 2:14 PM · Purdue Campus Feed</div>
-          <div class="action-btns"><button class="action-btn approve" onclick="toast('Post approved')">Keep</button><button class="action-btn remove" onclick="this.closest('.flagged-item').remove();toast('Post removed')">Remove</button><button class="action-btn ban" onclick="toast('User banned')">Ban User</button></div>
-        </div>
-        <div class="flagged-item">
-          <div class="flagged-header"><span class="flagged-user">Unknown · @user4492</span><span class="flagged-reason">Harassment</span></div>
-          <div class="flagged-text">"Stop posting your project in every channel nobody cares about your stupid robotics team lmao"</div>
-          <div class="flagged-meta">Reported by 1 user · Posted Jun 7, 9:41 PM · NSBE Club Feed</div>
-          <div class="action-btns"><button class="action-btn approve" onclick="toast('Post kept')">Keep</button><button class="action-btn remove" onclick="this.closest('.flagged-item').remove();toast('Post removed')">Remove</button><button class="action-btn warn" onclick="toast('Warning sent')">Warn User</button></div>
-        </div>
-      </div>
-      <div>
-        <div class="flagged-item">
-          <div class="flagged-header"><span class="flagged-user">Anon · @anon8812</span><span class="flagged-reason">Misinformation</span></div>
-          <div class="flagged-text">"WALC is CLOSED tomorrow for the whole day due to a gas leak — cancel your study sessions!!"</div>
-          <div class="flagged-meta">Reported by 5 users · Posted Jun 8, 11:02 AM · Campus Events</div>
-          <div class="action-btns"><button class="action-btn approve" onclick="toast('Post kept')">Keep</button><button class="action-btn remove" onclick="this.closest('.flagged-item').remove();toast('Post removed')">Remove</button><button class="action-btn ban" onclick="toast('User banned')">Ban User</button></div>
-        </div>
-        <div class="flagged-item">
-          <div class="flagged-header"><span class="flagged-user">User · @test123</span><span class="flagged-reason">Inappropriate</span></div>
-          <div class="flagged-text">"[Image flagged — explicit content detected by AI filter. Manual review required before displaying.]"</div>
-          <div class="flagged-meta">Auto-flagged by AI · Posted Jun 8, 7:55 AM · Connect Feed</div>
-          <div class="action-btns"><button class="action-btn approve" onclick="toast('Post approved')">Approve</button><button class="action-btn remove" onclick="this.closest('.flagged-item').remove();toast('Image removed')">Remove</button><button class="action-btn ban" onclick="toast('User banned')">Ban User</button></div>
-        </div>
-      </div>
-    </div>
+    <div class="card" id="content-empty" style="display:none;text-align:center;padding:48px;color:#9CA3AF">✅ No open reports — you're all caught up.</div>
+    <div class="two-col" id="content-list"></div>
   </div>
 
   <!-- ADS & REVENUE -->
@@ -835,7 +806,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
   signInWithEmailAndPassword, onAuthStateChanged, signOut,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, doc, getDoc, deleteDoc, collection, query, where, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // 🔑 Bootstrap admin(s) — these emails always have access so you can never lock
 // yourself out. Everyone else becomes an admin by adding an admins/{uid} doc in
@@ -898,6 +869,62 @@ window.adminGoogle = async function () {
 // If we came back from a redirect sign-in, surface any error code.
 getRedirectResult(auth).catch((err) => { if (err && err.code) setMsg('Sign-in failed: ' + err.code, true); });
 
+// ── CONTENT MODERATION (live from the `reports` collection) ──
+let modStarted = false;
+function startModeration() {
+  if (modStarted) return; modStarted = true;
+  const list = $('content-list'), empty = $('content-empty'), sub = $('content-sub'),
+        badge = $('badge-content'), statF = $('stat-flagged');
+  const esc = (s) => (s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const ago = (ts) => {
+    try {
+      const d = ts && ts.toDate ? ts.toDate() : null; if (!d) return '';
+      const m = Math.floor((Date.now() - d.getTime()) / 60000);
+      if (m < 1) return 'just now'; if (m < 60) return m + 'm ago';
+      const h = Math.floor(m / 60); if (h < 24) return h + 'h ago';
+      return Math.floor(h / 24) + 'd ago';
+    } catch (e) { return ''; }
+  };
+  const qy = query(collection(db, 'reports'), where('status', '==', 'open'));
+  onSnapshot(qy, (snap) => {
+    const ms = (t) => (t && t.toMillis ? t.toMillis() : 0);
+    const docs = snap.docs.slice().sort((a, b) => ms(b.data().createdAt) - ms(a.data().createdAt));
+    const n = docs.length;
+    sub.textContent = n === 0 ? 'No posts need review' : (n + ' post' + (n === 1 ? '' : 's') + ' need review');
+    statF.textContent = n;
+    badge.textContent = n; badge.style.display = n ? '' : 'none';
+    empty.style.display = n ? 'none' : 'block';
+    list.innerHTML = '';
+    docs.forEach((docSnap) => {
+      const r = docSnap.data();
+      const body = r.text ? '"' + esc(r.text) + '"' : (r.imageUrl ? '[Photo — open to review]' : '[No text]');
+      const el = document.createElement('div');
+      el.className = 'flagged-item';
+      el.innerHTML =
+        '<div class="flagged-header"><span class="flagged-user">' + esc(r.targetAuthor || 'Unknown') + '</span><span class="flagged-reason">' + esc(r.reason || 'Reported') + '</span></div>' +
+        '<div class="flagged-text">' + body + '</div>' +
+        '<div class="flagged-meta">Reported by ' + esc(r.reporterName || 'a user') + (r.campus ? ' · ' + esc(r.campus) : '') + ' · ' + ago(r.createdAt) + '</div>' +
+        '<div class="action-btns"><button class="action-btn approve">Dismiss</button><button class="action-btn remove">Remove post</button></div>';
+      const btns = el.querySelectorAll('button');
+      btns[0].onclick = () => modDismiss(docSnap.id);
+      btns[1].onclick = () => modRemove(docSnap.id, r.targetId);
+      list.appendChild(el);
+    });
+  }, (err) => { sub.textContent = 'Could not load reports: ' + (err.code || err.message); });
+}
+
+async function modDismiss(reportId) {
+  try { await deleteDoc(doc(db, 'reports', reportId)); toast('Report dismissed'); }
+  catch (e) { toast('Failed: ' + (e.code || e.message)); }
+}
+async function modRemove(reportId, postId) {
+  try {
+    if (postId) { try { await deleteDoc(doc(db, 'posts', postId)); } catch (e) {} }
+    await deleteDoc(doc(db, 'reports', reportId));
+    toast('Post removed');
+  } catch (e) { toast('Failed: ' + (e.code || e.message)); }
+}
+
 window.adminSignOut = async function () { await signOut(auth); };
 
 onAuthStateChanged(auth, async (user) => {
@@ -910,6 +937,7 @@ onAuthStateChanged(auth, async (user) => {
     $('admin-av').textContent = (name[0] || 'A').toUpperCase();
     // Handy when adding more admins: this uid is what you create an admins/{uid} doc for.
     console.log('[One Campus admin] signed in uid:', user.uid);
+    startModeration();
   } else if (user) {
     // signed in but NOT an admin — block and sign out
     setMsg('⛔ This account is not an admin.', true);

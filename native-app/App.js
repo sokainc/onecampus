@@ -311,6 +311,7 @@ export default function App() {
   const lastImgTap = useRef({});                       // for double-tap-to-like
   const [commentOn, setCommentOn] = useState(null); // post being commented on
   const [commentText, setCommentText] = useState('');
+  const [reportOn, setReportOn] = useState(null); // post being reported (opens reason sheet)
 
   const [sheet, setSheet] = useState(null); // 'paywall' | 'payment' | 'planner' | 'addEvent' | 'charity' | 'reward' | 'cancelSub'
   const [rewardResult, setRewardResult] = useState(null);
@@ -582,6 +583,29 @@ export default function App() {
   const deletePost = async (post) => {
     try { await deleteDoc(doc(db, 'posts', post.id)); showToast('Post deleted'); } catch (e) {}
   };
+
+  // Flag a post for admin review — writes to the `reports` collection (Content Mod tab).
+  const submitReport = async (post, reason) => {
+    setReportOn(null);
+    try {
+      await addDoc(collection(db, 'reports'), {
+        type: 'post',
+        targetId: post.id,
+        targetUid: post.uid || null,
+        targetAuthor: post.author || '',
+        text: (post.text || '').slice(0, 280),
+        imageUrl: post.imageUrl || null,
+        reason,
+        reportedBy: user.uid,
+        reporterName: profile.name || 'Student',
+        campus,
+        status: 'open',
+        createdAt: serverTimestamp(),
+      });
+      showToast('Reported — thanks, our team will review it');
+    } catch (e) { showToast('Could not send report — is the "reports" rule set?'); }
+  };
+  const REPORT_REASONS = ['Spam or scam', 'Harassment or bullying', 'Inappropriate or explicit', 'False information', 'Something else'];
 
   const postColor = (name) => {
     const colors = ['#7C3AED', '#EF4444', '#10B981', '#EC4899', '#0EA5E9', '#F59E0B', '#06B6D4'];
@@ -1599,8 +1623,10 @@ export default function App() {
                     </View>
                     <Text style={{ fontSize: 11, color: T.subtext }}>{p.major ? `${p.major} · ` : ''}{timeAgo(p.createdAt)}</Text>
                   </View>
-                  {p.uid === user.uid && (
+                  {p.uid === user.uid ? (
                     <TouchableOpacity onPress={() => deletePost(p)}><Ionicons name="trash-outline" size={17} color={T.subtext} /></TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity onPress={() => setReportOn(p)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}><Ionicons name="flag-outline" size={16} color={T.subtext} /></TouchableOpacity>
                   )}
                 </View>
 
@@ -2549,6 +2575,31 @@ export default function App() {
             </View>
           </KeyboardAvoidingView>
         </SafeAreaView>
+      </Modal>
+
+      {/* Report a post — reason picker */}
+      <Modal visible={!!reportOn} animationType="slide" transparent onRequestClose={() => setReportOn(null)}>
+        <TouchableWithoutFeedback onPress={() => setReportOn(null)}>
+          <View style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'flex-end' }}>
+            <TouchableWithoutFeedback onPress={() => {}}>
+              <View style={{ backgroundColor: T.card, borderTopLeftRadius: 20, borderTopRightRadius: 20, padding: 18, paddingBottom: 30 }}>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: T.text }}>Report this post</Text>
+                <Text style={{ fontSize: 13, color: T.subtext, marginTop: 3, marginBottom: 12 }}>Why are you reporting it? Our team will review it.</Text>
+                {REPORT_REASONS.map((r) => (
+                  <TouchableOpacity key={r} onPress={() => submitReport(reportOn, r)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, borderTopWidth: 1, borderColor: T.border }}>
+                    <Ionicons name="flag-outline" size={17} color={T.subtext} />
+                    <Text style={{ fontSize: 15, color: T.text, flex: 1 }}>{r}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={T.subtext} />
+                  </TouchableOpacity>
+                ))}
+                <TouchableOpacity onPress={() => setReportOn(null)} style={{ marginTop: 14, alignItems: 'center', paddingVertical: 12, borderRadius: 12, backgroundColor: T.bg }}>
+                  <Text style={{ fontSize: 15, fontWeight: '700', color: T.text }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </TouchableWithoutFeedback>
+          </View>
+        </TouchableWithoutFeedback>
       </Modal>
 
       {/* Business portal — native mobile screens */}
