@@ -832,7 +832,7 @@ new Chart(ctx, {
 // ── ADMIN AUTH (Firebase + email allowlist) ──
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import {
-  getAuth, GoogleAuthProvider, signInWithPopup,
+  getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
   signInWithEmailAndPassword, onAuthStateChanged, signOut,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
 import { getFirestore, doc, getDoc } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
@@ -881,9 +881,22 @@ window.adminDoAuth = async function () {
 
 window.adminGoogle = async function () {
   if (location.protocol === 'file:') { setMsg('Open via http://localhost:3000/admin.html for Google sign-in', true); return; }
-  try { await signInWithPopup(auth, provider); }
-  catch (err) { if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') setMsg(err.code || err.message, true); }
+  setMsg('Opening Google sign-in…');
+  try {
+    await signInWithPopup(auth, provider);
+  } catch (err) {
+    if (err.code === 'auth/popup-closed-by-user' || err.code === 'auth/cancelled-popup-request') { setMsg(''); return; }
+    if (err.code === 'auth/popup-blocked') {
+      // Popup blocked by the browser — fall back to a full-page redirect.
+      try { await signInWithRedirect(auth, provider); return; }
+      catch (e2) { setMsg('Sign-in failed: ' + (e2.code || e2.message), true); return; }
+    }
+    setMsg('Sign-in failed: ' + (err.code || err.message), true);
+  }
 };
+
+// If we came back from a redirect sign-in, surface any error code.
+getRedirectResult(auth).catch((err) => { if (err && err.code) setMsg('Sign-in failed: ' + err.code, true); });
 
 window.adminSignOut = async function () { await signOut(auth); };
 
