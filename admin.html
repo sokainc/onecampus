@@ -199,7 +199,17 @@
 
 <div class="sidebar">
   <div class="sidebar-logo">
-    <div class="sidebar-logo-icon">🎓</div>
+    <div class="sidebar-logo-icon" style="background:transparent;padding:0;overflow:hidden">
+      <svg viewBox="0 0 260 260" width="100%" height="100%" style="display:block">
+        <rect width="260" height="260" rx="58" fill="#000000"/>
+        <path d="M130 68 L130 53" stroke="#fff" stroke-width="3" stroke-linecap="round"/><path d="M130 55 L148 60 L130 65 Z" fill="#F59E0B"/>
+        <rect x="120" y="76" width="20" height="24" fill="#fff"/><path d="M120 78 A10 10 0 0 1 140 78 Z" fill="#fff"/>
+        <path d="M52 138 L130 98 L208 138 Z" fill="#fff"/><circle cx="130" cy="126" r="8" fill="#F59E0B"/>
+        <rect x="56" y="138" width="148" height="10" fill="#fff"/>
+        <rect x="63" y="148" width="14" height="55" fill="#fff"/><rect x="93" y="148" width="14" height="55" fill="#fff"/><rect x="123" y="148" width="14" height="55" fill="#fff"/><rect x="153" y="148" width="14" height="55" fill="#fff"/><rect x="183" y="148" width="14" height="55" fill="#fff"/>
+        <rect x="59" y="203" width="142" height="13" rx="3" fill="#fff"/><rect x="46" y="216" width="168" height="13" rx="3" fill="#fff"/>
+      </svg>
+    </div>
     <div>
       <span class="sidebar-logo-text">One Campus</span>
       <span class="sidebar-logo-badge">Admin</span>
@@ -298,15 +308,11 @@
     </div>
 
     <div class="card">
-      <div class="card-title">Recent Signups <span onclick="showPage('users',document.querySelectorAll('.nav-item')[1])">View All →</span></div>
+      <div class="card-title">Recently Active <span onclick="showPage('users',document.querySelectorAll('.nav-item')[1])">View All →</span></div>
       <table>
-        <thead><tr><th>User</th><th>Campus</th><th>Major</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#7C3AED">ML</div><div><div class="user-name">Maya Liu</div><div class="user-email">liu247@purdue.edu</div></div></div></td><td>Purdue</td><td>Computer Science</td><td>Today</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Maya Liu','liu247@purdue.edu','Purdue','Computer Science','Active','2,210','4','#7C3AED')">View</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EF4444">JR</div><div><div class="user-name">Jordan Reed</div><div class="user-email">jreed@purdue.edu</div></div></div></td><td>Purdue</td><td>Mechanical Eng.</td><td>Today</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Jordan Reed','jreed@purdue.edu','Purdue','Mechanical Eng.','Active','1,980','2','#EF4444')">View</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EC4899">PM</div><div><div class="user-name">Priya Mehta</div><div class="user-email">pmehta@purdue.edu</div></div></div></td><td>Purdue</td><td>Pre-Medicine</td><td>Yesterday</td><td><span class="status-pill status-pending">Pending</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Priya Mehta','pmehta@purdue.edu','Purdue','Pre-Medicine','Pending','1,750','1','#EC4899')">View</button><button class="action-btn approve" onclick="verifyUser(this,'Priya Mehta')">Verify</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#EF4444">AK</div><div><div class="user-name">Alex Kim</div><div class="user-email">akim99@purdue.edu</div></div></div></td><td>Purdue</td><td>Data Science</td><td>Jun 7</td><td><span class="status-pill status-flagged">Flagged</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Alex Kim','akim99@purdue.edu','Purdue','Data Science','Flagged','890','1','#EF4444')">View</button><button class="action-btn warn" onclick="openWarnUser('Alex Kim')">Warn</button><button class="action-btn ban" onclick="openBanUser('Alex Kim')">Ban</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:#0EA5E9">TB</div><div><div class="user-name">Tyler Brooks</div><div class="user-email">tbrooks@purdue.edu</div></div></div></td><td>Purdue</td><td>Electrical Eng.</td><td>Jun 6</td><td><span class="status-pill status-active">Active</span></td><td><div class="action-btns"><button class="action-btn view" onclick="openViewUser('Tyler Brooks','tbrooks@purdue.edu','Purdue','Electrical Eng.','Active','1,600','2','#0EA5E9')">View</button></div></td></tr>
+        <thead><tr><th>User</th><th>Campus</th><th>Major</th><th>Last active</th><th>Status</th></tr></thead>
+        <tbody id="recent-tbody">
+          <tr><td colspan="5" style="text-align:center;color:#9CA3AF;padding:24px">Loading…</td></tr>
         </tbody>
       </table>
     </div>
@@ -927,6 +933,7 @@ function startAdminData() {
     const sa = $('stat-active'); if (sa) sa.textContent = active.toLocaleString();
     const usub = document.querySelector('#page-users .topbar-sub'); if (usub) usub.textContent = total.toLocaleString() + ' total user' + (total === 1 ? '' : 's');
     renderUsers();
+    renderRecent();
   }, (err) => { const t = $('users-tbody'); if (t) t.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#DC2626;padding:24px">Could not load: ' + (err.code || err.message) + '</td></tr>'; });
   onSnapshot(collection(db, 'bans'), (snap) => { bannedSet = new Set(snap.docs.map((d) => d.id)); renderUsers(); });
 }
@@ -956,6 +963,21 @@ function renderUsers() {
   tb.querySelectorAll('[data-unban]').forEach((b) => { b.onclick = () => unbanUser(b.getAttribute('data-unban')); });
 }
 window.filterUsers = renderUsers;
+
+function renderRecent() {
+  const tb = $('recent-tbody'); if (!tb) return;
+  const ago = (ms) => { if (!ms) return '—'; const m = Math.floor((Date.now() - ms) / 60000); if (m < 1) return 'just now'; if (m < 60) return m + 'm ago'; const h = Math.floor(m / 60); if (h < 24) return h + 'h ago'; return Math.floor(h / 24) + 'd ago'; };
+  const rows = allProfiles.slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0)).slice(0, 5);
+  if (rows.length === 0) { tb.innerHTML = '<tr><td colspan="5" style="text-align:center;color:#9CA3AF;padding:24px">No users yet</td></tr>'; return; }
+  tb.innerHTML = rows.map((p) => {
+    const name = escA(p.name || 'Student'); const initials = (p.name || 'S').trim().slice(0, 2).toUpperCase();
+    const color = AV_COLORS[(p.uid || '').charCodeAt(0) % AV_COLORS.length] || '#7C3AED';
+    const banned = bannedSet.has(p.uid);
+    const status = banned ? '<span class="status-pill status-flagged">Banned</span>' : '<span class="status-pill status-active">Active</span>';
+    return '<tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:' + color + '">' + escA(initials) + '</div><div><div class="user-name">' + name + '</div><div class="user-email">' + escA(p.major || '—') + '</div></div></div></td>'
+      + '<td>' + escA(p.campus || '—') + '</td><td>' + escA(p.major || '—') + '</td><td>' + ago(p.updatedAt) + '</td><td>' + status + '</td></tr>';
+  }).join('');
+}
 
 async function banUser(uid, name) {
   if (!confirm('Ban ' + (name || 'this user') + "? They'll be blocked from the app until you unban them.")) return;
