@@ -276,7 +276,7 @@ export default function App() {
   const [joined, setJoined] = useState([]);
   const [rsvpd, setRsvpd] = useState([]);
   const [liked, setLiked] = useState([]);
-  const [events, setEvents] = useState(INITIAL_EVENTS);
+  const [liveEvents, setLiveEvents] = useState([]); // shared campus events from Firestore
   const [redeemed, setRedeemed] = useState([]);
   const [chats, setChats] = useState(STARTER_CHATS);
   // ── daily streak (Premium gets streak insurance) ──
@@ -734,6 +734,19 @@ export default function App() {
   };
 
   /* ── events ── */
+  // live-listen to shared campus events; merge the Purdue demo seeds so the tab isn't empty
+  React.useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'events'), where('campus', '==', campus));
+    const unsub = onSnapshot(q, (snap) => {
+      setLiveEvents(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => {});
+    return unsub;
+  }, [user, campus]);
+  const events = [
+    ...liveEvents.map(e => ({ ...e, mine: e.createdBy === user?.uid })),
+    ...(campus === 'purdue' ? INITIAL_EVENTS : []),
+  ];
   // ── NOTIFICATIONS ──
   const ensureNotifPermission = async () => {
     const { status } = await Notifications.getPermissionsAsync();
@@ -848,16 +861,22 @@ export default function App() {
   // tap an event card: RSVP if not going, cancel if already going
   const toggleRsvp = (name) => (rsvpd.includes(name) ? unRsvp(name) : rsvp(name));
 
-  const createEvent = () => {
+  const createEvent = async () => {
     if (!evName.trim()) { showToast('Give your event a name!'); return; }
     let t = evTime.trim() || '12:00';
     if (!/^\d{1,2}(:\d{2})?$/.test(t)) { showToast('Time should look like 7:00'); return; }
     if (!t.includes(':')) t += ':00';
-    setEvents(e => [...e, { name: evName.trim(), time: t, ampm: evAmpm, location: evLoc.trim() || 'Purdue Campus', badge: 'soon', color: evColor, day: evDay, mine: true }]);
-    setSheet(null);
-    setEvName(''); setEvTime(''); setEvLoc('');
-    const earned = addPoints(50);
-    showToast(`Event created! +${earned} pts${isPremium ? ' (2x)' : ''}`);
+    try {
+      await addDoc(collection(db, 'events'), {
+        name: evName.trim(), time: t, ampm: evAmpm, location: evLoc.trim() || 'Purdue Campus',
+        badge: 'soon', color: evColor, day: evDay, campus,
+        createdBy: user.uid, creatorName: profile.name || 'Student', createdAt: serverTimestamp(),
+      });
+      setSheet(null);
+      setEvName(''); setEvTime(''); setEvLoc('');
+      const earned = addPoints(50);
+      showToast(`Event created! +${earned} pts${isPremium ? ' (2x)' : ''}`);
+    } catch (e) { showToast('Could not create event — is the "events" rule set in Firestore?'); }
   };
 
   /* ── premium ── */
@@ -2099,7 +2118,7 @@ export default function App() {
           <Text style={[st.sectionLabel, { color: T.subtext }]}>ACCOUNT</Text>
           <View style={[st.setCard, { backgroundColor: T.card }]}>
             <TouchableOpacity onPress={() => {
-              setPoints(0); setJoined([]); setRsvpd([]); setLiked([]); setRedeemed([]); setEvents(INITIAL_EVENTS); setChats(STARTER_CHATS);
+              setPoints(0); setJoined([]); setRsvpd([]); setLiked([]); setRedeemed([]); setLiveEvents([]); setChats(STARTER_CHATS);
               showToast('Demo data reset — fresh start!');
             }} style={st.setRow}>
               <Ionicons name="trash-outline" size={18} color={T.text} />
