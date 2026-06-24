@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TouchableWithoutFeedback, TextInput, Modal, Image,
-  StyleSheet, FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView, Linking,
+  StyleSheet, FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView, Linking, Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker, Polyline } from 'react-native-maps';
@@ -20,9 +20,9 @@ import { initializeApp } from 'firebase/app';
 import {
   initializeAuth, getReactNativePersistence,
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
-  onAuthStateChanged, signOut as fbSignOut, updateProfile,
+  onAuthStateChanged, signOut as fbSignOut, updateProfile, deleteUser,
 } from 'firebase/auth';
-import { initializeFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, where, orderBy, limit, updateDoc, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
+import { initializeFirestore, doc, getDoc, getDocs, setDoc, collection, addDoc, onSnapshot, query, where, orderBy, limit, updateDoc, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 
 /* ─────────── FIREBASE ─────────── */
 const firebaseApp = initializeApp({
@@ -284,6 +284,8 @@ export default function App() {
   const [lastActive, setLastActive] = useState(null); // 'YYYY-MM-DD' of last day opened
   // ── friends / Quick Add (Premium) ──
   const [friends, setFriends] = useState([]);        // uids of people I've added
+  const [blocked, setBlocked] = useState([]);        // uids I've blocked (hide their posts/DMs)
+  const [showBlocked, setShowBlocked] = useState(false);
   const [people, setPeople] = useState([]);          // public profiles of everyone on campus
   const [showQuickAdd, setShowQuickAdd] = useState(false);
   const [banned, setBanned] = useState(false);       // set true if an admin has a bans/{uid} doc on this account
@@ -394,6 +396,7 @@ export default function App() {
           if (typeof d.streak === 'number') setStreak(d.streak);
           if (d.lastActive) setLastActive(d.lastActive);
           if (Array.isArray(d.friends)) setFriends(d.friends);
+          if (Array.isArray(d.blocked)) setBlocked(d.blocked);
           if (Array.isArray(d.classes)) setMyClasses(d.classes);
           showToast('Your data is synced');
         }
@@ -414,7 +417,7 @@ export default function App() {
     saveTimer.current = setTimeout(() => {
       setDoc(doc(db, 'users', user.uid), {
         points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings,
-        onboarded, homeCampus, interests: obInterests, streak, lastActive, friends, classes: myClasses,
+        onboarded, homeCampus, interests: obInterests, streak, lastActive, friends, blocked, classes: myClasses,
         email: user.email, updatedAt: Date.now(),
       }, { merge: true }).catch(() => {});
       // public profile so others can find & add you in Quick Add + see when you're free
@@ -426,7 +429,7 @@ export default function App() {
       }, { merge: true }).catch(() => {});
     }, 1200);
     return () => clearTimeout(saveTimer.current);
-  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, streak, lastActive, friends, myClasses, user]);
+  }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, streak, lastActive, friends, blocked, myClasses, user]);
 
   // ── DAILY STREAK: runs once data is loaded; Premium "streak insurance" forgives one missed day ──
   React.useEffect(() => {
@@ -664,6 +667,52 @@ export default function App() {
     await fbSignOut(auth);
     setShowSettings(false);
     showToast('Signed out');
+  };
+
+  // ── block a user: hide their posts + messages, keep them out of your lists ──
+  const blockUser = (uid, name) => {
+    if (!uid || uid === user?.uid) return;
+    Alert.alert(`Block ${name || 'this user'}?`, "You won't see their posts or messages, and they won't show up in your lists. You can unblock them in Settings.", [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Block', style: 'destructive', onPress: () => {
+        setBlocked(b => b.includes(uid) ? b : [...b, uid]);
+        setReportOn(null);
+        showToast('Blocked');
+      } },
+    ]);
+  };
+  const unblockUser = (uid) => { setBlocked(b => b.filter(u => u !== uid)); showToast('Unblocked'); };
+
+  // ── delete account: wipe this user's data, then remove the login (App Store requirement) ──
+  const deleteAccount = () => {
+    Alert.alert('Delete your account?', 'This permanently deletes your profile, posts, and data. This cannot be undone.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Delete', style: 'destructive', onPress: async () => {
+        const uid = user?.uid;
+        if (!uid) return;
+        try {
+          showToast('Deleting your account…');
+          // remove this user's posts from the shared feed
+          try {
+            const snap = await getDocs(query(collection(db, 'posts'), where('uid', '==', uid)));
+            await Promise.all(snap.docs.map(d => deleteDoc(d.ref).catch(() => {})));
+          } catch (e) {}
+          // remove their profile + main data doc
+          await deleteDoc(doc(db, 'profiles', uid)).catch(() => {});
+          await deleteDoc(doc(db, 'users', uid)).catch(() => {});
+          // finally remove the login itself
+          await deleteUser(auth.currentUser);
+          showToast('Your account was deleted');
+        } catch (e) {
+          if (e.code === 'auth/requires-recent-login') {
+            await fbSignOut(auth);
+            showToast('Please sign in again, then delete from Settings');
+          } else {
+            showToast('Could not delete — try signing out and back in first');
+          }
+        }
+      } },
+    ]);
   };
 
   // add-event form
@@ -1560,7 +1609,7 @@ export default function App() {
             <Text style={{ fontSize: 15, fontWeight: '800', color: T.text, marginTop: 6 }}>No messages yet</Text>
             <Text style={{ fontSize: 13, color: T.subtext, marginTop: 2 }}>Tap "Message" on a post to start a real conversation.</Text>
           </View>
-        ) : dmThreads.map(t => {
+        ) : dmThreads.filter(t => !blocked.includes((t.participants || []).find(u => u !== user.uid))).map(t => {
           const peerUid = (t.participants || []).find(u => u !== user.uid);
           const peerName = (t.names && t.names[peerUid]) || 'Student';
           return (
@@ -1594,7 +1643,7 @@ export default function App() {
           <Ionicons name="chevron-forward" size={16} color={T.subtext} />
         </TouchableOpacity>
         {/* your real added friends */}
-        {people.filter(p => friends.includes(p.uid)).map(p => (
+        {people.filter(p => friends.includes(p.uid) && !blocked.includes(p.uid)).map(p => (
           <TouchableOpacity key={p.uid} onPress={() => openDM({ uid: p.uid, name: p.name, color: postColor(p.name || '?') })} style={[st.friendRow, { backgroundColor: T.card }]}>
             <View style={[st.avatar, { backgroundColor: postColor(p.name || '?') }]}><Text style={{ color: 'white', fontWeight: '700' }}>{(p.name || '?')[0].toUpperCase()}</Text></View>
             <View style={{ flex: 1, marginLeft: 10 }}>
@@ -1652,7 +1701,7 @@ export default function App() {
           </View>
         )}
 
-        {feedPosts.map((p, i) => {
+        {feedPosts.filter(p => !blocked.includes(p.uid)).map((p, i) => {
           const likeCount = (p.likedBy || []).length;
           const iLiked = (p.likedBy || []).includes(user.uid);
           const cColor = postColor(p.author || '?');
@@ -2136,6 +2185,22 @@ export default function App() {
               </View>
               <Text style={{ color: T.subtext }}>›</Text>
             </TouchableOpacity>
+            <TouchableOpacity onPress={() => setShowBlocked(true)} style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+              <Ionicons name="ban-outline" size={18} color={T.text} />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>Blocked Users</Text>
+                <Text style={{ fontSize: 11, color: T.subtext }}>{blocked.length} blocked · tap to manage</Text>
+              </View>
+              <Text style={{ color: T.subtext }}>›</Text>
+            </TouchableOpacity>
+            <TouchableOpacity onPress={deleteAccount} style={[st.setRow, { borderTopWidth: 1, borderColor: T.border }]}>
+              <Ionicons name="trash" size={18} color="#EF4444" />
+              <View style={{ flex: 1, marginLeft: 10 }}>
+                <Text style={{ fontSize: 14, fontWeight: '700', color: '#EF4444' }}>Delete Account</Text>
+                <Text style={{ fontSize: 11, color: T.subtext }}>Permanently delete your account & data</Text>
+              </View>
+              <Text style={{ color: T.subtext }}>›</Text>
+            </TouchableOpacity>
           </View>
           <Text style={{ textAlign: 'center', fontSize: 11, color: T.subtext, marginTop: 20 }}>One Campus v1.0 · Made at Purdue</Text>
         </ScrollView>
@@ -2368,7 +2433,7 @@ export default function App() {
             </TouchableOpacity>
           </View>
           {(() => {
-            const myFriends = people.filter(p => friends.includes(p.uid)).map(p => ({ ...p, status: freeStatus(p.classes) }));
+            const myFriends = people.filter(p => friends.includes(p.uid) && !blocked.includes(p.uid)).map(p => ({ ...p, status: freeStatus(p.classes) }));
             const free = myFriends.filter(p => p.status.free);
             const busy = myFriends.filter(p => !p.status.free);
             if (!myFriends.length) {
@@ -2521,7 +2586,7 @@ export default function App() {
             </View>
           </View>
           <FlatList
-            data={people}
+            data={people.filter(p => !blocked.includes(p.uid))}
             keyExtractor={(p) => p.uid}
             contentContainerStyle={{ padding: 16, gap: 10, flexGrow: 1 }}
             ListEmptyComponent={(
@@ -2662,6 +2727,14 @@ export default function App() {
                     <Ionicons name="chevron-forward" size={16} color={T.subtext} />
                   </TouchableOpacity>
                 ))}
+                {reportOn?.uid && reportOn.uid !== user?.uid && (
+                  <TouchableOpacity onPress={() => blockUser(reportOn.uid, reportOn.author)}
+                    style={{ flexDirection: 'row', alignItems: 'center', gap: 10, paddingVertical: 13, borderTopWidth: 1, borderColor: T.border }}>
+                    <Ionicons name="ban-outline" size={17} color="#EF4444" />
+                    <Text style={{ fontSize: 15, color: '#EF4444', flex: 1, fontWeight: '700' }}>Block {reportOn.author || 'this user'}</Text>
+                    <Ionicons name="chevron-forward" size={16} color={T.subtext} />
+                  </TouchableOpacity>
+                )}
                 <TouchableOpacity onPress={() => setReportOn(null)} style={{ marginTop: 14, alignItems: 'center', paddingVertical: 12, borderRadius: 12, backgroundColor: T.bg }}>
                   <Text style={{ fontSize: 15, fontWeight: '700', color: T.text }}>Cancel</Text>
                 </TouchableOpacity>
@@ -2669,6 +2742,40 @@ export default function App() {
             </TouchableWithoutFeedback>
           </View>
         </TouchableWithoutFeedback>
+      </Modal>
+
+      {/* Blocked users — manage / unblock */}
+      <Modal visible={showBlocked} animationType="slide" onRequestClose={() => setShowBlocked(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+          <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+            <TouchableOpacity onPress={() => setShowBlocked(false)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>Blocked Users</Text>
+          </View>
+          <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+            {blocked.length === 0 ? (
+              <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                <Ionicons name="ban-outline" size={40} color={T.subtext} />
+                <Text style={{ fontSize: 15, fontWeight: '800', color: T.text, marginTop: 8 }}>No blocked users</Text>
+                <Text style={{ fontSize: 13, color: T.subtext, marginTop: 2 }}>Blocked people won't appear in your feed or messages.</Text>
+              </View>
+            ) : blocked.map(uid => {
+              const p = people.find(x => x.uid === uid);
+              const name = (p && p.name) || 'Student';
+              return (
+                <View key={uid} style={[st.friendRow, { backgroundColor: T.card }]}>
+                  <View style={[st.avatar, { backgroundColor: postColor(name) }]}><Text style={{ color: 'white', fontWeight: '700' }}>{name[0].toUpperCase()}</Text></View>
+                  <View style={{ flex: 1, marginLeft: 10 }}>
+                    <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{name}</Text>
+                    {!!(p && p.major) && <Text style={{ fontSize: 12, color: T.subtext }}>{p.major}</Text>}
+                  </View>
+                  <TouchableOpacity onPress={() => unblockUser(uid)} style={{ backgroundColor: A, borderRadius: 20, paddingHorizontal: 14, paddingVertical: 7 }}>
+                    <Text style={{ color: 'white', fontWeight: '700', fontSize: 12 }}>Unblock</Text>
+                  </TouchableOpacity>
+                </View>
+              );
+            })}
+          </ScrollView>
+        </SafeAreaView>
       </Modal>
 
       {/* Business portal — native mobile screens */}
