@@ -425,6 +425,8 @@ export default function App() {
       // public profile so others can find & add you in Quick Add + see when you're free
       setDoc(doc(db, 'profiles', user.uid), {
         uid: user.uid, name: profile.name || 'Student', major: profile.major || '', campus: homeCampus || 'purdue', classes: myClasses,
+        // who I've added — lets others' apps check "did this person add me?" for friends-only messaging
+        friends,
         // notification prefs so other users' phones can honor them before pushing to me
         notifications: settings.notifications, notifDMs: settings.notifDMs, notifRequests: settings.notifRequests, quietHours: settings.quietHours,
         updatedAt: Date.now(),
@@ -1287,6 +1289,14 @@ export default function App() {
     setChatWith({ uid: peer.uid, name: peer.name || 'Student', color: peer.color || A, initial: (peer.name || '?')[0].toUpperCase() });
   };
 
+  // friends-only messaging: you can only DM someone who has added YOU as a friend.
+  // their friends list is mirrored to their public profile, so we read it from `people`.
+  const peerHasAddedMe = (uid) => {
+    if (!uid || !user) return false;
+    const prof = people.find(p => p.uid === uid);
+    return Array.isArray(prof?.friends) && prof.friends.includes(user.uid);
+  };
+
   // add / remove a real person as a friend (Quick Add)
   const addFriend = (uid) => {
     if (!uid || friends.includes(uid)) return;
@@ -1303,6 +1313,11 @@ export default function App() {
     if (!text || !chatWith) return;
     // REAL DM (peer has a uid) → write to Firestore, no bot replies
     if (typeof chatWith === 'object' && chatWith.uid) {
+      // friends-only gate: they must have added you before you can message them
+      if (!peerHasAddedMe(chatWith.uid)) {
+        showToast(`${chatWith.name || 'They'} need to add you as a friend before you can message them`);
+        return;
+      }
       const cid = convoId(user.uid, chatWith.uid);
       setChatInput('');
       try {
@@ -2141,6 +2156,8 @@ export default function App() {
     const msgs = isReal
       ? dmMessages.map(m => ({ who: m.senderId === user.uid ? 'me' : 'them', text: m.text }))
       : (chats[chatWith] || []);
+    // friends-only: you can read history, but can't send unless they've added you
+    const locked = isReal && !peerHasAddedMe(chatWith.uid);
     return (
       <Modal visible animationType="slide" onRequestClose={() => setChatWith(null)}>
         <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
@@ -2160,8 +2177,10 @@ export default function App() {
               contentContainerStyle={{ padding: 14, gap: 8, flexGrow: 1 }}
               ListEmptyComponent={isReal ? (
                 <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', paddingTop: 60 }}>
-                  <Ionicons name="chatbubbles-outline" size={36} color={T.subtext} />
-                  <Text style={{ color: T.subtext, fontSize: 13, marginTop: 8 }}>Send the first message to {f.name}</Text>
+                  <Ionicons name={locked ? 'lock-closed-outline' : 'chatbubbles-outline'} size={36} color={T.subtext} />
+                  <Text style={{ color: T.subtext, fontSize: 13, marginTop: 8, textAlign: 'center', paddingHorizontal: 30 }}>
+                    {locked ? `You can message ${f.name} once they add you as a friend.` : `Send the first message to ${f.name}`}
+                  </Text>
                 </View>
               ) : null}
               onContentSizeChange={() => chatScroll.current?.scrollToEnd({ animated: true })}
@@ -2173,12 +2192,21 @@ export default function App() {
                 </View>
               )}
             />
-            <View style={[st.chatBar, { backgroundColor: T.card, borderColor: T.border }]}>
-              <TextInput value={chatInput} onChangeText={setChatInput} placeholder="Message..." placeholderTextColor={T.subtext}
-                onSubmitEditing={sendChat} returnKeyType="send"
-                style={[st.chatInput, { backgroundColor: T.bg, color: T.text }]} />
-              <TouchableOpacity onPress={sendChat} style={st.sendBtn}><Text style={{ color: 'white', fontSize: 16 }}>➤</Text></TouchableOpacity>
-            </View>
+            {locked ? (
+              <View style={[st.chatBar, { backgroundColor: T.card, borderColor: T.border, alignItems: 'center', justifyContent: 'center', paddingVertical: 16, gap: 8 }]}>
+                <Ionicons name="lock-closed" size={16} color={T.subtext} />
+                <Text style={{ color: T.subtext, fontSize: 13, flexShrink: 1, textAlign: 'center' }}>
+                  {f.name} needs to add you as a friend before you can message them.
+                </Text>
+              </View>
+            ) : (
+              <View style={[st.chatBar, { backgroundColor: T.card, borderColor: T.border }]}>
+                <TextInput value={chatInput} onChangeText={setChatInput} placeholder="Message..." placeholderTextColor={T.subtext}
+                  onSubmitEditing={sendChat} returnKeyType="send"
+                  style={[st.chatInput, { backgroundColor: T.bg, color: T.text }]} />
+                <TouchableOpacity onPress={sendChat} style={st.sendBtn}><Text style={{ color: 'white', fontSize: 16 }}>➤</Text></TouchableOpacity>
+              </View>
+            )}
           </KeyboardAvoidingView>
         </SafeAreaView>
       </Modal>
