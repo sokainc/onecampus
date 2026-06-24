@@ -13,9 +13,11 @@
       "backgroundColor": "#000000"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.onecampus.app"
     },
     "android": {
+      "package": "com.onecampus.app",
       "adaptiveIcon": {
         "foregroundImage": "./assets/logo-icon.png",
         "backgroundColor": "#000000"
@@ -26,7 +28,8 @@
       "favicon": "./assets/logo-icon.png"
     },
     "plugins": [
-      ["expo-location", { "locationWhenInUsePermission": "One Campus uses your location to show your spot on the campus map and give walking directions." }]
+      ["expo-location", { "locationWhenInUsePermission": "One Campus uses your location to show your spot on the campus map and give walking directions." }],
+      ["expo-image-picker", { "photosPermission": "One Campus needs access to your photos so you can add pictures to your posts." }]
     ],
     "extra": {
       "eas": {
