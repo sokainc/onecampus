@@ -723,6 +723,7 @@ export default function App() {
   const [evDay, setEvDay] = useState(0);
   const [evColor, setEvColor] = useState(EV_COLORS[0]);
   const [evTag, setEvTag] = useState(''); // interest category, powers "This week by interest"
+  const [evClub, setEvClub] = useState(null); // post as a club you run (officer tools)
 
   // payment form
   const [cardNum, setCardNum] = useState('');
@@ -797,6 +798,8 @@ export default function App() {
     ...liveEvents.map(e => ({ ...e, mine: e.createdBy === user?.uid })),
     ...(campus === 'purdue' ? INITIAL_EVENTS : []),
   ];
+  // clubs you run (you listed them) — you're their officer, so you can post events as the club
+  const myClubs = userClubs.filter(c => c.createdBy === user?.uid);
   // ── NOTIFICATIONS ──
   const ensureNotifPermission = async () => {
     const { status } = await Notifications.getPermissionsAsync();
@@ -919,11 +922,14 @@ export default function App() {
     try {
       await addDoc(collection(db, 'events'), {
         name: evName.trim(), time: t, ampm: evAmpm, location: evLoc.trim() || 'Purdue Campus',
-        badge: 'soon', color: evColor, day: evDay, campus, tag: evTag || null,
-        createdBy: user.uid, creatorName: profile.name || 'Student', createdAt: serverTimestamp(),
+        badge: 'soon', color: (evClub && evClub.colors && evClub.colors[0]) || evColor, day: evDay, campus,
+        // posting as a club tags the event with the club's category (also feeds "This week")
+        tag: evClub ? evClub.tag : (evTag || null),
+        club: evClub ? evClub.name : null, clubId: evClub ? evClub.id : null,
+        createdBy: user.uid, creatorName: evClub ? evClub.name : (profile.name || 'Student'), createdAt: serverTimestamp(),
       });
       setSheet(null);
-      setEvName(''); setEvTime(''); setEvLoc(''); setEvTag('');
+      setEvName(''); setEvTime(''); setEvLoc(''); setEvTag(''); setEvClub(null);
       const earned = addPoints(50);
       showToast(`Event created! +${earned} pts${isPremium ? ' (2x)' : ''}`);
     } catch (e) { showToast('Could not create event — is the "events" rule set in Firestore?'); }
@@ -1427,6 +1433,7 @@ export default function App() {
               </View>
               <View style={{ flex: 1 }}>
                 <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{e.name}</Text>
+                {!!e.club && <Text style={{ fontSize: 11, fontWeight: '800', color: A }}><Ionicons name="megaphone" size={11} color={A} /> {e.club}</Text>}
                 <Text style={{ fontSize: 12, color: T.subtext }}>
                   <Ionicons name="location" size={12} color={T.subtext} /> {e.location}{'  '}
                   <Text onPress={() => openDirections(e.location)} style={{ color: '#34A853', fontWeight: '800' }}><Ionicons name="navigate" size={12} color="#34A853" /> Directions</Text>
@@ -1933,6 +1940,28 @@ export default function App() {
               {sheet === 'addEvent' && (<>
                 <View style={{ alignItems: 'center', marginBottom: 4 }}><Ionicons name="calendar" size={42} color={A} /></View>
                 <Text style={[st.sheetTitle, { color: A }]}>Create Event</Text>
+                {myClubs.length > 0 && (
+                  <>
+                    <Text style={[st.label, { color: T.subtext }]}>POST AS</Text>
+                    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+                      <TouchableOpacity onPress={() => setEvClub(null)}
+                        style={[st.pill, { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: !evClub ? A : T.bg, borderWidth: 1, borderColor: !evClub ? A : T.border }]}>
+                        <Ionicons name="person" size={12} color={!evClub ? 'white' : T.subtext} />
+                        <Text style={{ color: !evClub ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>Just me</Text>
+                      </TouchableOpacity>
+                      {myClubs.map(c => {
+                        const on = evClub?.id === c.id;
+                        return (
+                          <TouchableOpacity key={c.id} onPress={() => setEvClub(on ? null : c)}
+                            style={[st.pill, { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: on ? A : T.bg, borderWidth: 1, borderColor: on ? A : T.border }]}>
+                            <Ionicons name="megaphone" size={12} color={on ? 'white' : T.subtext} />
+                            <Text style={{ color: on ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{c.name}</Text>
+                          </TouchableOpacity>
+                        );
+                      })}
+                    </ScrollView>
+                  </>
+                )}
                 <Text style={[st.label, { color: T.subtext }]}>EVENT NAME</Text>
                 <TextInput value={evName} onChangeText={setEvName} placeholder="e.g. CS Study Jam" placeholderTextColor={T.subtext} style={[st.input, { backgroundColor: T.bg, color: T.text, borderColor: T.border }]} />
                 <Text style={[st.label, { color: T.subtext }]}>DAY</Text>
@@ -1957,6 +1986,7 @@ export default function App() {
                 </View>
                 <Text style={[st.label, { color: T.subtext }]}>LOCATION</Text>
                 <TextInput value={evLoc} onChangeText={setEvLoc} placeholder="e.g. WALC 2nd Floor" placeholderTextColor={T.subtext} style={[st.input, { backgroundColor: T.bg, color: T.text, borderColor: T.border }]} />
+                {!evClub && (<>
                 <Text style={[st.label, { color: T.subtext }]}>CATEGORY</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
                   {CATEGORIES.map(c => {
@@ -1970,6 +2000,7 @@ export default function App() {
                     );
                   })}
                 </ScrollView>
+                </>)}
                 <Text style={[st.label, { color: T.subtext }]}>COLOR</Text>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   {EV_COLORS.map(c => (
