@@ -724,6 +724,7 @@ export default function App() {
   const [evColor, setEvColor] = useState(EV_COLORS[0]);
   const [evTag, setEvTag] = useState(''); // interest category, powers "This week by interest"
   const [evClub, setEvClub] = useState(null); // post as a club you run (officer tools)
+  const [attendanceFor, setAttendanceFor] = useState(null); // event whose attendee list an officer is viewing
 
   // payment form
   const [cardNum, setCardNum] = useState('');
@@ -933,6 +934,17 @@ export default function App() {
       const earned = addPoints(50);
       showToast(`Event created! +${earned} pts${isPremium ? ' (2x)' : ''}`);
     } catch (e) { showToast('Could not create event — is the "events" rule set in Firestore?'); }
+  };
+
+  // members check in at an event; officers see the count + who came (attendance)
+  const toggleCheckIn = async (e) => {
+    if (!e.id) return; // only real (Firestore) events, not demo seeds
+    const inIt = (e.attendees || []).includes(user.uid);
+    try {
+      await updateDoc(doc(db, 'events', e.id), { attendees: inIt ? arrayRemove(user.uid) : arrayUnion(user.uid) });
+      if (!inIt) { const earned = addPoints(15); showToast(`Checked in! +${earned} pts${isPremium ? ' (2x)' : ''}`); }
+      else showToast('Checked out');
+    } catch (err) { showToast('Could not check in — is the "events" rule updated?'); }
   };
 
   /* ── premium ── */
@@ -1439,10 +1451,23 @@ export default function App() {
                   <Text onPress={() => openDirections(e.location)} style={{ color: '#34A853', fontWeight: '800' }}><Ionicons name="navigate" size={12} color="#34A853" /> Directions</Text>
                 </Text>
               </View>
-              <View style={[st.badge, { backgroundColor: e.mine ? '#EDE9FE' : going ? '#F0FDF4' : '#FEE2E2' }]}>
-                <Text style={{ fontSize: 11, fontWeight: '700', color: e.mine ? A : going ? '#22c55e' : '#EF4444' }}>
-                  {e.mine ? 'Host' : going ? '✓ Going · tap to cancel' : e.badge === 'live' ? 'Live' : e.badge === 'today' ? 'Today' : 'Soon'}
-                </Text>
+              <View style={{ alignItems: 'flex-end', gap: 6 }}>
+                <View style={[st.badge, { backgroundColor: e.mine ? '#EDE9FE' : going ? '#F0FDF4' : '#FEE2E2' }]}>
+                  <Text style={{ fontSize: 11, fontWeight: '700', color: e.mine ? A : going ? '#22c55e' : '#EF4444' }}>
+                    {e.mine ? 'Host' : going ? '✓ Going · tap to cancel' : e.badge === 'live' ? 'Live' : e.badge === 'today' ? 'Today' : 'Soon'}
+                  </Text>
+                </View>
+                {!!e.id && (e.mine ? (
+                  <TouchableOpacity onPress={() => setAttendanceFor(e)}>
+                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: A }}><Ionicons name="people" size={10} color={A} /> {(e.attendees || []).length} checked in ›</Text>
+                  </TouchableOpacity>
+                ) : (
+                  <TouchableOpacity onPress={() => toggleCheckIn(e)}>
+                    <Text style={{ fontSize: 10.5, fontWeight: '800', color: (e.attendees || []).includes(user.uid) ? '#22c55e' : T.subtext }}>
+                      {(e.attendees || []).includes(user.uid) ? '✓ Checked in' : 'Check in'}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
               </View>
             </TouchableOpacity>
           );
@@ -2868,6 +2893,46 @@ export default function App() {
               );
             })}
           </ScrollView>
+        </SafeAreaView>
+      </Modal>
+
+      {/* Attendance — officer views who checked in */}
+      <Modal visible={!!attendanceFor} animationType="slide" onRequestClose={() => setAttendanceFor(null)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+          <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+            <TouchableOpacity onPress={() => setAttendanceFor(null)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>Attendance</Text>
+          </View>
+          {(() => {
+            const ev = events.find(x => x.id === attendanceFor?.id) || attendanceFor || {};
+            const att = ev.attendees || [];
+            return (
+              <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+                <Text style={{ fontSize: 17, fontWeight: '800', color: T.text }}>{ev.name}</Text>
+                <Text style={{ fontSize: 13, color: T.subtext, marginBottom: 6 }}>{att.length} {att.length === 1 ? 'person' : 'people'} checked in</Text>
+                {att.length === 0 ? (
+                  <View style={{ alignItems: 'center', paddingVertical: 40 }}>
+                    <Ionicons name="people-outline" size={40} color={T.subtext} />
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: T.text, marginTop: 8 }}>No check-ins yet</Text>
+                    <Text style={{ fontSize: 13, color: T.subtext, marginTop: 2, textAlign: 'center', paddingHorizontal: 30 }}>Members tap "Check in" on the event to mark they came.</Text>
+                  </View>
+                ) : att.map(uid => {
+                  const p = people.find(x => x.uid === uid);
+                  const name = (p && p.name) || (uid === user.uid ? (profile.name || 'You') : 'Student');
+                  return (
+                    <View key={uid} style={[st.friendRow, { backgroundColor: T.card }]}>
+                      <View style={[st.avatar, { backgroundColor: postColor(name) }]}><Text style={{ color: 'white', fontWeight: '700' }}>{name[0].toUpperCase()}</Text></View>
+                      <View style={{ flex: 1, marginLeft: 10 }}>
+                        <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{name}</Text>
+                        {!!(p && p.major) && <Text style={{ fontSize: 12, color: T.subtext }}>{p.major}</Text>}
+                      </View>
+                      <Ionicons name="checkmark-circle" size={20} color="#22c55e" />
+                    </View>
+                  );
+                })}
+              </ScrollView>
+            );
+          })()}
         </SafeAreaView>
       </Modal>
 
