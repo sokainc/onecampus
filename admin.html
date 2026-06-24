@@ -351,13 +351,10 @@
   <!-- CAMPUSES -->
   <div class="page" id="page-campuses">
     <div class="topbar">
-      <div><div class="topbar-title">Campus Management</div><div class="topbar-sub">3 campuses active · Expand to new schools</div></div>
-      <button class="btn btn-primary" onclick="openAddCampus()">+ Add Campus</button>
+      <div><div class="topbar-title">Campus Management</div><div class="topbar-sub" id="campus-sub">Loading…</div></div>
     </div>
-    <div class="three-col">
-      <div class="campus-card"><div class="campus-name">Purdue University</div><div class="campus-state">West Lafayette, IN</div><div class="campus-stat"><span class="campus-stat-label">Students</span><span class="campus-stat-value">1,247</span></div><div class="campus-stat"><span class="campus-stat-label">Active Clubs</span><span class="campus-stat-value">24</span></div><div class="campus-stat"><span class="campus-stat-label">Events This Week</span><span class="campus-stat-value">6</span></div><div style="margin-top:10px"><span class="campus-status">✓ Active</span></div></div>
-      <div class="campus-card"><div class="campus-name">Indiana University</div><div class="campus-state">Bloomington, IN</div><div class="campus-stat"><span class="campus-stat-label">Students</span><span class="campus-stat-value">Coming Soon</span></div><div class="campus-stat"><span class="campus-stat-label">Active Clubs</span><span class="campus-stat-value">—</span></div><div class="campus-stat"><span class="campus-stat-label">Events This Week</span><span class="campus-stat-value">—</span></div><div style="margin-top:10px"><span class="campus-status" style="background:#FEF3C7;color:#92400E">⏳ Onboarding</span></div></div>
-      <div class="campus-card"><div class="campus-name">Butler University</div><div class="campus-state">Indianapolis, IN</div><div class="campus-stat"><span class="campus-stat-label">Students</span><span class="campus-stat-value">Coming Soon</span></div><div class="campus-stat"><span class="campus-stat-label">Active Clubs</span><span class="campus-stat-value">—</span></div><div class="campus-stat"><span class="campus-stat-label">Events This Week</span><span class="campus-stat-value">—</span></div><div style="margin-top:10px"><span class="campus-status" style="background:#EDE9FE;color:#7C3AED">🔜 Planned</span></div></div>
+    <div class="three-col" id="campus-grid">
+      <div style="grid-column:1/-1;text-align:center;color:#9CA3AF;padding:24px">Loading campuses…</div>
     </div>
   </div>
 
@@ -900,6 +897,39 @@ function startAdminData() {
     const camps = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     renderAds(camps);
   }, (err) => { const t = $('ads-tbody'); if (t) t.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#DC2626;padding:24px">Could not load: ' + (err.code || err.message) + '</td></tr>'; });
+  onSnapshot(collection(db, 'clubs'), (snap) => { allClubs = snap.docs.map((d) => d.data()); renderCampuses(); });
+  onSnapshot(collection(db, 'events'), (snap) => { allEvents = snap.docs.map((d) => d.data()); renderCampuses(); });
+}
+
+let allClubs = [], allEvents = [];
+const CAMPUS_INFO = {
+  purdue: ['Purdue University', 'West Lafayette, IN'],
+  iu: ['Indiana University', 'Bloomington, IN'],
+  butler: ['Butler University', 'Indianapolis, IN'],
+  iupui: ['IUPUI', 'Indianapolis, IN'],
+  notredame: ['Notre Dame', 'Notre Dame, IN'],
+};
+function renderCampuses() {
+  const grid = $('campus-grid'); if (!grid) return;
+  const countBy = (arr) => arr.reduce((m, x) => { const k = x.campus || 'purdue'; m[k] = (m[k] || 0) + 1; return m; }, {});
+  const students = countBy(allProfiles), clubs = countBy(allClubs), events = countBy(allEvents);
+  const keys = Array.from(new Set([...Object.keys(CAMPUS_INFO), ...Object.keys(students), ...Object.keys(clubs)]));
+  keys.sort((a, b) => (students[b] || 0) - (students[a] || 0));
+  const active = keys.filter((k) => (students[k] || 0) > 0).length;
+  const sub = $('campus-sub'); if (sub) sub.textContent = active + ' active campus' + (active === 1 ? '' : 'es') + ' · ' + allProfiles.length.toLocaleString() + ' students total';
+  grid.innerHTML = keys.map((k) => {
+    const info = CAMPUS_INFO[k] || [k.charAt(0).toUpperCase() + k.slice(1), '—'];
+    const s = students[k] || 0, c = clubs[k] || 0, e = events[k] || 0;
+    const live = s > 0;
+    const status = live
+      ? '<span class="campus-status">✓ Active</span>'
+      : '<span class="campus-status" style="background:#FEF3C7;color:#92400E">⏳ Onboarding</span>';
+    return '<div class="campus-card"><div class="campus-name">' + escA(info[0]) + '</div><div class="campus-state">' + escA(info[1]) + '</div>'
+      + '<div class="campus-stat"><span class="campus-stat-label">Students</span><span class="campus-stat-value">' + (live ? s.toLocaleString() : 'Coming Soon') + '</span></div>'
+      + '<div class="campus-stat"><span class="campus-stat-label">Active Clubs</span><span class="campus-stat-value">' + (live ? c : '—') + '</span></div>'
+      + '<div class="campus-stat"><span class="campus-stat-label">Events This Week</span><span class="campus-stat-value">' + (live ? e : '—') + '</span></div>'
+      + '<div style="margin-top:10px">' + status + '</div></div>';
+  }).join('');
 }
 
 const setText = (id, v) => { const e = $(id); if (e) e.textContent = v; };

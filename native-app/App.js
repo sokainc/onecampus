@@ -22,7 +22,7 @@ import {
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   onAuthStateChanged, signOut as fbSignOut, updateProfile, deleteUser,
 } from 'firebase/auth';
-import { initializeFirestore, doc, getDoc, getDocs, setDoc, collection, addDoc, onSnapshot, query, where, orderBy, limit, updateDoc, deleteDoc, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
+import { initializeFirestore, doc, getDoc, getDocs, setDoc, collection, addDoc, onSnapshot, query, where, orderBy, limit, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment, serverTimestamp } from 'firebase/firestore';
 
 /* ─────────── FIREBASE ─────────── */
 const firebaseApp = initializeApp({
@@ -308,6 +308,8 @@ export default function App() {
   const [connectTab, setConnectTab] = useState('feed');
   // ── shared feed (real, everyone sees it) ──
   const [feedPosts, setFeedPosts] = useState([]);
+  const [feedAds, setFeedAds] = useState([]);          // live campaigns served as sponsored cards
+  const adSeen = useRef(new Set());                     // campaign ids counted for impressions this session
   const [postText, setPostText] = useState('');
   const [postImage, setPostImage] = useState(null);   // local uri of photo being attached
   const [uploadingPost, setUploadingPost] = useState(false);
@@ -461,6 +463,30 @@ export default function App() {
     }, () => { /* permission/offline — ignore */ });
     return unsub;
   }, [user]);
+
+  // ── FEED ADS: live campaigns for this campus, served as sponsored cards ──
+  React.useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'campaigns'), where('campus', '==', campus));
+    const unsub = onSnapshot(q, (snap) => {
+      setFeedAds(snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(c => c.status === 'live'));
+    }, () => {});
+    return unsub;
+  }, [user, campus]);
+  // count one impression per live campaign per session (non-premium viewers only)
+  React.useEffect(() => {
+    if (isPremium) return;
+    feedAds.forEach(ad => {
+      if (ad.id && !adSeen.current.has(ad.id)) {
+        adSeen.current.add(ad.id);
+        updateDoc(doc(db, 'campaigns', ad.id), { impressions: increment(1) }).catch(() => {});
+      }
+    });
+  }, [feedAds, isPremium]);
+  const adClick = async (ad) => {
+    if (ad?.id) updateDoc(doc(db, 'campaigns', ad.id), { clicks: increment(1) }).catch(() => {});
+    showToast(`Opening ${ad?.advertiser || 'sponsor'}…`);
+  };
 
   // ── PUSH: register this device & save its token once the user is signed in ──
   React.useEffect(() => {
@@ -1880,8 +1906,14 @@ export default function App() {
 
                 <View style={{ height: 12 }} />
               </View>
-              {!isPremium && (i + 1) % 3 === 0 && ADS[Math.floor(i / 3) % ADS.length] && (() => {
-                const ad = ADS[Math.floor(i / 3) % ADS.length];
+              {!isPremium && (i + 1) % 3 === 0 && (() => {
+                const slot = Math.floor(i / 3);
+                // serve a real live campaign if any exist, otherwise fall back to the demo ads
+                const real = feedAds.length ? feedAds[slot % feedAds.length] : null;
+                const ad = real
+                  ? { brand: real.advertiser || 'Sponsor', cat: 'Sponsored', logo: 'megaphone', color: (real.colors && real.colors[0]) || '#7C3AED', headline: real.name || '', copy: '', cta: 'Learn More', real }
+                  : ADS[slot % ADS.length];
+                if (!ad) return null;
                 return (
                   <View style={[st.postCard, { backgroundColor: T.card, borderWidth: 1, borderColor: T.border }]}>
                     <Text style={{ fontSize: 10, color: T.subtext, fontWeight: '700', letterSpacing: 0.5, marginBottom: 6 }}>SPONSORED</Text>
@@ -1890,8 +1922,8 @@ export default function App() {
                       <View><Text style={{ fontSize: 14, fontWeight: '800', color: T.text }}>{ad.brand}</Text><Text style={{ fontSize: 11, color: T.subtext }}>{ad.cat}</Text></View>
                     </View>
                     <Text style={{ fontSize: 14, fontWeight: '800', color: T.text, marginTop: 8 }}>{ad.headline}</Text>
-                    <Text style={{ fontSize: 12, color: T.subtext, marginVertical: 4 }}>{ad.copy}</Text>
-                    <TouchableOpacity onPress={() => showToast(`Opening ${ad.brand}...`)} style={[st.ctaBtn, { backgroundColor: ad.color }]}>
+                    {!!ad.copy && <Text style={{ fontSize: 12, color: T.subtext, marginVertical: 4 }}>{ad.copy}</Text>}
+                    <TouchableOpacity onPress={() => ad.real ? adClick(ad.real) : showToast(`Opening ${ad.brand}...`)} style={[st.ctaBtn, { backgroundColor: ad.color, marginTop: ad.copy ? 0 : 8 }]}>
                       <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{ad.cta}</Text>
                     </TouchableOpacity>
                   </View>
