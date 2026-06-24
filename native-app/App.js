@@ -722,6 +722,7 @@ export default function App() {
   const [evLoc, setEvLoc] = useState('');
   const [evDay, setEvDay] = useState(0);
   const [evColor, setEvColor] = useState(EV_COLORS[0]);
+  const [evTag, setEvTag] = useState(''); // interest category, powers "This week by interest"
 
   // payment form
   const [cardNum, setCardNum] = useState('');
@@ -918,11 +919,11 @@ export default function App() {
     try {
       await addDoc(collection(db, 'events'), {
         name: evName.trim(), time: t, ampm: evAmpm, location: evLoc.trim() || 'Purdue Campus',
-        badge: 'soon', color: evColor, day: evDay, campus,
+        badge: 'soon', color: evColor, day: evDay, campus, tag: evTag || null,
         createdBy: user.uid, creatorName: profile.name || 'Student', createdAt: serverTimestamp(),
       });
       setSheet(null);
-      setEvName(''); setEvTime(''); setEvLoc('');
+      setEvName(''); setEvTime(''); setEvLoc(''); setEvTag('');
       const earned = addPoints(50);
       showToast(`Event created! +${earned} pts${isPremium ? ' (2x)' : ''}`);
     } catch (e) { showToast('Could not create event — is the "events" rule set in Firestore?'); }
@@ -1348,6 +1349,18 @@ export default function App() {
 
   const renderEvents = () => {
     const filtered = dayFilter === null ? events : events.filter(e => e.day === dayFilter);
+    // ── "This week on campus": next 7 days, interest-matched events surfaced first ──
+    const todayIdx = (new Date().getDay() + 6) % 7; // 0=Mon … 6=Sun
+    const myTags = (obInterests || []).map(l => tagForLabel(l));
+    const week = [];
+    for (let off = 0; off < 7; off++) {
+      const di = (todayIdx + off) % 7;
+      events.filter(e => e.day === di).forEach(e => week.push({ ...e, off, di, forYou: !!(e.tag && myTags.includes(e.tag)) }));
+    }
+    week.sort((a, b) => (b.forYou - a.forYou) || (a.off - b.off));
+    const forYouCount = week.filter(e => e.forYou).length;
+    const weekTop = week.slice(0, 5);
+    const dayLabelOff = (off, di) => off === 0 ? 'Today' : off === 1 ? 'Tomorrow' : DAY_NAMES[di];
     return (
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1357,6 +1370,42 @@ export default function App() {
           </View>
           <TouchableOpacity onPress={() => setSheet('addEvent')} style={st.addBtn}><Text style={{ color: 'white', fontSize: 22 }}>+</Text></TouchableOpacity>
         </View>
+
+        {/* This week on campus — the daily-open hero */}
+        <View style={{ backgroundColor: T.card, borderRadius: 18, padding: 14, marginTop: 12 }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Ionicons name="sparkles" size={16} color={A} />
+            <Text style={{ fontSize: 15, fontWeight: '900', color: T.text }}>This week on campus</Text>
+          </View>
+          <Text style={{ fontSize: 12, color: T.subtext, marginTop: 2 }}>
+            {forYouCount > 0 ? `${forYouCount} event${forYouCount !== 1 ? 's' : ''} match your interests` : 'Your next 7 days, all in one place'}
+          </Text>
+          {weekTop.length === 0 ? (
+            <Text style={{ fontSize: 13, color: T.subtext, marginTop: 10 }}>Nothing scheduled yet — tap + to add the first event.</Text>
+          ) : weekTop.map((e, i) => {
+            const going = rsvpd.includes(e.name);
+            return (
+              <TouchableOpacity key={(e.id || e.name) + i} onPress={() => e.mine ? null : toggleRsvp(e.name)}
+                style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 }}>
+                <View style={{ width: 50, alignItems: 'center' }}>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: A }}>{dayLabelOff(e.off, e.di)}</Text>
+                  <Text style={{ fontSize: 11, color: T.subtext }}>{e.time}{e.ampm}</Text>
+                </View>
+                <View style={{ width: 3, height: 36, borderRadius: 3, backgroundColor: e.color }} />
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 13.5, fontWeight: '700', color: T.text }} numberOfLines={1}>{e.name}</Text>
+                  <Text style={{ fontSize: 11, color: T.subtext }} numberOfLines={1}><Ionicons name="location" size={11} color={T.subtext} /> {e.location}</Text>
+                </View>
+                {e.forYou ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#EDE9FE', borderRadius: 8, paddingHorizontal: 6, paddingVertical: 2 }}>
+                    <Ionicons name="star" size={9} color={A} /><Text style={{ fontSize: 9, fontWeight: '800', color: A }}>FOR YOU</Text>
+                  </View>
+                ) : going ? <Ionicons name="checkmark-circle" size={18} color="#22c55e" /> : null}
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
         <View style={{ flexDirection: 'row', gap: 6, marginVertical: 12 }}>
           {DAY_NAMES.map((d, i) => (
             <TouchableOpacity key={d} onPress={() => setDayFilter(dayFilter === i ? null : i)}
@@ -1908,6 +1957,19 @@ export default function App() {
                 </View>
                 <Text style={[st.label, { color: T.subtext }]}>LOCATION</Text>
                 <TextInput value={evLoc} onChangeText={setEvLoc} placeholder="e.g. WALC 2nd Floor" placeholderTextColor={T.subtext} style={[st.input, { backgroundColor: T.bg, color: T.text, borderColor: T.border }]} />
+                <Text style={[st.label, { color: T.subtext }]}>CATEGORY</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+                  {CATEGORIES.map(c => {
+                    const on = evTag === c.tag;
+                    return (
+                      <TouchableOpacity key={c.tag} onPress={() => setEvTag(on ? '' : c.tag)}
+                        style={[st.pill, { flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: on ? A : T.bg, borderWidth: 1, borderColor: on ? A : T.border }]}>
+                        <Ionicons name={c.icon} size={12} color={on ? 'white' : T.subtext} />
+                        <Text style={{ color: on ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{c.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
                 <Text style={[st.label, { color: T.subtext }]}>COLOR</Text>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   {EV_COLORS.map(c => (
