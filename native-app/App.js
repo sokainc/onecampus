@@ -947,6 +947,27 @@ export default function App() {
     } catch (err) { showToast('Could not check in — is the "events" rule updated?'); }
   };
 
+  // ── club announcements: officers broadcast to members; everyone can read ──
+  React.useEffect(() => {
+    const cid = clubDetail?.id;
+    if (!cid) { setClubPosts([]); return; }
+    const q = query(collection(db, 'clubs', cid, 'announcements'), orderBy('createdAt', 'desc'), limit(50));
+    const unsub = onSnapshot(q, (snap) => setClubPosts(snap.docs.map(d => ({ id: d.id, ...d.data() }))), () => {});
+    return unsub;
+  }, [clubDetail?.id]);
+  const postAnnouncement = async () => {
+    const text = annText.trim();
+    const cid = clubDetail?.id;
+    if (!text || !cid) return;
+    setAnnText('');
+    try {
+      await addDoc(collection(db, 'clubs', cid, 'announcements'), {
+        text, by: profile.name || 'Officer', createdAt: serverTimestamp(),
+      });
+      showToast('Announcement posted to members');
+    } catch (e) { showToast('Could not post — is the announcements rule set?'); }
+  };
+
   /* ── premium ── */
   const activatePremium = () => {
     setIsPremium(true);
@@ -1002,6 +1023,8 @@ export default function App() {
 
   const [showBusiness, setShowBusiness] = useState(false);
   const [clubDetail, setClubDetail] = useState(null);
+  const [clubPosts, setClubPosts] = useState([]); // announcements for the club being viewed
+  const [annText, setAnnText] = useState('');      // officer's announcement draft
   const joinClubByName = (name) => {
     if (joined.includes(name)) { showToast(`Already a member of ${name}`); return; }
     setJoined(j => [...j, name]);
@@ -2769,6 +2792,29 @@ export default function App() {
                       <Text style={{ flex: 1, fontSize: 14, color: T.text, lineHeight: 20 }}>{p}</Text>
                     </View>
                   ))}
+
+                  {!!clubDetail.id && (
+                    <>
+                      <Text style={{ fontSize: 13, fontWeight: '800', color: T.subtext, letterSpacing: 0.5, marginTop: 20 }}>ANNOUNCEMENTS</Text>
+                      {clubDetail.createdBy === user?.uid && (
+                        <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+                          <TextInput value={annText} onChangeText={setAnnText} placeholder="Post an update to members…" placeholderTextColor={T.subtext}
+                            style={[st.input, { flex: 1, backgroundColor: T.bg, color: T.text, borderColor: T.border }]} />
+                          <TouchableOpacity onPress={postAnnouncement} style={{ backgroundColor: A, borderRadius: 12, paddingHorizontal: 16, justifyContent: 'center' }}>
+                            <Text style={{ color: 'white', fontWeight: '800' }}>Post</Text>
+                          </TouchableOpacity>
+                        </View>
+                      )}
+                      {clubPosts.length === 0 ? (
+                        <Text style={{ fontSize: 13, color: T.subtext, marginTop: 8 }}>No announcements yet.{clubDetail.createdBy === user?.uid ? ' Post the first update for your members.' : ''}</Text>
+                      ) : clubPosts.map(a => (
+                        <View key={a.id} style={{ backgroundColor: T.card, borderRadius: 12, padding: 12, marginTop: 8 }}>
+                          <Text style={{ fontSize: 14, color: T.text, lineHeight: 20 }}>{a.text}</Text>
+                          <Text style={{ fontSize: 11, color: T.subtext, marginTop: 6 }}><Ionicons name="megaphone" size={11} color={T.subtext} /> {a.by} · {timeAgo(a.createdAt)}</Text>
+                        </View>
+                      ))}
+                    </>
+                  )}
 
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 20, backgroundColor: T.card, borderRadius: 14, padding: 14 }}>
                     <Ionicons name="location" size={22} color={A} />

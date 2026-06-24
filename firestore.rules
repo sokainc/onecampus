@@ -119,6 +119,16 @@ service cloud.firestore {
       // The student who listed the club can edit/remove it; admins can moderate any club.
       allow update, delete: if request.auth != null
                             && (resource.data.createdBy == request.auth.uid || isAdmin());
+
+      // Club announcements — any signed-in user can read; only the club's officer
+      // (its creator) or an admin can post/edit/remove them.
+      match /announcements/{annId} {
+        allow read: if request.auth != null;
+        allow create, update, delete: if request.auth != null && (
+          get(/databases/$(database)/documents/clubs/$(clubId)).data.createdBy == request.auth.uid
+          || isAdmin()
+        );
+      }
     }
   }
 }
