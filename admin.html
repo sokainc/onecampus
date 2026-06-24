@@ -259,9 +259,9 @@
       </div>
       <div class="stat-card">
         <div class="stat-icon" style="background:#FEF3C7">💰</div>
-        <div class="stat-value">$3,420</div>
-        <div class="stat-label">Ad Revenue (MTD)</div>
-        <div class="stat-change up">↑ 23% vs last month</div>
+        <div class="stat-value" id="stat-adrev">$0</div>
+        <div class="stat-label">Ad Revenue</div>
+        <div class="stat-change up">From live campaigns</div>
       </div>
       <div class="stat-card">
         <div class="stat-icon" style="background:#FEE2E2">🚩</div>
@@ -273,36 +273,13 @@
 
     <div class="two-col">
       <div class="card">
-        <div class="card-title">User Growth <span onclick="toast('Full analytics coming soon!')">View All →</span></div>
+        <div class="card-title">Ad Revenue by Advertiser</div>
         <div class="chart-wrap"><canvas id="growthChart"></canvas></div>
       </div>
       <div class="card">
         <div class="card-title">Revenue by Advertiser</div>
         <div id="rev-list">
-          <div class="rev-row">
-            <div class="rev-logo" style="background:linear-gradient(135deg,#E63946,#FF6B6B)">🍕</div>
-            <div class="rev-info"><div class="rev-name">Domino's</div><div class="rev-type">Food & Delivery</div></div>
-            <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:80%"></div></div>
-            <div class="rev-amount">$1,120</div>
-          </div>
-          <div class="rev-row">
-            <div class="rev-logo" style="background:linear-gradient(135deg,#F4792B,#FBBF24)">📚</div>
-            <div class="rev-info"><div class="rev-name">Chegg</div><div class="rev-type">Ed-Tech</div></div>
-            <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:65%"></div></div>
-            <div class="rev-amount">$910</div>
-          </div>
-          <div class="rev-row">
-            <div class="rev-logo" style="background:linear-gradient(135deg,#1DB954,#17A349)">🎵</div>
-            <div class="rev-info"><div class="rev-name">Spotify</div><div class="rev-type">Entertainment</div></div>
-            <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:55%"></div></div>
-            <div class="rev-amount">$770</div>
-          </div>
-          <div class="rev-row">
-            <div class="rev-logo" style="background:linear-gradient(135deg,#FF9900,#FFB347)">📦</div>
-            <div class="rev-info"><div class="rev-name">Amazon Prime</div><div class="rev-type">E-Commerce</div></div>
-            <div class="rev-bar-bg"><div class="rev-bar-fill" style="width:44%"></div></div>
-            <div class="rev-amount">$620</div>
-          </div>
+          <div style="text-align:center;color:#9CA3AF;padding:24px">Loading…</div>
         </div>
       </div>
     </div>
@@ -355,20 +332,17 @@
       <button class="btn btn-primary" onclick="openNewAdSlot()">+ New Ad Slot</button>
     </div>
     <div class="stats-row">
-      <div class="stat-card"><div class="stat-icon" style="background:#EDE9FE">👁️</div><div class="stat-value">84,200</div><div class="stat-label">Total Impressions</div><div class="stat-change up">↑ 18%</div></div>
-      <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5">🖱️</div><div class="stat-value">5,714</div><div class="stat-label">Total Clicks</div><div class="stat-change up">↑ 11%</div></div>
-      <div class="stat-card"><div class="stat-icon" style="background:#FEF3C7">📈</div><div class="stat-value">6.8%</div><div class="stat-label">Avg CTR</div><div class="stat-change up">↑ 0.4%</div></div>
-      <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5">💰</div><div class="stat-value">$3,420</div><div class="stat-label">Revenue (MTD)</div><div class="stat-change up">↑ 23%</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#EDE9FE">👁️</div><div class="stat-value" id="ads-imp">0</div><div class="stat-label">Total Impressions</div><div class="stat-change up">Across all campaigns</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5">🖱️</div><div class="stat-value" id="ads-clicks">0</div><div class="stat-label">Total Clicks</div><div class="stat-change up">Across all campaigns</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#FEF3C7">📈</div><div class="stat-value" id="ads-ctr">0%</div><div class="stat-label">Avg CTR</div><div class="stat-change up">Clicks ÷ impressions</div></div>
+      <div class="stat-card"><div class="stat-icon" style="background:#D1FAE5">💰</div><div class="stat-value" id="ads-rev">$0</div><div class="stat-label">Revenue</div><div class="stat-change up">Live campaigns</div></div>
     </div>
     <div class="card">
       <div class="card-title">Active Campaigns</div>
       <table>
         <thead><tr><th>Advertiser</th><th>Campaign</th><th>Impressions</th><th>Clicks</th><th>CTR</th><th>Spend</th><th>Status</th><th>Actions</th></tr></thead>
-        <tbody>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:linear-gradient(135deg,#E63946,#FF6B6B)">🍕</div><div><div class="user-name">Domino's</div></div></div></td><td>Dorm Delivery Promo</td><td>28,400</td><td>2,130</td><td>7.5%</td><td>$1,120</td><td><span class="status-pill status-active">Live</span></td><td><div class="action-btns"><button class="action-btn view" onclick="toast('Viewing Domino\'s campaign details')">View</button><button class="action-btn warn" onclick="pauseCampaign(this)">Pause</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:linear-gradient(135deg,#F4792B,#FBBF24)">📚</div><div><div class="user-name">Chegg</div></div></div></td><td>Textbook Rental Back-to-School</td><td>24,100</td><td>1,690</td><td>7.0%</td><td>$910</td><td><span class="status-pill status-active">Live</span></td><td><div class="action-btns"><button class="action-btn view" onclick="toast('Viewing Chegg campaign details')">View</button><button class="action-btn warn" onclick="pauseCampaign(this)">Pause</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:linear-gradient(135deg,#1DB954,#17A349)">🎵</div><div><div class="user-name">Spotify</div></div></div></td><td>Student Premium 3-Month Free</td><td>18,700</td><td>1,200</td><td>6.4%</td><td>$770</td><td><span class="status-pill status-active">Live</span></td><td><div class="action-btns"><button class="action-btn view" onclick="toast('Viewing Spotify campaign details')">View</button><button class="action-btn warn" onclick="pauseCampaign(this)">Pause</button></div></td></tr>
-          <tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:linear-gradient(135deg,#FF9900,#FFB347)">📦</div><div><div class="user-name">Amazon Prime</div></div></div></td><td>Prime Student Free Trial</td><td>13,000</td><td>694</td><td>5.3%</td><td>$620</td><td><span class="status-pill status-pending">Review</span></td><td><div class="action-btns"><button class="action-btn approve" onclick="approveCampaign(this)">Approve</button><button class="action-btn ban" onclick="rejectCampaign(this)">Reject</button></div></td></tr>
+        <tbody id="ads-tbody">
+          <tr><td colspan="8" style="text-align:center;color:#9CA3AF;padding:28px">Loading campaigns…</td></tr>
         </tbody>
       </table>
     </div>
@@ -787,16 +761,7 @@ function confirmClearAll() {
   document.querySelectorAll('.nav-badge').forEach(b => { if (b.textContent === '4') b.remove(); });
 }
 
-/* ── GROWTH CHART ── */
-const ctx = document.getElementById('growthChart').getContext('2d');
-new Chart(ctx, {
-  type: 'line',
-  data: {
-    labels: ['Apr 14','Apr 21','Apr 28','May 5','May 12','May 19','May 26','Jun 2','Jun 9'],
-    datasets: [{ label: 'Users', data: [120,210,380,520,740,920,1050,1180,1247], borderColor: '#7C3AED', backgroundColor: 'rgba(124,58,237,0.08)', tension: 0.4, fill: true, pointBackgroundColor: '#7C3AED', pointRadius: 4 }]
-  },
-  options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF' } }, y: { grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } } } }
-});
+/* Ad-revenue chart is built from live campaign data in the module script below. */
 </script>
 
 <script type="module">
@@ -806,7 +771,7 @@ import {
   getAuth, GoogleAuthProvider, signInWithPopup, signInWithRedirect, getRedirectResult,
   signInWithEmailAndPassword, onAuthStateChanged, signOut,
 } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { getFirestore, doc, getDoc, setDoc, deleteDoc, collection, query, where, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { getFirestore, doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, orderBy, onSnapshot } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 
 // 🔑 Bootstrap admin(s) — these emails always have access so you can never lock
 // yourself out. Everyone else becomes an admin by adding an admins/{uid} doc in
@@ -931,6 +896,85 @@ function startAdminData() {
     renderRecent();
   }, (err) => { const t = $('users-tbody'); if (t) t.innerHTML = '<tr><td colspan="6" style="text-align:center;color:#DC2626;padding:24px">Could not load: ' + (err.code || err.message) + '</td></tr>'; });
   onSnapshot(collection(db, 'bans'), (snap) => { bannedSet = new Set(snap.docs.map((d) => d.id)); renderUsers(); });
+  onSnapshot(collection(db, 'campaigns'), (snap) => {
+    const camps = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+    renderAds(camps);
+  }, (err) => { const t = $('ads-tbody'); if (t) t.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#DC2626;padding:24px">Could not load: ' + (err.code || err.message) + '</td></tr>'; });
+}
+
+const setText = (id, v) => { const e = $(id); if (e) e.textContent = v; };
+const spendOf = (c) => (c.days || 0) * (c.costPerDay || 10);
+let adChart = null;
+
+function renderAds(camps) {
+  const active = camps.filter((c) => c.status !== 'draft');
+  const totalRev = active.reduce((s, c) => s + spendOf(c), 0);
+  const totalImp = camps.reduce((s, c) => s + (c.impressions || 0), 0);
+  const totalClk = camps.reduce((s, c) => s + (c.clicks || 0), 0);
+  const ctr = totalImp ? (totalClk / totalImp * 100).toFixed(1) + '%' : '0%';
+  setText('stat-adrev', '$' + totalRev.toLocaleString());
+  setText('ads-rev', '$' + totalRev.toLocaleString());
+  setText('ads-imp', totalImp.toLocaleString());
+  setText('ads-clicks', totalClk.toLocaleString());
+  setText('ads-ctr', ctr);
+
+  const byAdv = {};
+  active.forEach((c) => { const k = c.advertiser || 'Unknown'; byAdv[k] = (byAdv[k] || 0) + spendOf(c); });
+  const advs = Object.entries(byAdv).sort((a, b) => b[1] - a[1]);
+  renderRevList(advs);
+  renderAdChart(advs);
+  renderCampaignTable(camps);
+}
+
+function renderRevList(advs) {
+  const el = $('rev-list'); if (!el) return;
+  if (advs.length === 0) { el.innerHTML = '<div style="text-align:center;color:#9CA3AF;padding:24px">No campaigns yet</div>'; return; }
+  const max = advs[0][1] || 1;
+  el.innerHTML = advs.slice(0, 6).map(([name, rev]) => {
+    const initials = name.trim().slice(0, 2).toUpperCase();
+    const color = AV_COLORS[name.charCodeAt(0) % AV_COLORS.length] || '#7C3AED';
+    const pct = Math.max(6, Math.round(rev / max * 100));
+    return '<div class="rev-row"><div class="rev-logo" style="background:' + color + '">' + escA(initials) + '</div>'
+      + '<div class="rev-info"><div class="rev-name">' + escA(name) + '</div><div class="rev-type">Advertiser</div></div>'
+      + '<div class="rev-bar-bg"><div class="rev-bar-fill" style="width:' + pct + '%"></div></div>'
+      + '<div class="rev-amount">$' + rev.toLocaleString() + '</div></div>';
+  }).join('');
+}
+
+function renderAdChart(advs) {
+  const cv = $('growthChart'); if (!cv || typeof Chart === 'undefined') return;
+  const labels = advs.slice(0, 8).map((a) => a[0]);
+  const data = advs.slice(0, 8).map((a) => a[1]);
+  if (adChart) { adChart.data.labels = labels; adChart.data.datasets[0].data = data; adChart.update(); return; }
+  adChart = new Chart(cv.getContext('2d'), {
+    type: 'bar',
+    data: { labels, datasets: [{ label: 'Revenue ($)', data, backgroundColor: '#7C3AED', borderRadius: 6 }] },
+    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { x: { grid: { display: false }, ticks: { font: { size: 10 }, color: '#9CA3AF' } }, y: { beginAtZero: true, grid: { color: '#F3F4F6' }, ticks: { font: { size: 10 }, color: '#9CA3AF' } } } }
+  });
+}
+
+function renderCampaignTable(camps) {
+  const tb = $('ads-tbody'); if (!tb) return;
+  if (camps.length === 0) { tb.innerHTML = '<tr><td colspan="8" style="text-align:center;color:#9CA3AF;padding:28px">No campaigns yet — advertisers create these in the app.</td></tr>'; return; }
+  const rows = camps.slice().sort((a, b) => spendOf(b) - spendOf(a));
+  tb.innerHTML = rows.map((c) => {
+    const adv = escA(c.advertiser || 'Unknown'); const initials = (c.advertiser || 'A').trim().slice(0, 2).toUpperCase();
+    const color = AV_COLORS[(c.advertiser || 'A').charCodeAt(0) % AV_COLORS.length] || '#7C3AED';
+    const imp = c.impressions || 0, clk = c.clicks || 0;
+    const ctr = imp ? (clk / imp * 100).toFixed(1) + '%' : '—';
+    const live = c.status === 'live';
+    const pill = live ? '<span class="status-pill status-active">Live</span>' : (c.status === 'paused' ? '<span class="status-pill status-pending">Paused</span>' : '<span class="status-pill status-flagged">' + escA(c.status || 'Draft') + '</span>');
+    const btn = (c.status === 'draft') ? '' : '<button class="action-btn warn" data-ad="' + c.id + '" data-st="' + c.status + '">' + (live ? 'Pause' : 'Resume') + '</button>';
+    return '<tr><td><div class="user-cell"><div class="user-avatar-sm" style="background:' + color + '">' + escA(initials) + '</div><div><div class="user-name">' + adv + '</div></div></div></td>'
+      + '<td>' + escA(c.name || '—') + '</td><td>' + imp.toLocaleString() + '</td><td>' + clk.toLocaleString() + '</td><td>' + ctr + '</td><td>$' + spendOf(c).toLocaleString() + '</td><td>' + pill + '</td>'
+      + '<td><div class="action-btns">' + btn + '</div></td></tr>';
+  }).join('');
+  tb.querySelectorAll('[data-ad]').forEach((b) => { b.onclick = () => adTogglePause(b.getAttribute('data-ad'), b.getAttribute('data-st')); });
+}
+
+async function adTogglePause(id, status) {
+  try { await updateDoc(doc(db, 'campaigns', id), { status: status === 'live' ? 'paused' : 'live' }); toast(status === 'live' ? 'Campaign paused' : 'Campaign resumed'); }
+  catch (e) { toast('Failed: ' + (e.code || e.message)); }
 }
 
 const escA = (s) => (s || '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));

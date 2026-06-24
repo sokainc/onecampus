@@ -956,24 +956,44 @@ export default function App() {
     }
   };
   const [bizTab, setBizTab] = useState('dashboard');
-  const [bizCampaigns, setBizCampaigns] = useState([
-    { name: 'Boiler Up Fall Promo', type: 'Brand Awareness', status: 'live', impressions: 14200, clicks: 1136, days: 56, color: '#F59E0B' },
-    { name: 'Late Night Special', type: 'Banner Ad', status: 'live', impressions: 8900, clicks: 712, days: 36, color: '#FF6B35' },
-    { name: 'Back-to-School Push', type: 'Sponsored Post', status: 'draft', impressions: 0, clicks: 0, days: 0, color: '#7C3AED' },
-  ]);
+  const [bizCampaigns, setBizCampaigns] = useState([]); // this advertiser's campaigns, live from Firestore
   const [bizForm, setBizForm] = useState({ headline: '', copy: '', cta: '', days: '7' });
 
-  const bizTogglePause = (i) => {
-    setBizCampaigns(cs => cs.map((c, idx) => idx === i && c.status !== 'draft'
-      ? { ...c, status: c.status === 'live' ? 'paused' : 'live' } : c));
+  // live-load THIS advertiser's campaigns from the shared `campaigns` collection (admin sees all of them)
+  React.useEffect(() => {
+    if (!user) return;
+    const q = query(collection(db, 'campaigns'), where('createdBy', '==', user.uid));
+    const unsub = onSnapshot(q, (snap) => {
+      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+        .sort((a, b) => (b.createdAt?.toMillis?.() || 0) - (a.createdAt?.toMillis?.() || 0));
+      setBizCampaigns(list);
+    }, () => {});
+    return unsub;
+  }, [user]);
+
+  const bizTogglePause = async (c) => {
+    if (!c.id || c.status === 'draft') return;
+    try { await updateDoc(doc(db, 'campaigns', c.id), { status: c.status === 'live' ? 'paused' : 'live' }); } catch (e) {}
   };
-  const bizSubmitAd = () => {
+  const bizSubmitAd = async () => {
     if (!bizForm.headline.trim()) { showToast('Add a headline for your ad'); return; }
     const days = parseInt(bizForm.days, 10) || 7;
-    setBizCampaigns(cs => [{ name: bizForm.headline.trim(), type: 'Sponsored Post', status: 'live', impressions: 0, clicks: 0, days, color: '#10B981' }, ...cs]);
-    setBizForm({ headline: '', copy: '', cta: '', days: '7' });
-    setBizTab('campaigns');
-    showToast(`Campaign launched! $${days * 10} for ${days} days`);
+    try {
+      await addDoc(collection(db, 'campaigns'), {
+        advertiser: profile.name || 'My Business',
+        name: bizForm.headline.trim(),
+        type: 'Sponsored Post',
+        status: 'live',
+        impressions: 0, clicks: 0,
+        days, costPerDay: 10,
+        campus: homeCampus || 'purdue',
+        createdBy: user.uid,
+        createdAt: serverTimestamp(),
+      });
+      setBizForm({ headline: '', copy: '', cta: '', days: '7' });
+      setBizTab('campaigns');
+      showToast(`Campaign launched! $${days * 10} for ${days} days`);
+    } catch (e) { showToast('Could not launch — is the "campaigns" rule set in Firestore?'); }
   };
 
   const renderBusinessPortal = () => {
@@ -1026,10 +1046,17 @@ export default function App() {
             </TouchableOpacity>
           </>)}
 
+          {bizTab === 'campaigns' && bizCampaigns.length === 0 && (
+            <View style={{ backgroundColor: 'white', borderRadius: 16, padding: 28, alignItems: 'center' }}>
+              <Ionicons name="megaphone-outline" size={34} color="#F59E0B" />
+              <Text style={{ fontSize: 14, fontWeight: '800', color: '#1a1a2e', marginTop: 8 }}>No campaigns yet</Text>
+              <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>Tap "Create Ad" to launch your first one.</Text>
+            </View>
+          )}
           {bizTab === 'campaigns' && bizCampaigns.map((c, i) => (
-            <View key={i} style={{ backgroundColor: 'white', borderRadius: 16, padding: 14, marginBottom: 10 }}>
+            <View key={c.id || i} style={{ backgroundColor: 'white', borderRadius: 16, padding: 14, marginBottom: 10 }}>
               <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
-                <View style={{ width: 4, height: 38, borderRadius: 4, backgroundColor: c.color, marginRight: 10 }} />
+                <View style={{ width: 4, height: 38, borderRadius: 4, backgroundColor: c.color || '#F59E0B', marginRight: 10 }} />
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e' }}>{c.name}</Text>
                   <Text style={{ fontSize: 12, color: '#9CA3AF' }}>{c.type}{c.days ? ` · ${c.days} days · $${c.days * 10}` : ''}</Text>
@@ -1042,7 +1069,7 @@ export default function App() {
                 ))}
               </View>
               {c.status !== 'draft' && (
-                <TouchableOpacity onPress={() => bizTogglePause(i)} style={{ marginTop: 10, alignSelf: 'flex-start', backgroundColor: '#FFF4E0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 7 }}>
+                <TouchableOpacity onPress={() => bizTogglePause(c)} style={{ marginTop: 10, alignSelf: 'flex-start', backgroundColor: '#FFF4E0', borderRadius: 10, paddingHorizontal: 14, paddingVertical: 7 }}>
                   <Text style={{ color: '#92400E', fontWeight: '700', fontSize: 12 }}>{c.status === 'live' ? '⏸ Pause' : '▶ Resume'}</Text>
                 </TouchableOpacity>
               )}
