@@ -17,20 +17,31 @@
     ol b { color: #7C3AED; }
     .note { font-size: 12px; color: #9CA3AF; margin-top: 18px; }
     .badge { display: inline-block; background: #EDE9FE; color: #7C3AED; font-size: 11px; font-weight: 800; padding: 4px 10px; border-radius: 20px; margin-bottom: 14px; letter-spacing: 0.5px; }
+    .open-btn { display: block; margin: 18px auto 0; max-width: 300px; background: linear-gradient(135deg,#7C3AED,#6D28D9); color: white; font-weight: 800; font-size: 15px; padding: 15px 20px; border-radius: 14px; text-decoration: none; box-shadow: 0 10px 26px rgba(124,58,237,0.32); }
+    .open-hint { font-size: 12px; color: #9CA3AF; margin-top: 8px; }
+    .or-line { display: flex; align-items: center; gap: 12px; max-width: 300px; margin: 22px auto 4px; color: #C4B5FD; font-size: 12px; font-weight: 700; letter-spacing: 1px; }
+    .or-line::before, .or-line::after { content: ''; flex: 1; height: 1px; background: #EDE9FE; }
   </style>
 </head>
 <body>
   <div class="card">
     <img class="logo" src="logo.png" alt="One Campus" />
-    <div class="badge">📱 GET THE APP</div>
-    <h1>One Campus</h1>
-    <p class="sub">Scan to open the app on your phone</p>
+    <div class="badge">✓ SIGNED IN</div>
+    <h1>Log in to the app</h1>
+    <p class="sub">You're all set on the web — now open One Campus to log in or sign up on your phone.</p>
+
+    <!-- On a phone? one tap opens the app's login/signup -->
+    <a class="open-btn" href="exp://u.expo.dev/9c104cf3-538a-4a62-993d-018c35693c9a?channel-name=production&runtime-version=exposdk%3A54.0.0">📱 Open in Expo Go →</a>
+    <p class="open-hint">On your phone already? Tap above to jump straight to the app's login/sign-up screen.</p>
+
+    <div class="or-line">OR SCAN</div>
+
     <img class="qr" alt="Scan to open One Campus in Expo Go"
       src="https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=2&data=exp%3A%2F%2Fu.expo.dev%2F9c104cf3-538a-4a62-993d-018c35693c9a%3Fchannel-name%3Dproduction%26runtime-version%3Dexposdk%253A54.0.0" />
     <ol>
       <li>Install the free <b>Expo Go</b> app from the App Store / Google Play</li>
       <li>Open your phone <b>camera</b> and point it at this QR code</li>
-      <li>Tap the notification — <b>One Campus opens</b> 🎉</li>
+      <li>Tap the notification — the <b>One Campus login/sign-up</b> opens 🎉</li>
     </ol>
     <p class="note">Free beta · works on iPhone &amp; Android · needs the Expo Go app</p>
     <a href="demo.html" style="display:inline-block;margin-top:18px;color:#7C3AED;font-weight:700;font-size:14px;text-decoration:none">Or use One Campus in your browser →</a>
