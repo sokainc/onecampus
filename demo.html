@@ -503,8 +503,28 @@
     }
 
     /* short laptop/tablet windows — scale the phone down instead of clipping it */
-    @media (min-width: 441px) and (max-height: 900px) {
+    @media (min-width: 441px) and (max-width: 767px) and (max-height: 900px) {
       .phone { transform: scale(calc((100vh - 40px) / 844)); transform-origin: center; }
+    }
+
+    /* desktop / large windows — fill the whole screen instead of a floating phone mockup */
+    @media (min-width: 768px) {
+      body { padding: 0; align-items: stretch; justify-content: stretch; background: #F5F3FF; }
+      .phone {
+        width: 100vw;
+        height: 100vh;
+        height: 100dvh;
+        max-width: none;
+        border-radius: 0;
+        box-shadow: none;
+        transform: none; /* cancel the short-window scale-down */
+      }
+      /* drop the fake iPhone chrome on desktop */
+      .status-bar, .notch { display: none; }
+      /* keep content in a comfortable centered column so it doesn't stretch edge-to-edge */
+      .app-header { padding-left: max(24px, calc((100% - 820px) / 2)); padding-right: max(24px, calc((100% - 820px) / 2)); }
+      .screen     { padding-left: max(24px, calc((100% - 820px) / 2)); padding-right: max(24px, calc((100% - 820px) / 2)); }
+      .bottom-nav { padding-left: max(24px, calc((100% - 820px) / 2)); padding-right: max(24px, calc((100% - 820px) / 2)); }
     }
   </style>
 </head>
