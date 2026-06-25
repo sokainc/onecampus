@@ -56,8 +56,13 @@ service cloud.firestore {
       allow create: if request.auth != null
                     && request.resource.data.uid == request.auth.uid;
 
-      // Anyone signed in can update a post (needed for likes + comments).
-      allow update: if request.auth != null;
+      // The author/admin can edit the whole post; everyone else can change ONLY
+      // the likedBy + comments arrays (so liking/commenting works) — they can't
+      // touch the post's text, author, or anything else.
+      allow update: if request.auth != null && (
+                      resource.data.uid == request.auth.uid || isAdmin()
+                      || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['likedBy', 'comments'])
+                    );
 
       // The original author can delete their own post; admins can remove any post.
       allow delete: if request.auth != null
