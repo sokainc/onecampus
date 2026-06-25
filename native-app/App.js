@@ -21,6 +21,7 @@ import {
   initializeAuth, getReactNativePersistence,
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   onAuthStateChanged, signOut as fbSignOut, updateProfile, deleteUser,
+  sendPasswordResetEmail,
 } from 'firebase/auth';
 import { initializeFirestore, doc, getDoc, getDocs, setDoc, collection, addDoc, onSnapshot, query, where, orderBy, limit, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment, serverTimestamp } from 'firebase/firestore';
 
@@ -749,6 +750,26 @@ export default function App() {
         'auth/invalid-credential': 'Wrong email or password',
         'auth/user-not-found': 'No account with that email — try Sign Up',
         'auth/wrong-password': 'Wrong password',
+        'auth/network-request-failed': 'No internet connection',
+        'auth/too-many-requests': 'Too many tries — wait a minute',
+      };
+      showToast(msgs[err.code] || `Error: ${err.code || err.message}`);
+    }
+    setAuthBusy(false);
+  };
+
+  // send a password-reset email to whatever's typed in the email field
+  const doResetPassword = async () => {
+    const email = authEmail.trim();
+    if (!email.includes('@')) { showToast('Enter your email above first, then tap reset'); return; }
+    setAuthBusy(true);
+    try {
+      await sendPasswordResetEmail(auth, email);
+      showToast(`Password reset link sent to ${email} — check your inbox`);
+    } catch (err) {
+      const msgs = {
+        'auth/invalid-email': 'That email looks invalid',
+        'auth/user-not-found': 'No account with that email',
         'auth/network-request-failed': 'No internet connection',
         'auth/too-many-requests': 'Too many tries — wait a minute',
       };
@@ -2541,6 +2562,12 @@ export default function App() {
             <TouchableOpacity onPress={doAuth} disabled={authBusy} style={[st.bigBtn, authBusy && { opacity: 0.6 }]}>
               <Text style={st.bigBtnText}>{authBusy ? 'One sec...' : authMode === 'signup' ? 'Create My Account' : 'Sign In →'}</Text>
             </TouchableOpacity>
+
+            {authMode === 'signin' && (
+              <TouchableOpacity onPress={doResetPassword} disabled={authBusy} style={{ marginTop: 14, alignSelf: 'center' }}>
+                <Text style={{ color: A, fontSize: 13, fontWeight: '700' }}>Forgot password?</Text>
+              </TouchableOpacity>
+            )}
 
             <Text style={{ textAlign: 'center', fontSize: 11, color: T.subtext, marginTop: 18, lineHeight: 17 }}>
               Real accounts powered by Firebase.{'\n'}Google sign-in available on the website.
