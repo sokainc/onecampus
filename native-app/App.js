@@ -270,6 +270,24 @@ const INTERESTS = ['All', ...CATEGORIES.map(c => c.label)];
 const CAT_ICON = Object.fromEntries(CATEGORIES.map(c => [c.tag, c.icon]));
 // the Discover filter stores a label ('Greek Life'); clubs store a tag ('GREEK') — bridge them
 const tagForLabel = (label) => (CATEGORIES.find(c => c.label === label) || {}).tag || label.toUpperCase();
+
+// ── basic profanity filter for posts, comments & messages ──
+// whole-word match (so "class", "assassin", etc. are NOT flagged) on a curated list.
+const BANNED_WORDS = [
+  'fuck', 'fucks', 'fucking', 'fucked', 'fucker', 'motherfucker', 'shit', 'shitty', 'bullshit',
+  'bitch', 'bitches', 'bastard', 'asshole', 'assholes', 'dick', 'dickhead', 'cock', 'pussy',
+  'slut', 'whore', 'douche', 'douchebag', 'prick', 'cunt', 'twat', 'wanker', 'jackass',
+  'faggot', 'faggots', 'fag', 'retard', 'retarded', 'nigger', 'niggers', 'nigga', 'niggas',
+  'kike', 'spic', 'chink', 'gook', 'tranny', 'dyke', 'coon',
+];
+const BANNED_SET = new Set(BANNED_WORDS);
+const hasProfanity = (text) => {
+  if (!text) return false;
+  return String(text).toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')   // strip punctuation so "f.u.c.k" splits into harmless tokens
+    .split(/\s+/)
+    .some(word => BANNED_SET.has(word));
+};
 // pick a representative Ionicons name for any club from its name/category
 const clubIcon = (club) => {
   const n = (club.name || '').toLowerCase();
@@ -502,6 +520,12 @@ export default function App() {
     return () => clearTimeout(saveTimer.current);
   }, [points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings, onboarded, homeCampus, obInterests, streak, lastActive, friends, blocked, myClasses, user]);
 
+  // ── USAGE ANALYTICS: count app opens on your own profile doc (free, works in Expo Go) ──
+  React.useEffect(() => {
+    if (!user) return;
+    setDoc(doc(db, 'users', user.uid), { appOpens: increment(1), lastOpenAt: serverTimestamp() }, { merge: true }).catch(() => {});
+  }, [user]);
+
   // ── DAILY STREAK: runs once data is loaded; Premium "streak insurance" forgives one missed day ──
   React.useEffect(() => {
     if (!user || !dataReady) return;
@@ -637,6 +661,7 @@ export default function App() {
   const createPost = async () => {
     const text = postText.trim();
     if (!text && !postImage) return;
+    if (hasProfanity(text)) { showToast("Let's keep One Campus respectful — please reword that"); return; }
     setUploadingPost(true);
     try {
       let imageUrl = null;
@@ -654,6 +679,8 @@ export default function App() {
       });
       setPostText('');
       setPostImage(null);
+      // usage metric — count posts on your own profile doc (no extra cost / rules)
+      setDoc(doc(db, 'users', user.uid), { postsCreated: increment(1) }, { merge: true }).catch(() => {});
       const earned = addPoints(20);
       showToast(`Posted to the feed! +${earned} pts${isPremium ? ' (2x)' : ''}`);
     } catch (e) {
@@ -675,6 +702,7 @@ export default function App() {
   const sendComment = async () => {
     const text = commentText.trim();
     if (!text || !commentOn) return;
+    if (hasProfanity(text)) { showToast("Let's keep it respectful — please reword that"); return; }
     setCommentText('');
     try {
       await updateDoc(doc(db, 'posts', commentOn.id), {
@@ -1398,6 +1426,7 @@ export default function App() {
   const sendChat = async () => {
     const text = chatInput.trim();
     if (!text || !chatWith) return;
+    if (hasProfanity(text)) { showToast("Let's keep it respectful — please reword that"); return; }
     // REAL DM (peer has a uid) → write to Firestore, no bot replies
     if (typeof chatWith === 'object' && chatWith.uid) {
       // friends-only gate: they must have added you before you can message them
@@ -1419,6 +1448,8 @@ export default function App() {
         });
         // notify the recipient on their phone, even if their app is closed
         sendPushTo(chatWith.uid, profile.name || 'New message', text, { type: 'dm', uid: user.uid });
+        // usage metric — count messages sent on your own profile doc
+        setDoc(doc(db, 'users', user.uid), { messagesSent: increment(1) }, { merge: true }).catch(() => {});
       } catch (e) {
         showToast('Could not send — is the "dms" rule set in Firestore?');
       }
