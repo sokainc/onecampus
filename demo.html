@@ -137,7 +137,6 @@
     .disc-btn:active { transform: scale(0.9); }
     .disc-btn.skip { background: white; box-shadow: 0 4px 20px rgba(0,0,0,0.1); }
     .disc-btn.join { background: linear-gradient(135deg,#7C3AED,#A855F7); box-shadow: 0 4px 20px rgba(124,58,237,0.4); color: white; }
-    .disc-btn.super { background: linear-gradient(135deg,#FF6B35,#FFB347); box-shadow: 0 4px 20px rgba(255,107,53,0.4); }
     .disc-interests { font-size: 12px; font-weight: 700; color: #6B7280; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px; }
     .interest-pills { display: flex; flex-wrap: wrap; gap: 8px; }
     .interest-pill {
@@ -573,7 +572,6 @@
       <div class="discover-card-stack" id="card-stack"></div>
       <div class="disc-actions">
         <button class="disc-btn skip" onclick="swipeCard('skip')" title="Skip">✕</button>
-        <button class="disc-btn super" onclick="swipeCard('super')" title="Super Join">⭐</button>
         <button class="disc-btn join" onclick="swipeCard('join')" title="Join">✓</button>
       </div>
       <div class="disc-interests">Filter by Interest</div>
@@ -1037,15 +1035,15 @@ function swipeCard(action) {
   const list = activeClubs();
   if (list.length === 0) return;
   const club = list[currentCardIndex % list.length];
-  front.style.transform = (action === 'join' || action === 'super') ? 'translateX(130%) rotate(15deg)' : 'translateX(-130%) rotate(-15deg)';
+  front.style.transform = (action === 'join') ? 'translateX(130%) rotate(15deg)' : 'translateX(-130%) rotate(-15deg)';
   front.style.opacity = '0';
-  if (action === 'join' || action === 'super') {
+  if (action === 'join') {
     if (joinedClubs.has(club.name)) {
       showToast(`Already a member of ${club.name}`);
     } else {
       joinedClubs.add(club.name);
-      const earned = addPoints(action === 'super' ? 150 : 75);
-      showToast(`${action === 'super' ? '⭐ Super joined' : '✓ Joined'} ${club.name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
+      const earned = addPoints(75);
+      showToast(`✓ Joined ${club.name}! +${earned} pts${isPremium ? ' (2x 👑)' : ''}`);
     }
   } else {
     showToast(`Skipped — next up!`);
