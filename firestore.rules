@@ -12,6 +12,29 @@ service cloud.firestore {
       );
     }
 
+    // ── DM safety helpers (friends-only + block enforcement, server-side) ──
+    // In a 2-person DM, return the OTHER participant (not me).
+    function dmPeer(parts) {
+      return parts[0] == request.auth.uid ? parts[1] : parts[0];
+    }
+    // Has `other` added me as a friend? (friends are mirrored to the public profile)
+    function peerAddedMe(other) {
+      return exists(/databases/$(database)/documents/profiles/$(other))
+        && request.auth.uid in get(/databases/$(database)/documents/profiles/$(other)).data.get('friends', []);
+    }
+    // Has `other` blocked me? (blocked list lives on their private user doc; rules can still read it)
+    function peerBlockedMe(other) {
+      return exists(/databases/$(database)/documents/users/$(other))
+        && request.auth.uid in get(/databases/$(database)/documents/users/$(other)).data.get('blocked', []);
+    }
+    // I may DM these participants only if it's a 2-person chat, the other person has
+    // added me as a friend, and they haven't blocked me.
+    function canDM(parts) {
+      return parts.size() == 2
+        && peerAddedMe(dmPeer(parts))
+        && !peerBlockedMe(dmPeer(parts));
+    }
+
     // Admin allowlist. A doc here (id = the admin's uid) grants admin powers.
     // Only the owner of that uid (or an existing admin) can read it; nobody can
     // write from a client — add/remove admins in the Firebase Console only.
@@ -31,19 +54,31 @@ service cloud.firestore {
       allow write: if request.auth != null && request.auth.uid == userId;
     }
 
-    // Direct messages — only the two participants can see/use a conversation.
+    // Direct messages — only the two participants can see a conversation, and you
+    // can only start/continue one with someone who has added you as a friend
+    // (and hasn't blocked you). Reading existing history stays open to participants.
     match /dms/{convoId} {
-      allow read, update: if request.auth != null && request.auth.uid in resource.data.participants;
-      allow create: if request.auth != null && request.auth.uid in request.resource.data.participants;
+      allow read: if request.auth != null && request.auth.uid in resource.data.participants;
+      allow update: if request.auth != null
+                    && request.auth.uid in resource.data.participants
+                    && canDM(resource.data.participants);
+      allow create: if request.auth != null
+                    && request.auth.uid in request.resource.data.participants
+                    && canDM(request.resource.data.participants);
 
       match /messages/{msgId} {
         // Only the conversation's participants can read its messages.
         allow read: if request.auth != null
                     && request.auth.uid in get(/databases/$(database)/documents/dms/$(convoId)).data.participants;
-        // You can only send a message as yourself, in a conversation you're part of.
+        // Send only as yourself, in a chat you're part of, to someone who added you
+        // (and hasn't blocked you), with a non-empty message under 2,000 characters.
         allow create: if request.auth != null
                       && request.resource.data.senderId == request.auth.uid
-                      && request.auth.uid in get(/databases/$(database)/documents/dms/$(convoId)).data.participants;
+                      && request.auth.uid in get(/databases/$(database)/documents/dms/$(convoId)).data.participants
+                      && canDM(get(/databases/$(database)/documents/dms/$(convoId)).data.participants)
+                      && request.resource.data.text is string
+                      && request.resource.data.text.size() > 0
+                      && request.resource.data.text.size() <= 2000;
       }
     }
 
@@ -52,9 +87,12 @@ service cloud.firestore {
       // Anyone signed in can read the feed.
       allow read: if request.auth != null;
 
-      // You can only create a post as yourself (uid must match your account).
+      // You can only create a post as yourself (uid must match your account),
+      // and the post text must be a string under 2,000 characters.
       allow create: if request.auth != null
-                    && request.resource.data.uid == request.auth.uid;
+                    && request.resource.data.uid == request.auth.uid
+                    && request.resource.data.get('text', '') is string
+                    && request.resource.data.get('text', '').size() <= 2000;
 
       // The author/admin can edit the whole post; everyone else can change ONLY
       // the likedBy + comments arrays (so liking/commenting works) — they can't
