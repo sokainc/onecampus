@@ -624,13 +624,13 @@ export default function App() {
     const list = clubList();
     if (!list.length) return;
     const club = list[cardIdx % list.length];
-    if (action === 'join' || action === 'super') {
+    if (action === 'join') {
       if (joined.includes(club.name)) {
         showToast(`Already a member of ${club.name}`);
       } else {
         setJoined(j => [...j, club.name]);
-        const earned = addPoints(action === 'super' ? 150 : 75);
-        showToast(`${action === 'super' ? 'Super joined' : 'Joined'} ${club.name}! +${earned} pts${isPremium ? ' (2x)' : ''}`);
+        const earned = addPoints(75);
+        showToast(`Joined ${club.name}! +${earned} pts${isPremium ? ' (2x)' : ''}`);
       }
     } else {
       showToast('Skipped — next up!');
