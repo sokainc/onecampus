@@ -1,7 +1,7 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TouchableWithoutFeedback, TextInput, Modal, Image,
-  StyleSheet, FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView, Linking, Alert,
+  FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView, Alert,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker, Polyline } from 'react-native-maps';
@@ -15,15 +15,12 @@ import * as Notifications from 'expo-notifications';
 Notifications.setNotificationHandler({
   handleNotification: async () => ({ shouldShowBanner: true, shouldShowList: true, shouldPlaySound: true, shouldSetBadge: false }),
 });
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import { initializeApp } from 'firebase/app';
 import {
-  initializeAuth, getReactNativePersistence,
   signInWithEmailAndPassword, createUserWithEmailAndPassword,
   onAuthStateChanged, signOut as fbSignOut, updateProfile, deleteUser,
   sendPasswordResetEmail,
 } from 'firebase/auth';
-import { initializeFirestore, doc, getDoc, getDocs, setDoc, collection, addDoc, onSnapshot, query, where, orderBy, limit, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, getDocs, setDoc, collection, addDoc, onSnapshot, query, where, orderBy, limit, updateDoc, deleteDoc, arrayUnion, arrayRemove, increment, serverTimestamp } from 'firebase/firestore';
 
 
 import { auth, db } from "./src/firebase";
@@ -1099,17 +1096,6 @@ export default function App() {
     setDirections({ url, label: place });
   };
 
-  const stepToText = (s) => {
-    const dist = s.distance >= 10 ? ` — ${Math.round(s.distance)} m` : '';
-    const road = s.name ? ` on ${s.name}` : '';
-    const m = s.maneuver || {};
-    const dir = (m.modifier || '').includes('left') ? '←' : (m.modifier || '').includes('right') ? '→' : '↑';
-    if (m.type === 'depart') return `↑ Head out${road}${dist}`;
-    if (m.type === 'arrive') return `You've arrived!`;
-    if (m.type === 'turn' || m.type === 'end of road' || m.type === 'fork') return `${dir} Turn ${m.modifier || ''}${road}${dist}`;
-    if (m.type === 'new name' || m.type === 'continue') return `↑ Continue${road}${dist}`;
-    return `${dir} ${m.type || 'Continue'}${road}${dist}`;
-  };
 
   const [showSteps, setShowSteps] = useState(false);
   const clearRoute = () => { setRouteCoords(null); setRouteInfo(null); setShowSteps(false); };
@@ -1187,11 +1173,6 @@ export default function App() {
 
   /* ─────────── RENDER HELPERS ─────────── */
 
-  const Pill = ({ label, active, onPress }) => (
-    <TouchableOpacity onPress={onPress} style={[st.pill, { backgroundColor: active ? A : T.card }, !active && { borderWidth: 1, borderColor: T.border }]}>
-      <Text style={{ color: active ? 'white' : T.subtext, fontWeight: '700', fontSize: 12 }}>{label}</Text>
-    </TouchableOpacity>
-  );
 
 
   const renderEvents = () => {
