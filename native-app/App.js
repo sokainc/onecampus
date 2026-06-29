@@ -213,16 +213,27 @@ export default function App() {
     })();
   }, [user]);
 
+  // build the full save payload (shared by the debounced autosave and the sign-out flush)
+  const buildUserDoc = () => ({
+    points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings,
+    onboarded, homeCampus, interests: obInterests, streak, lastActive, friends, blocked, classes: myClasses,
+    email: user?.email, updatedAt: Date.now(),
+  });
+  // write the latest state immediately — call this right before signing out so nothing is lost
+  const saveNow = async () => {
+    if (!user || !dataLoaded.current) return;
+    clearTimeout(saveTimer.current);
+    try { await setDoc(doc(db, 'users', user.uid), buildUserDoc(), { merge: true }); }
+    catch (e) { showToast('⚠️ Could not save your data — check your connection'); }
+  };
+
   // ── BACKEND: auto-save to Firestore when anything changes (debounced) ──
   React.useEffect(() => {
     if (!user || !dataLoaded.current) return;
     clearTimeout(saveTimer.current);
     saveTimer.current = setTimeout(() => {
-      setDoc(doc(db, 'users', user.uid), {
-        points, joined, rsvpd, liked, redeemed, isPremium, profile, accent, dark, settings,
-        onboarded, homeCampus, interests: obInterests, streak, lastActive, friends, blocked, classes: myClasses,
-        email: user.email, updatedAt: Date.now(),
-      }, { merge: true }).catch(() => {});
+      setDoc(doc(db, 'users', user.uid), buildUserDoc(), { merge: true })
+        .catch(() => showToast('⚠️ Could not save your data — check your connection'));
       // public profile so others can find & add you in Quick Add + see when you're free
       setDoc(doc(db, 'profiles', user.uid), {
         uid: user.uid, name: profile.name || 'Student', major: profile.major || '', campus: homeCampus || 'purdue', classes: myClasses,
@@ -523,6 +534,7 @@ export default function App() {
   };
 
   const doSignOut = async () => {
+    await saveNow();          // flush the latest data so nothing is lost on logout
     await fbSignOut(auth);
     setShowSettings(false);
     showToast('Signed out');
