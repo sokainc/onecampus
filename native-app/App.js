@@ -93,6 +93,8 @@ export default function App() {
   // ── Who's free right now (Premium) ──
   const [myClasses, setMyClasses] = useState([]);    // my weekly schedule: [{ day, start, end }] (mins from midnight)
   const [showFreeNow, setShowFreeNow] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
+  const [searchQ, setSearchQ] = useState('');
   const [showSchedule, setShowSchedule] = useState(false);
   const [clsForm, setClsForm] = useState({ day: todayIdx(), start: '9:00', startAmpm: 'AM', end: '10:00', endAmpm: 'AM' });
   const [, setFreeTick] = useState(0);               // bumps every 30s so "free now" stays current while open
@@ -2340,6 +2342,58 @@ export default function App() {
     ['discover', 'compass', 'Discover'], ['events', 'calendar', 'Events'], ['campus', 'map', 'Campus'], ['points', 'trophy', 'Points'], ['connect', 'people', 'Connect'],
   ];
 
+  // ── GLOBAL SEARCH: clubs, events & people across campus ──
+  const renderSearch = () => {
+    const q = searchQ.trim().toLowerCase();
+    const allClubs = [...userClubs, ...CAMPUSES[campus].clubs];
+    const clubHits = q ? allClubs.filter(c => `${c.name} ${c.desc || ''} ${c.tag || ''}`.toLowerCase().includes(q)) : [];
+    const eventHits = q ? events.filter(e => `${e.name} ${e.location || ''}`.toLowerCase().includes(q)) : [];
+    const peopleHits = q ? people.filter(p => p.uid !== user?.uid && !blocked.includes(p.uid) && `${p.name || ''} ${p.major || ''}`.toLowerCase().includes(q)) : [];
+    const total = clubHits.length + eventHits.length + peopleHits.length;
+    const Row = ({ bg, icon, initial, title, sub, onPress }) => (
+      <TouchableOpacity onPress={onPress} style={[st.friendRow, { backgroundColor: T.card }]}>
+        <View style={[st.avatar, { backgroundColor: bg }]}>
+          {icon ? <Ionicons name={icon} size={18} color="white" /> : <Text style={{ color: 'white', fontWeight: '700' }}>{initial}</Text>}
+        </View>
+        <View style={{ flex: 1, marginLeft: 10 }}>
+          <Text style={{ fontSize: 14, fontWeight: '800', color: T.text }} numberOfLines={1}>{title}</Text>
+          <Text style={{ fontSize: 12, color: T.subtext }} numberOfLines={1}>{sub}</Text>
+        </View>
+      </TouchableOpacity>
+    );
+    return (
+      <Modal visible={showSearch} animationType="slide" onRequestClose={() => setShowSearch(false)}>
+        <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+          <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+            <Ionicons name="search" size={18} color={T.subtext} />
+            <TextInput autoFocus value={searchQ} onChangeText={setSearchQ} placeholder="Search clubs, events, people…" placeholderTextColor={T.subtext}
+              style={{ flex: 1, marginLeft: 10, fontSize: 15, color: T.text }} returnKeyType="search" />
+            <TouchableOpacity onPress={() => setShowSearch(false)}><Text style={{ color: A, fontWeight: '800', fontSize: 14, paddingLeft: 10 }}>Done</Text></TouchableOpacity>
+          </View>
+          <ScrollView keyboardShouldPersistTaps="handled" contentContainerStyle={{ padding: 16, gap: 8 }}>
+            {!q && <Text style={{ color: T.subtext, textAlign: 'center', marginTop: 50 }}>Search for clubs, events, and people across campus.</Text>}
+            {q && total === 0 && <Text style={{ color: T.subtext, textAlign: 'center', marginTop: 50 }}>No results for “{searchQ}”</Text>}
+            {clubHits.length > 0 && <Text style={[st.sectionLabel, { color: T.subtext }]}>CLUBS</Text>}
+            {clubHits.map((c, i) => (
+              <Row key={`c${i}`} bg={c.colors ? c.colors[0] : A} icon={clubIcon(c)} title={c.name} sub={c.desc}
+                onPress={() => { setShowSearch(false); setClubDetail(c); }} />
+            ))}
+            {eventHits.length > 0 && <Text style={[st.sectionLabel, { color: T.subtext }]}>EVENTS</Text>}
+            {eventHits.map((e, i) => (
+              <Row key={`e${i}`} bg={e.color || A} icon="calendar" title={e.name} sub={`${e.time || ''} ${e.ampm || ''} · ${e.location || ''}`}
+                onPress={() => { setShowSearch(false); setTab('events'); }} />
+            ))}
+            {peopleHits.length > 0 && <Text style={[st.sectionLabel, { color: T.subtext }]}>PEOPLE</Text>}
+            {peopleHits.map((p, i) => (
+              <Row key={`p${i}`} bg={postColor(p.name || '?')} initial={(p.name || '?')[0].toUpperCase()} title={p.name || 'Student'} sub={p.major || 'Student'}
+                onPress={() => { setShowSearch(false); openDM({ uid: p.uid, name: p.name, color: postColor(p.name || '?') }); }} />
+            ))}
+          </ScrollView>
+        </SafeAreaView>
+      </Modal>
+    );
+  };
+
   // shared context for extracted screen components (grows as more screens move out)
   const screenCtx = { clubList, cardIdx, st, A, T, setShowAddClub, isPremium, homeCampus, pickCampus, campus, setClubDetail, joined, interest, swipe, setInterest, setCardIdx };
   return (
@@ -2356,6 +2410,9 @@ export default function App() {
             <Ionicons name={isPremium ? 'star' : 'flash'} size={12} color="white" />
             <Text style={{ color: 'white', fontWeight: '700', fontSize: 13 }}>{points.toLocaleString()} pts</Text>
           </View>
+          <TouchableOpacity onPress={() => { setSearchQ(''); setShowSearch(true); }} style={[st.gearBtn, { backgroundColor: T.card }]}>
+            <Ionicons name="search" size={16} color={A} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowQuickAdd(true)} style={[st.gearBtn, { backgroundColor: T.card }]}>
             <Ionicons name="person-add" size={16} color={A} />
           </TouchableOpacity>
@@ -2385,6 +2442,7 @@ export default function App() {
       {renderSheet()}
       {renderChat()}
       {renderSettingsModal()}
+      {renderSearch()}
 
       {/* Who's Free Right Now (Premium) — friends free between classes, computed live */}
       <Modal visible={showFreeNow} animationType="slide" onRequestClose={() => setShowFreeNow(false)}>
