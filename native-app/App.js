@@ -33,7 +33,6 @@ import {
   PURDUE_CLUBS,
   CAMPUSES,
   INITIAL_EVENTS,
-  FRIENDS,
   BUILDINGS,
   YOU,
   POSTS,
@@ -751,11 +750,11 @@ export default function App() {
     const ok = await ensureNotifPermission();
     if (!ok) { showToast('Allow notifications in phone settings'); setSettings(s => ({ ...s, friendAlerts: false })); return; }
     if (settings.quietHours && inQuietHours()) { showToast('Alerts on — quiet hours active, so none right now'); return; }
-    const activeFriends = FRIENDS.filter(f => f.online);
+    const myFriends = people.filter(p => friends.includes(p.uid) && !blocked.includes(p.uid));
     const nextEvent = events.find(e => rsvpd.includes(e.name)) || events[0];
-    if (activeFriends.length) {
+    if (myFriends.length) {
       await Notifications.scheduleNotificationAsync({
-        content: { title: 'One Campus', body: `${activeFriends[0].name}${activeFriends.length > 1 ? ` and ${activeFriends.length - 1} others` : ''} are active on campus right now` },
+        content: { title: 'One Campus', body: myFriends.length === 1 ? `${myFriends[0].name || 'A friend'} is active on campus right now` : `${myFriends.length} of your friends are active on campus right now` },
         trigger: { seconds: 8 },
       });
     }
@@ -1305,7 +1304,7 @@ export default function App() {
       <Text style={[st.title, { color: A }]}>Campus</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
         <Text style={[st.sub, { color: T.subtext, flex: 1 }]}>
-          {myLoc ? 'Showing your location' : settings.location ? `${FRIENDS.filter(f => f.online).length} friends active right now` : "You're invisible (location off)"}
+          {myLoc ? 'Showing your location' : settings.location ? 'Find buildings, clubs & walking directions' : "You're invisible (location off)"}
         </Text>
         <TouchableOpacity onPress={requestMyLocation} style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: A, borderRadius: 11, paddingHorizontal: 12, paddingVertical: 7 }}>
           <Ionicons name="locate" size={12} color="white" />
@@ -1341,16 +1340,10 @@ export default function App() {
           {BUILDINGS.map(b => (
             <Marker key={b.name} coordinate={{ latitude: b.lat, longitude: b.lng }} title={b.name} description={b.full} pinColor={A} />
           ))}
-          {settings.location && FRIENDS.filter(f => f.online).map(f => {
-            const b = BUILDINGS.find(x => x.name === f.at);
-            if (!b) return null;
-            return <Marker key={f.name} coordinate={{ latitude: b.lat + 0.0005, longitude: b.lng + 0.0005 }} title={f.name} description={f.major} pinColor={f.color} onCalloutPress={() => setChatWith(f.name)} />;
-          })}
           {routeCoords && <Polyline coordinates={routeCoords} strokeColor={A} strokeWidth={4} lineDashPattern={[6, 6]} />}
         </MapView>
       </View>
       {BUILDINGS.map(b => {
-        const here = FRIENDS.filter(f => f.at === b.name && f.online);
         const clubsHere = PURDUE_CLUBS.filter(c => c.location.includes(b.name));
         return (
           <View key={b.name} style={[st.buildingCard, { backgroundColor: T.card, marginTop: 10 }]}>
@@ -1365,15 +1358,6 @@ export default function App() {
                 <Text style={{ color: 'white', fontSize: 11, fontWeight: '800' }}>Directions</Text>
               </TouchableOpacity>
             </View>
-            {here.length > 0 && (
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 10, flexWrap: 'wrap' }}>
-                {here.map(f => (
-                  <TouchableOpacity key={f.name} onPress={() => setChatWith(f.name)} style={[st.friendChip, { backgroundColor: f.color }]}>
-                    <Text style={{ color: 'white', fontWeight: '700', fontSize: 12 }}>{f.initial} {f.name} <Ionicons name="chatbubble" size={11} color="white" /></Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            )}
             {clubsHere.map(c => (
               <TouchableOpacity key={c.name} onPress={() => {
                 if (joined.includes(c.name)) { showToast(`Already a member of ${c.name}`); return; }
@@ -1499,7 +1483,7 @@ export default function App() {
   const renderConnect = () => (
     <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
       <Text style={[st.title, { color: A }]}>Connections</Text>
-      <Text style={[st.sub, { color: T.subtext }]}>{FRIENDS.length} friends on campus</Text>
+      <Text style={[st.sub, { color: T.subtext }]}>{friends.length} {friends.length === 1 ? 'friend' : 'friends'} on campus</Text>
       <View style={{ flexDirection: 'row', gap: 8, marginVertical: 10 }}>
         {[['feed', 'Feed'], ['messages', 'Messages'], ['friends', 'Friends']].map(([k, label]) => (
           <TouchableOpacity key={k} onPress={() => setConnectTab(k)} style={[st.tabBtn, { backgroundColor: connectTab === k ? A : T.card }]}>
@@ -1558,18 +1542,9 @@ export default function App() {
             <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>Message <Ionicons name="chatbubble" size={11} color={A} /></Text>
           </TouchableOpacity>
         ))}
-        {/* suggested (demo) people */}
-        <Text style={[st.sectionLabel, { color: T.subtext, marginTop: 6 }]}>SUGGESTED</Text>
-        {FRIENDS.map(f => (
-          <TouchableOpacity key={f.name} onPress={() => setChatWith(f.name)} style={[st.friendRow, { backgroundColor: T.card }]}>
-            <View style={[st.avatar, { backgroundColor: f.color }]}><Text style={{ color: 'white', fontWeight: '700' }}>{f.initial}</Text></View>
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <Text style={{ fontSize: 14, fontWeight: '700', color: T.text }}>{f.name} {f.online ? <Ionicons name="ellipse" size={9} color="#22c55e" /> : null}</Text>
-              <Text style={{ fontSize: 12, color: T.subtext }}>{f.major}</Text>
-            </View>
-            <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>Message <Ionicons name="chatbubble" size={11} color={A} /></Text>
-          </TouchableOpacity>
-        ))}
+        {people.filter(p => friends.includes(p.uid) && !blocked.includes(p.uid)).length === 0 && (
+          <Text style={{ color: T.subtext, fontSize: 13, textAlign: 'center', marginTop: 14 }}>No friends yet — tap "Add friends" to find people on campus.</Text>
+        )}
       </>) : (<>
         {/* composer */}
         <View style={[st.postCard, { backgroundColor: T.card }]}>
@@ -1912,7 +1887,7 @@ export default function App() {
     const isReal = typeof chatWith === 'object' && !!chatWith.uid;
     const f = isReal
       ? { name: chatWith.name, initial: chatWith.initial, color: chatWith.color, online: true, real: true }
-      : (FRIENDS.find(x => x.name === chatWith) || { name: chatWith, initial: chatWith[0], color: A, online: true });
+      : { name: String(chatWith), initial: '?', color: A, online: true };
     const msgs = isReal
       ? dmMessages.map(m => ({ who: m.senderId === user.uid ? 'me' : 'them', text: m.text }))
       : (chats[chatWith] || []);
