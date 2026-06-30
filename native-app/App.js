@@ -1,13 +1,14 @@
 import React, { useState, useRef } from 'react';
 import {
   View, Text, ScrollView, TouchableOpacity, TouchableWithoutFeedback, TextInput, Modal, Image,
-  FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView, Alert,
+  FlatList, KeyboardAvoidingView, Platform, Switch, SafeAreaView, Alert, Linking,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import MapView, { Marker, Polyline } from 'react-native-maps';
 import { WebView } from 'react-native-webview';
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as DocumentPicker from 'expo-document-picker';
 import * as Location from 'expo-location';
 import * as Notifications from 'expo-notifications';
 
@@ -94,6 +95,17 @@ export default function App() {
   const [showFreeNow, setShowFreeNow] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQ, setSearchQ] = useState('');
+  // ── jobs board ──
+  const [jobs, setJobs] = useState([]);                 // all job postings (Firestore)
+  const [jobForm, setJobForm] = useState({ title: '', type: '', pay: '', location: '', description: '' });
+  const [showJobs, setShowJobs] = useState(false);      // student jobs board modal
+  const [jobDetail, setJobDetail] = useState(null);     // job the student is viewing / applying to
+  const [applyResume, setApplyResume] = useState(null); // { uri, name }
+  const [applyNote, setApplyNote] = useState('');
+  const [applyBusy, setApplyBusy] = useState(false);
+  const [viewApplicants, setViewApplicants] = useState(null); // job (business view) whose applicants to show
+  const [applicants, setApplicants] = useState([]);
+  const [myApplied, setMyApplied] = useState([]);       // job ids I've applied to
   const [showSchedule, setShowSchedule] = useState(false);
   const [clsForm, setClsForm] = useState({ day: todayIdx(), start: '9:00', startAmpm: 'AM', end: '10:00', endAmpm: 'AM' });
   const [, setFreeTick] = useState(0);               // bumps every 30s so "free now" stays current while open
@@ -386,6 +398,68 @@ export default function App() {
     return json.secure_url;
   };
 
+  // upload any file (e.g. a PDF résumé) to Cloudinary's auto endpoint
+  const uploadFileToCloudinary = async (uri, name) => {
+    const data = new FormData();
+    data.append('file', { uri, type: 'application/pdf', name: name || 'resume.pdf' });
+    data.append('upload_preset', CLOUDINARY_UPLOAD_PRESET);
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/auto/upload`, { method: 'POST', body: data });
+    const json = await res.json();
+    if (!json.secure_url) throw new Error('upload failed');
+    return json.secure_url;
+  };
+
+  // ── JOBS BOARD ──
+  // post a job (business / professor side)
+  const postJob = async () => {
+    if (!jobForm.title.trim()) { showToast('Add a job title'); return; }
+    try {
+      await addDoc(collection(db, 'jobs'), {
+        title: jobForm.title.trim(),
+        type: jobForm.type.trim() || 'Part-time',
+        pay: jobForm.pay.trim(),
+        location: jobForm.location.trim(),
+        description: jobForm.description.trim(),
+        createdBy: user.uid,
+        employer: profile.name || 'Employer',
+        createdAt: serverTimestamp(),
+      });
+      setJobForm({ title: '', type: '', pay: '', location: '', description: '' });
+      showToast('Job posted! Students can now apply.');
+    } catch (e) { showToast('Could not post job — is the "jobs" rule set in Firestore?'); }
+  };
+  const deleteJob = async (id) => { try { await deleteDoc(doc(db, 'jobs', id)); showToast('Job removed'); } catch (e) {} };
+
+  // pick a PDF résumé from the phone
+  const pickResume = async () => {
+    try {
+      const res = await DocumentPicker.getDocumentAsync({ type: 'application/pdf', copyToCacheDirectory: true });
+      if (!res.canceled && res.assets && res.assets[0]) setApplyResume({ uri: res.assets[0].uri, name: res.assets[0].name || 'resume.pdf' });
+    } catch (e) { showToast('Could not open files'); }
+  };
+  // student applies to a job with their résumé
+  const submitApplication = async () => {
+    if (!jobDetail) return;
+    if (!applyResume) { showToast('Attach your résumé (PDF) first'); return; }
+    setApplyBusy(true);
+    try {
+      const url = await uploadFileToCloudinary(applyResume.uri, applyResume.name);
+      await addDoc(collection(db, 'jobs', jobDetail.id, 'applications'), {
+        studentUid: user.uid,
+        studentName: profile.name || 'Student',
+        studentMajor: profile.major || '',
+        resumeUrl: url,
+        resumeName: applyResume.name,
+        note: applyNote.trim(),
+        createdAt: serverTimestamp(),
+      });
+      setMyApplied(a => [...a, jobDetail.id]);
+      showToast('Application sent! 🎉');
+      setJobDetail(null); setApplyResume(null); setApplyNote('');
+    } catch (e) { showToast('Could not apply — check your connection'); }
+    setApplyBusy(false);
+  };
+
   const createPost = async () => {
     const text = postText.trim();
     if (!text && !postImage) return;
@@ -667,6 +741,24 @@ export default function App() {
     }, () => {});
     return unsub;
   }, [user, campus]);
+
+  // live-listen to all job postings (shared across campus)
+  React.useEffect(() => {
+    if (!user) return;
+    const unsub = onSnapshot(query(collection(db, 'jobs'), orderBy('createdAt', 'desc')), (snap) => {
+      setJobs(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => {});
+    return unsub;
+  }, [user]);
+  // when a business opens a job's applicants, live-listen to that job's applications
+  React.useEffect(() => {
+    if (!viewApplicants) { setApplicants([]); return; }
+    const unsub = onSnapshot(collection(db, 'jobs', viewApplicants.id, 'applications'), (snap) => {
+      setApplicants(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, () => {});
+    return unsub;
+  }, [viewApplicants]);
+
   const events = [
     ...liveEvents.map(e => ({ ...e, mine: e.createdBy === user?.uid })),
     ...(campus === 'purdue' ? INITIAL_EVENTS : []),
@@ -1000,7 +1092,7 @@ export default function App() {
         </View>
         {/* tabs */}
         <View style={{ flexDirection: 'row', backgroundColor: '#92400E', paddingHorizontal: 8, paddingBottom: 8, gap: 6 }}>
-          {[['dashboard', 'stats-chart', 'Dashboard'], ['campaigns', 'megaphone', 'Campaigns'], ['create', 'create', 'Create Ad']].map(([k, icon, label]) => (
+          {[['dashboard', 'stats-chart', 'Dashboard'], ['campaigns', 'megaphone', 'Campaigns'], ['create', 'create', 'Create Ad'], ['jobs', 'briefcase', 'Jobs']].map(([k, icon, label]) => (
             <TouchableOpacity key={k} onPress={() => setBizTab(k)} style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 5, paddingVertical: 8, borderRadius: 10, backgroundColor: bizTab === k ? 'rgba(255,255,255,0.22)' : 'transparent' }}>
               <Ionicons name={icon} size={12} color="white" />
               <Text style={{ color: 'white', fontSize: 11.5, fontWeight: '700', textAlign: 'center' }}>{label}</Text>
@@ -1078,6 +1170,38 @@ export default function App() {
             <TouchableOpacity onPress={bizSubmitAd} style={{ backgroundColor: BIZ, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 14 }}>
               <Text style={{ color: 'white', fontWeight: '800', fontSize: 15 }}>Launch Campaign →</Text>
             </TouchableOpacity>
+          </>)}
+
+          {bizTab === 'jobs' && (<>
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E', marginBottom: 6 }}>POST A JOB</Text>
+            <TextInput value={jobForm.title} onChangeText={v => setJobForm(f => ({ ...f, title: v }))} placeholder="Job title (e.g. Research Assistant)" placeholderTextColor="#9CA3AF" style={bizInput} />
+            <TextInput value={jobForm.type} onChangeText={v => setJobForm(f => ({ ...f, type: v }))} placeholder="Type (Part-time, Research, Internship…)" placeholderTextColor="#9CA3AF" style={bizInput} />
+            <TextInput value={jobForm.pay} onChangeText={v => setJobForm(f => ({ ...f, pay: v }))} placeholder="Pay (e.g. $15/hr, Stipend, Volunteer)" placeholderTextColor="#9CA3AF" style={bizInput} />
+            <TextInput value={jobForm.location} onChangeText={v => setJobForm(f => ({ ...f, location: v }))} placeholder="Location (e.g. WALC, Remote)" placeholderTextColor="#9CA3AF" style={bizInput} />
+            <TextInput value={jobForm.description} onChangeText={v => setJobForm(f => ({ ...f, description: v }))} placeholder="Description — what's the role?" placeholderTextColor="#9CA3AF" multiline style={[bizInput, { height: 90, textAlignVertical: 'top' }]} />
+            <TouchableOpacity onPress={postJob} style={{ backgroundColor: BIZ, borderRadius: 14, paddingVertical: 14, alignItems: 'center', marginTop: 6 }}>
+              <Text style={{ color: 'white', fontWeight: '800', fontSize: 15 }}>Post Job →</Text>
+            </TouchableOpacity>
+
+            <Text style={{ fontSize: 12, fontWeight: '800', color: '#92400E', marginTop: 20, marginBottom: 6 }}>YOUR POSTED JOBS</Text>
+            {jobs.filter(j => j.createdBy === user?.uid).length === 0 && (
+              <Text style={{ color: '#9CA3AF', fontSize: 13 }}>No jobs yet — post one above.</Text>
+            )}
+            {jobs.filter(j => j.createdBy === user?.uid).map(j => (
+              <View key={j.id} style={{ backgroundColor: 'white', borderRadius: 14, padding: 14, marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6' }}>
+                <View style={{ flexDirection: 'row', alignItems: 'flex-start' }}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={{ fontSize: 15, fontWeight: '800', color: '#1a1a2e' }}>{j.title}</Text>
+                    <Text style={{ fontSize: 12, color: '#6B7280', marginTop: 2 }}>{j.type}{j.pay ? ` · ${j.pay}` : ''}{j.location ? ` · ${j.location}` : ''}</Text>
+                  </View>
+                  <TouchableOpacity onPress={() => deleteJob(j.id)}><Ionicons name="trash-outline" size={18} color="#EF4444" /></TouchableOpacity>
+                </View>
+                <TouchableOpacity onPress={() => setViewApplicants(j)} style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#FEF3C7', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginTop: 10, alignSelf: 'flex-start' }}>
+                  <Ionicons name="people" size={13} color="#92400E" />
+                  <Text style={{ color: '#92400E', fontWeight: '800', fontSize: 12 }}>View applicants</Text>
+                </TouchableOpacity>
+              </View>
+            ))}
           </>)}
         </ScrollView>
       </SafeAreaView>
@@ -2317,6 +2441,95 @@ export default function App() {
     ['discover', 'compass', 'Discover'], ['events', 'calendar', 'Events'], ['campus', 'map', 'Campus'], ['points', 'trophy', 'Points'], ['connect', 'people', 'Connect'],
   ];
 
+  // ── JOBS BOARD (student): browse jobs + apply with a PDF résumé ──
+  const renderJobs = () => (
+    <Modal visible={showJobs} animationType="slide" onRequestClose={() => { setShowJobs(false); setJobDetail(null); }}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+        <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+          {jobDetail
+            ? <TouchableOpacity onPress={() => { setJobDetail(null); setApplyResume(null); setApplyNote(''); }}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+            : <Ionicons name="briefcase" size={18} color={A} />}
+          <View style={{ flex: 1, marginLeft: 8 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>{jobDetail ? jobDetail.title : 'Campus Jobs'}</Text>
+            <Text style={{ fontSize: 11, color: T.subtext }}>{jobDetail ? jobDetail.employer : `${jobs.length} opening${jobs.length === 1 ? '' : 's'}`}</Text>
+          </View>
+          <TouchableOpacity onPress={() => { setShowJobs(false); setJobDetail(null); }}><Text style={{ color: A, fontWeight: '800', fontSize: 14 }}>Done</Text></TouchableOpacity>
+        </View>
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }} keyboardShouldPersistTaps="handled">
+          {!jobDetail ? (<>
+            {jobs.length === 0 && <Text style={{ color: T.subtext, textAlign: 'center', marginTop: 50 }}>No job postings yet — check back soon.</Text>}
+            {jobs.map(j => {
+              const applied = myApplied.includes(j.id);
+              return (
+                <TouchableOpacity key={j.id} onPress={() => setJobDetail(j)} style={{ backgroundColor: T.card, borderRadius: 14, padding: 14 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    <View style={[st.avatar, { backgroundColor: A }]}><Ionicons name="briefcase" size={18} color="white" /></View>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={{ fontSize: 15, fontWeight: '800', color: T.text }}>{j.title}</Text>
+                      <Text style={{ fontSize: 12, color: T.subtext }} numberOfLines={1}>{j.employer}{j.pay ? ` · ${j.pay}` : ''}{j.location ? ` · ${j.location}` : ''}</Text>
+                    </View>
+                    {applied ? <Text style={{ color: '#22c55e', fontWeight: '800', fontSize: 12 }}>✓ Applied</Text> : <Ionicons name="chevron-forward" size={16} color={T.subtext} />}
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </>) : (<>
+            {!!jobDetail.type && <Text style={{ color: A, fontWeight: '800', fontSize: 12 }}>{jobDetail.type}{jobDetail.pay ? ` · ${jobDetail.pay}` : ''}{jobDetail.location ? ` · ${jobDetail.location}` : ''}</Text>}
+            <Text style={{ color: T.text, fontSize: 14, lineHeight: 21 }}>{jobDetail.description || 'No description provided.'}</Text>
+            {myApplied.includes(jobDetail.id) ? (
+              <Text style={{ color: '#22c55e', fontWeight: '800', marginTop: 10 }}>✓ You've applied to this job.</Text>
+            ) : (<>
+              <Text style={[st.sectionLabel, { color: T.subtext, marginTop: 8 }]}>YOUR APPLICATION</Text>
+              <TouchableOpacity onPress={pickResume} style={{ flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: T.card, borderRadius: 12, padding: 14, borderWidth: 1, borderColor: applyResume ? '#22c55e' : T.border }}>
+                <Ionicons name={applyResume ? 'document-text' : 'cloud-upload-outline'} size={20} color={applyResume ? '#22c55e' : A} />
+                <Text style={{ flex: 1, color: applyResume ? T.text : T.subtext, fontWeight: '700', fontSize: 13 }} numberOfLines={1}>{applyResume ? applyResume.name : 'Attach your résumé (PDF)'}</Text>
+              </TouchableOpacity>
+              <TextInput value={applyNote} onChangeText={setApplyNote} placeholder="Add a short note (optional)" placeholderTextColor={T.subtext} multiline
+                style={{ backgroundColor: T.card, borderRadius: 12, padding: 14, minHeight: 70, textAlignVertical: 'top', color: T.text, marginTop: 4 }} />
+              <TouchableOpacity onPress={submitApplication} disabled={applyBusy} style={[st.bigBtn, applyBusy && { opacity: 0.6 }]}>
+                <Text style={st.bigBtnText}>{applyBusy ? 'Sending…' : 'Submit Application →'}</Text>
+              </TouchableOpacity>
+            </>)}
+          </>)}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+
+  // ── APPLICANTS (business): the job poster reviews who applied + their résumés ──
+  const renderApplicants = () => (
+    <Modal visible={!!viewApplicants} animationType="slide" onRequestClose={() => setViewApplicants(null)}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: T.bg }}>
+        <View style={[st.chatHeader, { backgroundColor: T.card, borderColor: T.border }]}>
+          <TouchableOpacity onPress={() => setViewApplicants(null)}><Text style={{ fontSize: 24, color: A, paddingRight: 10 }}>‹</Text></TouchableOpacity>
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 16, fontWeight: '800', color: T.text }}>Applicants</Text>
+            <Text style={{ fontSize: 11, color: T.subtext }}>{viewApplicants?.title} · {applicants.length} applied</Text>
+          </View>
+        </View>
+        <ScrollView contentContainerStyle={{ padding: 16, gap: 10 }}>
+          {applicants.length === 0 && <Text style={{ color: T.subtext, textAlign: 'center', marginTop: 50 }}>No applicants yet.</Text>}
+          {applicants.map(a => (
+            <View key={a.id} style={{ backgroundColor: T.card, borderRadius: 14, padding: 14 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={[st.avatar, { backgroundColor: postColor(a.studentName || '?') }]}><Text style={{ color: 'white', fontWeight: '700' }}>{(a.studentName || '?')[0].toUpperCase()}</Text></View>
+                <View style={{ flex: 1, marginLeft: 10 }}>
+                  <Text style={{ fontSize: 14, fontWeight: '800', color: T.text }}>{a.studentName}</Text>
+                  {!!a.studentMajor && <Text style={{ fontSize: 12, color: T.subtext }}>{a.studentMajor}</Text>}
+                </View>
+              </View>
+              {!!a.note && <Text style={{ fontSize: 13, color: T.text, marginTop: 8 }}>{a.note}</Text>}
+              <TouchableOpacity onPress={() => a.resumeUrl && Linking.openURL(a.resumeUrl)} style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: A, borderRadius: 10, paddingHorizontal: 12, paddingVertical: 8, marginTop: 10, alignSelf: 'flex-start' }}>
+                <Ionicons name="document-text" size={13} color="white" />
+                <Text style={{ color: 'white', fontWeight: '800', fontSize: 12 }}>View résumé</Text>
+              </TouchableOpacity>
+            </View>
+          ))}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+
   // ── GLOBAL SEARCH: clubs, events & people across campus ──
   const renderSearch = () => {
     const q = searchQ.trim().toLowerCase();
@@ -2388,6 +2601,9 @@ export default function App() {
           <TouchableOpacity onPress={() => { setSearchQ(''); setShowSearch(true); }} style={[st.gearBtn, { backgroundColor: T.card }]}>
             <Ionicons name="search" size={16} color={A} />
           </TouchableOpacity>
+          <TouchableOpacity onPress={() => setShowJobs(true)} style={[st.gearBtn, { backgroundColor: T.card }]}>
+            <Ionicons name="briefcase" size={16} color={A} />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => setShowQuickAdd(true)} style={[st.gearBtn, { backgroundColor: T.card }]}>
             <Ionicons name="person-add" size={16} color={A} />
           </TouchableOpacity>
@@ -2418,6 +2634,8 @@ export default function App() {
       {renderChat()}
       {renderSettingsModal()}
       {renderSearch()}
+      {renderJobs()}
+      {renderApplicants()}
 
       {/* Who's Free Right Now (Premium) — friends free between classes, computed live */}
       <Modal visible={showFreeNow} animationType="slide" onRequestClose={() => setShowFreeNow(false)}>
