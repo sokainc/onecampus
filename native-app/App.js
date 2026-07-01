@@ -33,7 +33,6 @@ import {
   EXPO_PUSH_ENDPOINT,
   PURDUE_CLUBS,
   CAMPUSES,
-  INITIAL_EVENTS,
   BUILDINGS,
   YOU,
   POSTS,
@@ -667,6 +666,10 @@ export default function App() {
   const [evAmpm, setEvAmpm] = useState('PM');
   const [evLoc, setEvLoc] = useState('');
   const [evDay, setEvDay] = useState(0);
+  const [evDate, setEvDate] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  });
   const [evColor, setEvColor] = useState(EV_COLORS[0]);
   const [evTag, setEvTag] = useState(''); // interest category, powers "This week by interest"
   const [evClub, setEvClub] = useState(null); // post as a club you run (officer tools)
@@ -759,10 +762,14 @@ export default function App() {
     return unsub;
   }, [viewApplicants]);
 
-  const events = [
-    ...liveEvents.map(e => ({ ...e, mine: e.createdBy === user?.uid })),
-    ...(campus === 'purdue' ? INITIAL_EVENTS : []),
-  ];
+  // date helpers for the calendar — real dates make it auto-expire (self-updates each week/semester)
+  const dateStr = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const dayIdxOf = (ymd) => { const d = new Date(ymd + 'T00:00:00'); return (d.getDay() + 6) % 7; };
+  const todayStr = dateStr(new Date());
+  // only future/undated events; anything with a past date drops off automatically
+  const events = liveEvents
+    .filter(e => !e.date || e.date >= todayStr)
+    .map(e => ({ ...e, mine: e.createdBy === user?.uid }));
   // clubs you run (you listed them) — you're their officer, so you can post events as the club
   const myClubs = userClubs.filter(c => c.createdBy === user?.uid);
   // ── NOTIFICATIONS ──
@@ -887,14 +894,14 @@ export default function App() {
     try {
       await addDoc(collection(db, 'events'), {
         name: evName.trim(), time: t, ampm: evAmpm, location: evLoc.trim() || 'Purdue Campus',
-        badge: 'soon', color: (evClub && evClub.colors && evClub.colors[0]) || evColor, day: evDay, campus,
+        badge: 'soon', color: (evClub && evClub.colors && evClub.colors[0]) || evColor, day: dayIdxOf(evDate), date: evDate, campus,
         // posting as a club tags the event with the club's category (also feeds "This week")
         tag: evClub ? evClub.tag : (evTag || null),
         club: evClub ? evClub.name : null, clubId: evClub ? evClub.id : null,
         createdBy: user.uid, creatorName: evClub ? evClub.name : (profile.name || 'Student'), createdAt: serverTimestamp(),
       });
       setSheet(null);
-      setEvName(''); setEvTime(''); setEvLoc(''); setEvTag(''); setEvClub(null);
+      setEvName(''); setEvTime(''); setEvLoc(''); setEvTag(''); setEvClub(null); setEvDate(todayStr);
       const earned = addPoints(50);
       showToast(`Event created! +${earned} pts${isPremium ? ' (2x)' : ''}`);
     } catch (e) { showToast('Could not create event — is the "events" rule set in Firestore?'); }
@@ -1315,17 +1322,16 @@ export default function App() {
   const renderEvents = () => {
     const filtered = dayFilter === null ? events : events.filter(e => e.day === dayFilter);
     // ── "This week on campus": next 7 days, interest-matched events surfaced first ──
-    const todayIdx = (new Date().getDay() + 6) % 7; // 0=Mon … 6=Sun
     const myTags = (obInterests || []).map(l => tagForLabel(l));
-    const week = [];
-    for (let off = 0; off < 7; off++) {
-      const di = (todayIdx + off) % 7;
-      events.filter(e => e.day === di).forEach(e => week.push({ ...e, off, di, forYou: !!(e.tag && myTags.includes(e.tag)) }));
-    }
-    week.sort((a, b) => (b.forYou - a.forYou) || (a.off - b.off));
+    const _t0 = new Date(); _t0.setHours(0, 0, 0, 0);
+    const daysAway = (ymd) => Math.round((new Date(ymd + 'T00:00:00') - _t0) / 86400000);
+    const week = events
+      .filter(e => e.date && daysAway(e.date) >= 0 && daysAway(e.date) < 7)
+      .map(e => ({ ...e, off: daysAway(e.date), forYou: !!(e.tag && myTags.includes(e.tag)) }))
+      .sort((a, b) => (b.forYou - a.forYou) || (a.off - b.off));
     const forYouCount = week.filter(e => e.forYou).length;
     const weekTop = week.slice(0, 5);
-    const dayLabelOff = (off, di) => off === 0 ? 'Today' : off === 1 ? 'Tomorrow' : DAY_NAMES[di];
+    const dayLabelOff = (off) => off === 0 ? 'Today' : off === 1 ? 'Tomorrow' : new Date(_t0.getTime() + off * 86400000).toLocaleDateString('en-US', { weekday: 'short' });
     return (
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
         <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -1353,7 +1359,7 @@ export default function App() {
               <TouchableOpacity key={(e.id || e.name) + i} onPress={() => e.mine ? null : toggleRsvp(e.name)}
                 style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 12 }}>
                 <View style={{ width: 50, alignItems: 'center' }}>
-                  <Text style={{ fontSize: 11, fontWeight: '800', color: A }}>{dayLabelOff(e.off, e.di)}</Text>
+                  <Text style={{ fontSize: 11, fontWeight: '800', color: A }}>{dayLabelOff(e.off)}</Text>
                   <Text style={{ fontSize: 11, color: T.subtext }}>{e.time}{e.ampm}</Text>
                 </View>
                 <View style={{ width: 3, height: 36, borderRadius: 3, backgroundColor: e.color }} />
@@ -1918,14 +1924,14 @@ export default function App() {
                 )}
                 <Text style={[st.label, { color: T.subtext }]}>EVENT NAME</Text>
                 <TextInput value={evName} onChangeText={setEvName} placeholder="e.g. CS Study Jam" placeholderTextColor={T.subtext} style={[st.input, { backgroundColor: T.bg, color: T.text, borderColor: T.border }]} />
-                <Text style={[st.label, { color: T.subtext }]}>DAY</Text>
-                <View style={{ flexDirection: 'row', gap: 5 }}>
-                  {DAY_NAMES.map((d, i) => (
-                    <TouchableOpacity key={d} onPress={() => setEvDay(i)} style={[st.dayPick, { backgroundColor: evDay === i ? A : T.bg, borderColor: T.border }]}>
-                      <Text style={{ fontSize: 11, fontWeight: '700', color: evDay === i ? 'white' : T.subtext }}>{d}</Text>
+                <Text style={[st.label, { color: T.subtext }]}>DATE</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6, paddingVertical: 2 }}>
+                  {Array.from({ length: 90 }, (_, i) => { const d = new Date(); d.setDate(d.getDate() + i); return { ymd: dateStr(d), label: d.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }), rel: i }; }).map(o => (
+                    <TouchableOpacity key={o.ymd} onPress={() => setEvDate(o.ymd)} style={{ paddingHorizontal: 12, paddingVertical: 8, borderRadius: 12, borderWidth: 1, borderColor: T.border, backgroundColor: evDate === o.ymd ? A : T.bg }}>
+                      <Text style={{ fontSize: 12, fontWeight: '700', color: evDate === o.ymd ? 'white' : T.subtext }}>{o.rel === 0 ? 'Today' : o.rel === 1 ? 'Tomorrow' : o.label}</Text>
                     </TouchableOpacity>
                   ))}
-                </View>
+                </ScrollView>
                 <View style={{ flexDirection: 'row', gap: 10 }}>
                   <View style={{ flex: 1 }}>
                     <Text style={[st.label, { color: T.subtext }]}>TIME</Text>
