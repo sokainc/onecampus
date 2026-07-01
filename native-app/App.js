@@ -1030,6 +1030,10 @@ export default function App() {
       setJoined(j => j.includes(name) ? j : [...j, name]); // the founder is automatically a member
       setShowAddClub(false);
       setClubForm({ name: '', tag: 'TECH', desc: '', location: '' });
+      // surface the new club immediately: clear any interest filter and jump the deck to the front
+      setInterest('All');
+      setCardIdx(0);
+      setTab('discover');
       const earned = addPoints(100);
       showToast(`${name} is now listed! +${earned} pts${isPremium ? ' (2x)' : ''}`);
     } catch (e) {
